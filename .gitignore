@@ -65,3 +65,9 @@ CREDENTIALS_DO_NOT_UPLOAD_TO_GITHUB.md
 scratch/
 .vscode/
 backups/
+
+# Requested capstone PDF reference collection only
+!/docs/capstone-pdfs/
+!/docs/capstone-pdfs/**/
+!/docs/capstone-pdfs/**/*.pdf
+!/docs/capstone-pdfs/**/*.md

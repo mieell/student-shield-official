@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Keep the requested PDF snapshots byte-for-byte intact.
+docs/capstone-pdfs/**/*.pdf binary
