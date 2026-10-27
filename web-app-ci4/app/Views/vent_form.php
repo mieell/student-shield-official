@@ -182,7 +182,7 @@
                             <summary>View crisis support</summary>
                             <div>
                                 <p>National Center for Mental Health</p>
-                                <p>Hotline: <a href="tel:1553">1553</a> · <a href="tel:09178998727">0917-899-8727</a></p>
+                                <p class="vent-crisis-contacts"><span>Hotline:</span><a href="tel:1553">1553</a><a href="tel:09178998727">0917-899-8727</a></p>
                             </div>
                         </details>
                     </section>
