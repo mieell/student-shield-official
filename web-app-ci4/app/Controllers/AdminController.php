@@ -650,8 +650,22 @@ class AdminController extends BaseController
     }
 
     /**
-     * View pending student registrations (Approval-Based Registration).
+     * Counselor-only indicator, derived from the existing approval queue.
      */
+    public function pendingRegistrationCount()
+    {
+        if (!$this->guardStaffAccess()) return $this->forbidden();
+
+        try {
+            $count = \Config\Database::connect()->table('users')
+                ->where('role', 0)->where('registration_status', 'pending')->countAllResults();
+            return $this->response->setHeader('Cache-Control', 'no-store')->setJSON(['count' => $count]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Pending registration count failed: {message}', ['message' => $e->getMessage()]);
+            return $this->response->setStatusCode(503)->setJSON(['message' => 'Registration updates are unavailable.']);
+        }
+    }
+
     public function pendingRegistrations()
     {
         if (!session()->get('isLoggedIn') || (int) session()->get('role') !== 1) {

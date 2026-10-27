@@ -44,6 +44,9 @@ if ((int) session()->get('role') === 1) {
             <a href="<?= base_url($url) ?>" class="staff-nav-link" <?= $staffPage === $key ? 'aria-current="page"' : '' ?>>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="<?= esc($path, 'attr') ?>"/></svg>
                 <span><?= esc($label) ?></span>
+                <?php if ($key === 'registrations'): ?>
+                <span id="navRegistrationsBadge" class="staff-nav-count" hidden></span>
+                <?php endif; ?>
                 <?php if ($key === 'sessions' && !empty($showSessionRequests)): ?>
                 <span id="navSessionsBadge" class="staff-nav-count <?= ($pending_meetings_count ?? 0) > 0 ? '' : 'hidden' ?>"><?= esc($pending_meetings_count ?? 0) ?></span>
                 <?php endif; ?>
@@ -74,6 +77,14 @@ if ((int) session()->get('role') === 1) {
         <div class="staff-mobile-brand"><img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM logo" width="28" height="28"><strong>StudentShield</strong></div>
         <div class="staff-school-name">Saint Vincent Blessed School of Manila</div>
         <div class="staff-topbar-tools">
+            <?php if ((int) session()->get('role') === 1): ?>
+            <a id="registrationNotification" class="staff-registration-notice" href="<?= base_url('admin/pending-registrations') ?>" data-count-url="<?= base_url('admin/api/pending-registrations') ?>" aria-label="Review student registrations">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M13 7a4 4 0 11-8 0 4 4 0 018 0M20 8v6M17 11h6"/></svg>
+                <span class="staff-registration-label">Registrations</span>
+                <span id="registrationNotificationCount" class="staff-nav-count" hidden></span>
+            </a>
+            <span id="registrationNotificationStatus" class="sr-only" role="status" aria-live="polite"></span>
+            <?php endif; ?>
             <div class="staff-clock"><span id="liveDayDate"><?= date('D, j M Y') ?></span><span id="liveTime"><?= date('g:i:s A') ?></span></div>
             <?php if (!empty($showSessionRequests)): ?><?= view('partials/staff_session_requests', ['pending_meetings_count' => $pending_meetings_count ?? 0]) ?><?php endif; ?>
         </div>

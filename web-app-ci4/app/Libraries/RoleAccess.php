@@ -26,7 +26,7 @@ final class RoleAccess
         if (str_starts_with($path, 'counselor/')) return $role === 1 && self::allows($role, 'admin/' . substr($path, 10));
         $counselor = [
             '#^admin/(vents|incidents|sessions|alerts|analytics|pending-registrations)$#',
-            '#^admin/api/(pending-meetings|vents|incidents|alerts|student-profile/[0-9]+|case-summary/[0-9]+(?:/meeting/pending)?)$#',
+            '#^admin/api/(pending-meetings|pending-registrations|vents|incidents|alerts|student-profile/[0-9]+|case-summary/[0-9]+(?:/meeting/pending)?)$#',
             '#^admin/evidence/[^/]+$#',
             '#^admin/vent/((resolve|delete|restore)/[0-9]+|(delete|restore)-multiple)$#',
             '#^admin/incident/((resolve|verify|reject|undo|delete|restore)/[0-9]+|(delete|restore)-multiple)$#',

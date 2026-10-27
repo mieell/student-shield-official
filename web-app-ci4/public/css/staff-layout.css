@@ -287,3 +287,16 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
 
 /* Staff headings share the student identity; body and data typography stay Inter. */
 body.staff-layout #staffMain :is(h1, h2, h3, h4) { font-family: 'Nunito', sans-serif; }
+.staff-registration-notice { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid #cfd9d4; border-radius: 8px; background: white; color: #235d3a; font-size: 12px; font-weight: 600; text-decoration: none; }
+.staff-registration-notice svg { width: 20px; height: 20px; flex-shrink: 0; }
+.staff-registration-notice:hover { background: #edf6ef; }
+.staff-registration-notice:focus-visible { outline: 2px solid #128f42; outline-offset: 3px; }
+.staff-registration-notice[data-pending="true"] { border-color: #235d3a; background: #edf6ef; }
+.staff-registration-notice .staff-nav-count { margin-left: 0; }
+.staff-registration-notice [hidden], #navRegistrationsBadge[hidden] { display: none !important; }
+@media (max-width: 767px) { .staff-registration-label { display: none; } .staff-registration-notice { padding: 8px; } }
+@media (max-width: 420px) {
+    .staff-layout .staff-topbar-tools:has(.staff-registration-notice) .staff-clock { display: none; }
+    .staff-layout .staff-mobile-brand { min-width: 0; }
+    .staff-layout .staff-mobile-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

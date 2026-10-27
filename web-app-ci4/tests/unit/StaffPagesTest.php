@@ -4,6 +4,24 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class StaffPagesTest extends CIUnitTestCase
 {
+    public function testRegistrationNotificationIsCounselorOnly(): void
+    {
+        helper(['url', 'form']);
+        foreach ([1, 2, 3] as $role) {
+            session()->set(['isLoggedIn' => true, 'role' => $role, 'user_id' => $role]);
+            $html = view('partials/staff_navigation', ['showSessionRequests' => false]);
+            if ($role === 1) {
+                $this->assertStringContainsString('id="registrationNotification"', $html);
+                $this->assertStringContainsString('admin/api/pending-registrations', $html);
+                $this->assertStringContainsString('id="navRegistrationsBadge"', $html);
+            } else {
+                $this->assertStringNotContainsString('id="registrationNotification"', $html);
+                $this->assertStringNotContainsString('admin/api/pending-registrations', $html);
+            }
+        }
+        session()->remove(['isLoggedIn', 'role', 'user_id']);
+    }
+
     public function testNonStaffCannotOpenAWorkspaceBeforeAnyDatabaseAccess(): void
     {
         foreach ([null, 0] as $role) {
@@ -77,7 +95,7 @@ final class StaffPagesTest extends CIUnitTestCase
                 $xpath = new DOMXPath($dom);
                 $this->assertSame($role === 2 ? 1 : 0, $xpath->query('//aside//a[contains(@href,"/admin/users")]')->length);
                 $this->assertSame($role === 2 ? 1 : 0, $xpath->query('//aside//a[contains(@href,"/admin/audit-logs")]')->length);
-                $this->assertSame($role === 1 ? 1 : 0, $xpath->query('//a[contains(@href,"/admin/pending-registrations")]')->length);
+                $this->assertSame($role === 1 ? 1 : 0, $xpath->query('//aside//a[contains(@href,"/admin/pending-registrations")]')->length);
                 $this->assertStringNotContainsString('<script>staff</script>', $html);
                 $this->assertSame(1, $xpath->query('//form[contains(@action,"/logout")]')->length);
             }

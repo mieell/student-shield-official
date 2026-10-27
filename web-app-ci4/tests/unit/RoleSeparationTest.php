@@ -78,6 +78,30 @@ final class RoleSeparationTest extends CIUnitTestCase
         return $controller;
     }
 
+    public function testRegistrationNotificationTracksOnlyPendingStudents(): void
+    {
+        $this->login(1);
+        $path = 'admin/api/pending-registrations';
+        $this->assertTrue(RoleAccess::allows(1, $path));
+        $response = $this->controller(AdminController::class, $path)->pendingRegistrationCount();
+        $this->assertSame(['count' => 1], json_decode($response->getBody(), true));
+        $this->assertStringContainsString('no-store', $response->getHeaderLine('Cache-Control'));
+        $this->rbacDb->table('users')->where('id', 12)->update(['registration_status' => 'approved']);
+        $this->rbacDb->table('users')->where('id', 2)->update(['registration_status' => 'pending']);
+        $response = $this->controller(AdminController::class, $path)->pendingRegistrationCount();
+        $this->assertSame(['count' => 0], json_decode($response->getBody(), true));
+        $this->rbacDb->table('users')->where('id', 10)->update(['registration_status' => 'pending']);
+        $response = $this->controller(AdminController::class, $path)->pendingRegistrationCount();
+        $this->assertSame(['count' => 1], json_decode($response->getBody(), true));
+        foreach ([0, 2, 3] as $role) {
+            $this->login($role);
+            $this->assertFalse(RoleAccess::allows($role, $path));
+            $this->assertSame(403, $this->controller(AdminController::class, $path)->pendingRegistrationCount()->getStatusCode());
+        }
+        session()->remove('isLoggedIn');
+        $this->assertSame(403, $this->controller(AdminController::class, $path)->pendingRegistrationCount()->getStatusCode());
+    }
+
     public function testStaffProfileIsOwnAccountOnlyWithNoHelp(): void
     {
         foreach ([1, 2, 3] as $role) {

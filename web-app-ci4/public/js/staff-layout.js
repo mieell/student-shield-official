@@ -156,3 +156,41 @@
         requestAnimationFrame(syncMobile);
     });
 })();
+
+// The pending queue is the source of truth; no notification records are duplicated.
+(function () {
+    const notice = document.getElementById('registrationNotification');
+    if (!notice) return;
+    const badges = [document.getElementById('registrationNotificationCount'), document.getElementById('navRegistrationsBadge')];
+    const status = document.getElementById('registrationNotificationStatus');
+    let busy = false;
+    let previous = null;
+    async function refreshRegistrations() {
+        if (busy || document.hidden) return;
+        busy = true;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        try {
+            const response = await fetch(notice.dataset.countUrl, {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}, signal: controller.signal});
+            if (!response.ok) throw new Error('Registration updates unavailable');
+            const data = await response.json();
+            if (!Number.isSafeInteger(data.count) || data.count < 0) throw new Error('Invalid count');
+            const count = data.count;
+            const label = count === 1 ? '1 pending student registration' : count + ' pending student registrations';
+            badges.forEach(badge => { if (badge) { badge.textContent = String(count); badge.hidden = count === 0; } });
+            notice.dataset.pending = String(count > 0);
+            notice.setAttribute('aria-label', label + '. Review registrations.');
+            notice.title = label;
+            if (count !== previous && status) status.textContent = label;
+            previous = count;
+        } catch (error) {
+            notice.title = 'Registration updates unavailable. Open registrations to review.';
+        } finally {
+            clearTimeout(timeout);
+            busy = false;
+        }
+    }
+    refreshRegistrations();
+    setInterval(refreshRegistrations, 30000);
+    document.addEventListener('visibilitychange', refreshRegistrations);
+})();
