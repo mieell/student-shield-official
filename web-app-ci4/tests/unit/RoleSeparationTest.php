@@ -78,6 +78,22 @@ final class RoleSeparationTest extends CIUnitTestCase
         return $controller;
     }
 
+    public function testIncidentArchiveAndRestoreStayOnIncidents(): void
+    {
+        $this->login(1);
+        foreach (['deleteIncident', 'restoreIncident'] as $method) {
+            $response = $this->controller(AdminController::class, 'admin/incident/action/1')->$method(1);
+            $this->assertStringEndsWith('/admin/incidents', $response->getHeaderLine('Location'));
+        }
+        foreach (['deleteMultipleIncidents', 'restoreMultipleIncidents'] as $method) {
+            foreach ([[1], []] as $ids) {
+                $response = $this->controller(AdminController::class, 'admin/incident/action', ['incident_ids' => $ids])->$method();
+                $this->assertStringEndsWith('/admin/incidents', $response->getHeaderLine('Location'));
+            }
+        }
+        $this->assertNull($this->rbacDb->table('bully_reports')->where('id', 1)->get()->getRowArray()['deleted_at']);
+    }
+
     public function testRegistrationNotificationTracksOnlyPendingStudents(): void
     {
         $this->login(1);

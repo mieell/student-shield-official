@@ -473,7 +473,7 @@ class AdminController extends BaseController
         // Soft Delete
         $db->table('bully_reports')->where('id', $id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
         $this->logAudit('SOFT_DELETE', 'incident', (int) $id);
-        return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id archived (soft-deleted).");
+        return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id archived (soft-deleted).");
     }
 
     public function deleteMultipleIncidents()
@@ -485,9 +485,9 @@ class AdminController extends BaseController
             // Soft Delete
             $db->table('bully_reports')->whereIn('id', $ids)->update(['deleted_at' => date('Y-m-d H:i:s')]);
             $this->logAudit('BULK_SOFT_DELETE', 'incident', 0);
-            return redirect()->to('/admin/dashboard')->with('message', count($ids) . " Incident Reports archived (soft-deleted).");
+            return redirect()->to('/admin/incidents')->with('message', count($ids) . " Incident Reports archived (soft-deleted).");
         }
-        return redirect()->to('/admin/dashboard')->with('error', "No incidents selected for deletion.");
+        return redirect()->to('/admin/incidents')->with('error', "No incidents selected for deletion.");
     }
 
     public function restoreIncident($id)
@@ -496,7 +496,7 @@ class AdminController extends BaseController
         $db = \Config\Database::connect();
         $db->table('bully_reports')->where('id', $id)->update(['deleted_at' => null]);
         $this->logAudit('RESTORE', 'incident', (int) $id);
-        return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id unarchived and restored.");
+        return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id unarchived and restored.");
     }
 
     public function restoreMultipleIncidents()
@@ -507,9 +507,9 @@ class AdminController extends BaseController
             $db = \Config\Database::connect();
             $db->table('bully_reports')->whereIn('id', $ids)->update(['deleted_at' => null]);
             $this->logAudit('BULK_RESTORE', 'incident', 0);
-            return redirect()->to('/admin/dashboard')->with('message', count($ids) . " Incident Reports unarchived and restored.");
+            return redirect()->to('/admin/incidents')->with('message', count($ids) . " Incident Reports unarchived and restored.");
         }
-        return redirect()->to('/admin/dashboard')->with('error', "No incidents selected for restoration.");
+        return redirect()->to('/admin/incidents')->with('error', "No incidents selected for restoration.");
     }
 
     public function fetchAlertLogs()
