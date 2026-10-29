@@ -32,7 +32,7 @@ if ((int) session()->get('role') === 1) {
 <aside id="staffSidebar" class="staff-sidebar" aria-label="Staff navigation" tabindex="-1">
     <div class="staff-brand">
         <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM logo" width="44" height="44">
-        <div class="staff-brand-copy"><strong>StudentShield</strong><span>Saint Vincent Blessed School</span></div>
+        <div class="staff-brand-copy"><strong>StudentShield</strong></div>
         <button type="button" id="staffSidebarClose" class="staff-sidebar-close" aria-label="Close navigation">×</button>
     </div>
     <div class="staff-sidebar-scroll">
@@ -86,7 +86,6 @@ if ((int) session()->get('role') === 1) {
             <span id="registrationNotificationStatus" class="sr-only" role="status" aria-live="polite"></span>
             <?php endif; ?>
             <div class="staff-clock"><span id="liveDayDate"><?= date('D, j M Y') ?></span><span id="liveTime"><?= date('g:i:s A') ?></span></div>
-            <?php if (!empty($showSessionRequests)): ?><?= view('partials/staff_session_requests', ['pending_meetings_count' => $pending_meetings_count ?? 0]) ?><?php endif; ?>
         </div>
     </div>
 </header>

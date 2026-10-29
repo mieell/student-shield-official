@@ -1833,11 +1833,12 @@ $pageDescriptions = [
                 dropdownOpen = false;
                 const dropdown = document.getElementById('meetingDropdown');
                 if (dropdown) dropdown.classList.add('hidden');
-                document.getElementById('meetingBellBtn').setAttribute('aria-expanded', 'false');
+                document.getElementById('meetingBellBtn')?.setAttribute('aria-expanded', 'false');
             };
 
             function positionMeetingDropdown() {
                 const dropdown = document.getElementById('meetingDropdown');
+                if (!dropdown) return;
                 dropdown.style.top = window.innerWidth < 768
                     ? (document.getElementById('mainNavBar').getBoundingClientRect().bottom + 8) + 'px' : '';
             }
@@ -1852,7 +1853,7 @@ $pageDescriptions = [
                 dropdownOpen = !dropdownOpen;
                 const dropdown = document.getElementById('meetingDropdown');
                 if (dropdown) dropdown.classList.toggle('hidden', !dropdownOpen);
-                document.getElementById('meetingBellBtn').setAttribute('aria-expanded', String(dropdownOpen));
+                document.getElementById('meetingBellBtn')?.setAttribute('aria-expanded', String(dropdownOpen));
                 positionMeetingDropdown();
                 if (dropdownOpen) window.closeStaffNavigation?.();
                 if (dropdownOpen) fetchMeetings();
