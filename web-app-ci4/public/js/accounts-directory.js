@@ -86,5 +86,4 @@
     document.getElementById('closeAccountInspector').addEventListener('click', () => closeInspector(true));
     inspector.addEventListener('keydown', event => { if (event.key === 'Escape') closeInspector(true); });
     render();
-    if (matches.length && window.matchMedia('(min-width:1251px)').matches) openInspector(matches[0], false);
 })();
