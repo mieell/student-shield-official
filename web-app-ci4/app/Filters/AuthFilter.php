@@ -20,7 +20,7 @@ class AuthFilter implements FilterInterface
         $staff = preg_match('#^(admin|counselor|principal)(/|$)#', $path) === 1;
         $json = str_contains($path, '/api/') || $request->isAJAX() || str_contains($request->getHeaderLine('Accept'), 'json');
         if (!session()->get('isLoggedIn')) {
-            $cookie = $_COOKIE[$staff ? 'admin_trusted_device' : 'student_remember'] ?? '';
+            $cookie = $staff ? '' : ($_COOKIE['student_remember'] ?? '');
             $parts = explode(':', (string) base64_decode($cookie, true), 2);
             if (count($parts) === 2 && ctype_digit($parts[0])) {
                 try {

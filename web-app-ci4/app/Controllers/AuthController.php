@@ -21,30 +21,6 @@ class AuthController extends BaseController
             return redirect()->to(\App\Libraries\RoleAccess::home($role));
         }
 
-        // ── AUTO-LOGIN VIA TRUSTED DEVICE COOKIE ──
-        if (isset($_COOKIE['admin_trusted_device'])) {
-            $cookieData = base64_decode($_COOKIE['admin_trusted_device']);
-            if (strpos($cookieData, ':') !== false) {
-                list($cookieUserId, $cookieToken) = explode(':', $cookieData, 2);
-                $db = \Config\Database::connect();
-                $user = $db->table('users')->where('id', $cookieUserId)->whereIn('role', [1, 2, 3])->get()->getRowArray();
-                
-                if ($user && \App\Libraries\RoleAccess::enabled($user) && password_verify($cookieToken, $user['remember_token'] ?? '')) {
-                    $roleNames = [1 => 'counselor', 2 => 'super_admin', 3 => 'principal'];
-                    session()->regenerate();
-                    session()->set([
-                        'user_id'    => $user['id'],
-                        'name'       => $user['name'],
-                        'role'       => (int) $user['role'],
-                        'role_name'  => $roleNames[(int)$user['role']] ?? 'counselor',
-                        'auth_version' => (int) ($user['auth_version'] ?? 1),
-                        'isLoggedIn' => true,
-                    ]);
-                    return redirect()->to(\App\Libraries\RoleAccess::home((int) session()->get('role')));
-                }
-            }
-        }
-
         return view('login');
     }
 
@@ -419,12 +395,14 @@ class AuthController extends BaseController
         if ($userId) {
             $this->logAudit('USER_LOGOUT', 'system', $userId);
             $db = \Config\Database::connect();
-            $db->table('users')->where('id', $userId)->update(['remember_token' => null]);
+            if ((int) $role === 0) {
+                $db->table('users')->where('id', $userId)->update(['remember_token' => null]);
+            }
         }
         
-        // Remove remember tokens and trusted device cookies
+        // Staff trust skips OTP after password verification; it does not keep a session signed in.
         setcookie('student_remember', '', time() - 3600, '/');
-        setcookie('admin_trusted_device', '', time() - 3600, '/');
+
         
         // Explicitly expire session cookie on shared computers
         if (ini_get("session.use_cookies")) {
