@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" href="<?= base_url('images/logo.png?v=3') ?>">
     <link rel="shortcut icon" type="image/png" href="<?= base_url('images/logo.png?v=3') ?>">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Portal - Registration</title>
     <link rel="preload" as="image" href="<?= base_url('images/logo.png?v=6') ?>">
     <script src="https://cdn.tailwindcss.com"></script>

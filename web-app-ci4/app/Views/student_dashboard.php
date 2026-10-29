@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" href="<?= base_url('images/logo.png?v=3') ?>">
     <link rel="shortcut icon" type="image/png" href="<?= base_url('images/logo.png?v=3') ?>">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?= csrf_hash() ?>">
     <title>StudentShield - Path Selection</title>
     <link rel="preload" as="image" href="<?= base_url('images/logo.png?v=6') ?>">
@@ -104,7 +104,7 @@
         }
     </style>
 </head>
-<body class="school-student-page text-white antialiased min-h-screen flex flex-col items-center justify-center relative overflow-x-hidden bg-student">
+<body class="student-home school-student-page text-white antialiased min-h-screen flex flex-col items-center justify-center relative overflow-x-hidden bg-student">
     <div class="bg-grid"></div>
     <div class="bg-rings"></div>
 
@@ -133,13 +133,13 @@
     </nav>
 
     <!-- Main Content (Centered) -->
-    <div class="w-full max-w-6xl mx-auto px-6 py-16 mt-10 relative z-20 flex flex-col items-center">
+    <div class="student-home-content w-full max-w-6xl mx-auto px-6 py-16 mt-10 relative z-20 flex flex-col items-center">
         
-        <div class="w-full max-w-lg mx-auto mb-10 shadow-lg rounded-2xl overflow-hidden"><?= view('partials/student_meet_card') ?></div>
+        <div class="student-home-meeting w-full max-w-lg mx-auto mb-10 shadow-lg rounded-2xl overflow-hidden"><?= view('partials/student_meet_card') ?></div>
 
         
         <!-- Header Section -->
-        <div class="text-center mb-12 sm:mb-16">
+        <div class="student-home-intro text-center mb-12 sm:mb-16">
             <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 text-[#FCEEA1] font-bold text-xs tracking-widest uppercase border border-white/20 mb-5 shadow-sm">Select Action</span>
             <h1 class="text-4xl sm:text-5xl md:text-[3.5rem] font-heading font-extrabold text-white mb-6 tracking-tight leading-tight">
                 How can we help you today?
@@ -150,7 +150,7 @@
         </div>
 
         <!-- Choice Cards Container -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full max-w-5xl">
+        <div class="student-home-actions grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full max-w-5xl">
             
             <!-- PATH 1: VENTING -->
             <a href="<?= base_url('student/vent') ?>" class="glass-card rounded-[2rem] p-8 md:p-10 flex flex-col group relative overflow-hidden">
@@ -218,8 +218,7 @@
 
         </div>
 
-        <!-- Footer Footer -->
-        <div class="mt-16 text-center">
+        <div class="student-home-footer mt-16 text-center">
             <p class="text-white/70 text-xs font-medium tracking-wider">© 2026 StudentShield · SVBSM</p>
         </div>
     </div>

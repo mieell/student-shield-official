@@ -90,7 +90,6 @@
 .staff-layout .principal-workspace .analytics-counting-note summary { min-height:38px; font-size:12px; justify-content:flex-start; gap:10px; }
 .staff-layout .principal-workspace .analytics-charts { grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:16px; align-items:start; }
 .staff-layout .principal-workspace .analytics-charts .role-panel { margin-top:16px; }
-.staff-layout .principal-workspace .analytics-charts .trend-chart { height:210px; }
 .staff-layout .principal-workspace .bar-track { height:10px; }
 .staff-layout .principal-workspace .bar-row { margin:26px 0; }
 .staff-layout .principal-workspace .analytics-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }

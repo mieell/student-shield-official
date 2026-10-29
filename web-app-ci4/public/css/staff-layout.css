@@ -255,17 +255,11 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
  .staff-layout .staff-menu-button { width: 32px; }
 }
 
-.staff-utility-nav { display:grid; gap:2px; padding:8px 0; border-bottom:1px solid #ffffff26; margin-bottom:8px; }
 .staff-utility-link { display:flex; align-items:center; gap:12px; padding:9px 12px; min-height:44px; border-radius:7px; font-size:13px; color:white; text-decoration:none; }
 .staff-utility-link svg { width:18px; height:18px; flex-shrink:0; }
 .staff-utility-link:hover, .staff-utility-link[aria-current="page"] { background:#ffffff20; }
 .staff-sidebar-account { flex-shrink:0; }
-.staff-password-form { display:grid; gap:18px; max-width:480px; }
-.staff-password-form button { justify-self:start; }
-.staff-profile-fields { display:grid; gap:16px; margin-bottom:20px; }
-.staff-profile-fields dt { color:#526259; font-size:13px; }
-.staff-profile-fields dd { margin:3px 0 0; font-weight:600; overflow-wrap:anywhere; }
-@media (max-height:700px) { .staff-sidebar-account .staff-utility-nav { gap:0; padding:0; } .staff-utility-link { padding-block:6px; } }
+@media (max-height:700px) { .staff-utility-link { padding-block:6px; } }
 
 .staff-account-menu { position:relative; }
 .staff-account-menu > summary { cursor:pointer; border-radius:8px; padding:12px 8px; list-style:none; color:white; }

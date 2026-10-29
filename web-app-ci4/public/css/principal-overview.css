@@ -85,7 +85,7 @@
  .staff-layout #staffMain.principal-workspace .report-preset { display:flex; align-items:center; justify-content:center; font-size:12px; padding:10px; min-height:44px; }
  .staff-layout #staffMain.principal-workspace .report-export { grid-column:1 / -1; margin-left:0; font-size:12px; min-height:44px; }
  .staff-layout #staffMain.principal-workspace .analytics-filter-panel { position:static; min-width:0; }
- .staff-layout #staffMain.principal-workspace .analytics-filter-panel .analytics-filters { position:fixed; left:12px; right:12px; top:84px; bottom:calc(86px + env(safe-area-inset-bottom)); width:auto; max-width:none; padding:16px; max-height:none; align-content:start; }
+ .staff-layout #staffMain.principal-workspace .analytics-filter-panel .analytics-filters { position:fixed; left:12px; right:12px; top:84px; bottom:auto; width:auto; max-width:none; padding:16px; max-height:calc(100dvh - 180px - env(safe-area-inset-bottom)); align-content:start; }
  .staff-layout #staffMain.principal-workspace .analytics-actions { bottom:-16px; }
  .staff-layout #staffMain.principal-workspace .analytics-filters :is(input,select) { font-size:16px; min-height:44px; }
  .staff-layout #staffMain.principal-workspace .analytics-filter-panel > summary { min-height:44px; }

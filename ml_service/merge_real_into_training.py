@@ -12,7 +12,6 @@ Run from project root:
 import csv
 import random
 import os
-from pathlib import Path
 from collections import Counter
 
 REAL_VENTS_PATH  = "ml_service/data/real_vents.csv"
