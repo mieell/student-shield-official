@@ -169,10 +169,10 @@
             
             <?php if (isset($pager) && $pager->getPageCount() > 1): ?>
             <style>
-                .pagination { display: flex; list-style: none; padding: 0; margin: 0; gap: 0.375rem; flex-wrap: wrap; }
-                .pagination li a, .pagination li span { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 0.875rem; border: 1px solid #CFD9D4; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; color: #3D4943; text-decoration: none; background: white; transition: all 0.15s ease; }
-                .pagination li.active a, .pagination li.active span { background-color: #096328; color: white; border-color: #096328; font-weight: 700; box-shadow: 0 2px 6px rgba(9,99,40,0.25); }
-                .pagination li a:hover { background-color: #F4F7F5; border-color: #096328; color: #096328; }
+                .pagination { display: flex; align-items: center; list-style: none; padding: 0; margin: 0; gap: 0.375rem; flex-wrap: wrap; }
+                .pagination > li > a, .pagination > li > span { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 0.875rem; border: 1px solid #CFD9D4; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; color: #3D4943; text-decoration: none; background: white; transition: all 0.15s ease; }
+                .pagination > li.active > a, .pagination > li.active > span { background-color: #096328; color: white; border-color: #096328; font-weight: 700; box-shadow: 0 2px 6px rgba(9,99,40,0.25); }
+                .pagination > li:not(.active) > a:hover { background-color: #F4F7F5; border-color: #096328; color: #096328; }
             </style>
             <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-wrap gap-4">
                 <span class="text-sm text-gray-500">
