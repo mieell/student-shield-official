@@ -178,6 +178,7 @@
             const count = data.count;
             const label = count === 1 ? '1 pending student registration' : count + ' pending student registrations';
             badges.forEach(badge => { if (badge) { badge.textContent = String(count); badge.hidden = count === 0; } });
+            notice.hidden = count === 0;
             notice.dataset.pending = String(count > 0);
             notice.setAttribute('aria-label', label + '. Review registrations.');
             notice.title = label;

@@ -294,3 +294,20 @@ body.staff-layout #staffMain :is(h1, h2, h3, h4) { font-family: 'Nunito', sans-s
     .staff-layout .staff-mobile-brand { min-width: 0; }
     .staff-layout .staff-mobile-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* Quiet school identity details shared by the staff workspaces. */
+.staff-sidebar .staff-brand { position: relative; isolation: isolate; align-items: center; gap: 10px; margin: -8px -4px 12px; padding: 16px 12px 22px; border-bottom: 1px solid #ffffff30; }
+.staff-brand::before { content: ""; position: absolute; z-index: -1; width: 104px; height: 104px; right: -26px; top: -40px; border: 1px solid #ffffff26; border-radius: 50%; pointer-events: none; }
+.staff-brand::after { content: ""; position: absolute; bottom: -1px; left: 12px; width: 34px; height: 2px; background: #f5d875; pointer-events: none; }
+.staff-sidebar .staff-brand img { padding: 2px; background: #fff; border-radius: 50%; box-shadow: 0 3px 8px #063d2226; }
+.staff-brand-copy { min-width: 0; }
+.staff-brand-copy span { display: block; margin-top: 4px; color: #e1f1e7; font-size: 9px; line-height: 1.4; letter-spacing: .1px; }
+.staff-sidebar .staff-brand strong { font-size: 18px; letter-spacing: -.4px; }
+.staff-sidebar .staff-nav-link { transition: background-color 140ms ease, color 140ms ease; }
+.staff-sidebar .staff-nav-link[aria-current="page"] { background: #ffffff20; box-shadow: inset 0 1px 0 #ffffff18; }
+.staff-layout #dashboardHeader.staff-topbar { border-top: 2px solid #128f42; }
+.staff-layout .dashboard-card { box-shadow: 0 4px 16px #183e2807; }
+.staff-layout .queue-heading { padding-block: 18px; }
+.staff-layout .staff-metrics.staff-metrics-compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.staff-registration-notice[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .staff-sidebar .staff-nav-link { transition: none; } }

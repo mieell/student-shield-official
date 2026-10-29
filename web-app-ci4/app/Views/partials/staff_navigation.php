@@ -32,7 +32,7 @@ if ((int) session()->get('role') === 1) {
 <aside id="staffSidebar" class="staff-sidebar" aria-label="Staff navigation" tabindex="-1">
     <div class="staff-brand">
         <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM logo" width="44" height="44">
-        <div><strong>StudentShield</strong></div>
+        <div class="staff-brand-copy"><strong>StudentShield</strong><span>Saint Vincent Blessed School</span></div>
         <button type="button" id="staffSidebarClose" class="staff-sidebar-close" aria-label="Close navigation">×</button>
     </div>
     <div class="staff-sidebar-scroll">
@@ -57,7 +57,7 @@ if ((int) session()->get('role') === 1) {
     </div>
     <div class="staff-sidebar-account">
         <details id="staffAccountMenu" class="staff-account-menu">
-            <summary class="staff-account" aria-label="Account options for <?= esc($staffName, 'attr') ?>"><span class="staff-avatar"><?= esc($staffInitial) ?></span><span class="staff-account-name"><strong><?= esc($staffName) ?></strong><span><?= esc($staffRole) ?></span></span><svg class="staff-account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 14l4-4 4 4"/></svg></summary>
+            <summary class="staff-account" aria-label="Account options for <?= esc($staffName, 'attr') ?>"><span class="staff-avatar"><?= esc($staffInitial) ?></span><span class="staff-account-name"><strong><?= esc($staffName) ?></strong><?php if (strcasecmp(trim($staffName), $staffRole) !== 0): ?><span><?= esc($staffRole) ?></span><?php endif; ?></span><svg class="staff-account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 14l4-4 4 4"/></svg></summary>
             <div class="staff-account-popover">
                 <a class="staff-utility-link" href="<?= base_url('staff/profile') ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8M5 21v-2a7 7 0 0114 0v2"/></svg>Profile</a>
                 <a class="staff-utility-link" href="<?= base_url('staff/settings') ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg>Settings</a>
@@ -78,7 +78,7 @@ if ((int) session()->get('role') === 1) {
         <div class="staff-school-name">Saint Vincent Blessed School of Manila</div>
         <div class="staff-topbar-tools">
             <?php if ((int) session()->get('role') === 1): ?>
-            <a id="registrationNotification" class="staff-registration-notice" href="<?= base_url('admin/pending-registrations') ?>" data-count-url="<?= base_url('admin/api/pending-registrations') ?>" aria-label="Review student registrations">
+            <a id="registrationNotification" class="staff-registration-notice" hidden href="<?= base_url('admin/pending-registrations') ?>" data-count-url="<?= base_url('admin/api/pending-registrations') ?>" aria-label="Review student registrations">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M13 7a4 4 0 11-8 0 4 4 0 018 0M20 8v6M17 11h6"/></svg>
                 <span class="staff-registration-label">Registrations</span>
                 <span id="registrationNotificationCount" class="staff-nav-count" hidden></span>

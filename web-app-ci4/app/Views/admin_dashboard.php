@@ -521,7 +521,7 @@ $pageDescriptions = [
                 </div>
             </div>
             <?php if (in_array($dashboardPage, ['vents', 'analytics'], true)): ?>
-            <div class="staff-metrics grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto">
+            <div class="staff-metrics <?= $dashboardPage === 'vents' ? 'staff-metrics-compact' : '' ?> grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto">
                 <div class="stat-card green-accent flex items-center gap-3 p-3.5 sm:p-5">
                     <div class="h-9 w-9 rounded-lg bg-[#235D3A]/10 flex items-center justify-center flex-shrink-0">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 text-[#235D3A]" fill="none" viewBox="0 0 24 24"
@@ -552,6 +552,7 @@ $pageDescriptions = [
                             id="stat-critical">--</span>
                     </div>
                 </div>
+                <?php if ($dashboardPage === 'analytics'): ?>
                 <a href="<?= base_url('admin/sessions') ?>"
                     class="stat-card flex items-center gap-3 p-3.5 sm:p-5 border-l-4 border-l-emerald-600 hover:border-emerald-700 col-span-2 sm:col-span-1 transition-all">
                     <div class="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
@@ -568,6 +569,7 @@ $pageDescriptions = [
                             id="stat-sessions"><?= esc($pending_meetings_count ?? 0) ?></span>
                     </div>
                 </a>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
@@ -576,7 +578,7 @@ $pageDescriptions = [
         <?php if ($dashboardPage === 'vents'): ?>
         <div id="section-vents" class="dashboard-card overflow-hidden animate-slide-up flex flex-col"
             style="animation-delay: 0.2s">
-            <div class="queue-heading"><div><h3>Wellness entries</h3><p>Review entries and keep track of follow-ups.</p></div><span class="queue-caption">Counselor workspace</span></div>
+            <div class="queue-heading"><h3>Entries</h3></div>
             <!-- Table Container -->
             <div class="overflow-x-auto custom-scrollbar flex flex-col">
                 <div
