@@ -50,3 +50,10 @@
  .accounts-workspace .account-toolbar { grid-template-columns:minmax(0,1fr); }
  .accounts-workspace .accounts-directory-heading h2 { font-size:16px; }
 }
+
+/* Search and quick statuses form one toolbar, with a divider only below it. */
+.staff-layout #staffMain .staff-filter-bar:has(+ .filter-quick) { border-bottom: 0; }
+.staff-layout #staffMain .staff-filter-bar + .filter-quick { padding: 4px 22px 14px; }
+@media (max-width: 768px) {
+ .staff-layout #staffMain .staff-filter-bar + .filter-quick { padding: 4px 16px 12px; }
+}
