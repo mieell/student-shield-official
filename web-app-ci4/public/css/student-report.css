@@ -133,3 +133,10 @@
 .student-form-page--report .report-expectation-note { margin: 0 0 24px; padding: 14px 16px; border: 1px solid #cfd9d4; border-radius: 8px; background: #edf6ef; color: #3d4943; font-size: 14px; line-height: 1.6; }
 
 .student-form-page--report .report-urgent-note { margin: -12px 0 24px; color: #3d4943; font-size: 14px; line-height: 1.6; }
+.student-report-tracker-body .report-progress { display: flex; list-style: none; padding: 0; margin: 20px 0; }
+.student-report-tracker-body .report-progress li { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 3px; border: 0; color: #526259; font-size: 12px; line-height: 1.4; text-align: center; }
+.report-progress li:not(:first-child)::before { content: ''; position: absolute; height: 2px; background: #cfd9d4; left: -50%; right: 50%; top: 13px; }
+.student-report-tracker-body .report-progress .report-progress-reached::before { background: #235d3a; }
+.report-progress-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #82958b; border-radius: 50%; color: #526259; background: white; font-size: 12px; }
+.report-progress-reached .report-progress-dot { background: #235d3a; border-color: #235d3a; color: white; }
+.report-progress li[aria-current="step"] { color: #235d3a; font-weight: 700; }

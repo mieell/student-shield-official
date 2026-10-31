@@ -19,6 +19,21 @@ $reportStatuses = [
                 <li>
                     <div><strong>Report #<?= esc($report['id']) ?></strong><span class="student-report-status"><?= esc($label) ?></span></div>
                     <p><?= esc($description) ?></p>
+                    <?php
+                    $progressStep = ['pending_review' => 0, 'verified' => 1, 'resolved' => 2, 'rejected_fake' => 1][$report['status']] ?? null;
+                    $progressLabels = $report['status'] === 'rejected_fake'
+                        ? ['Submitted', 'Review completed'] : ['Submitted', 'Under review', 'Closed'];
+                    ?>
+                    <?php if ($progressStep !== null): ?>
+                    <ol class="report-progress" aria-label="Review progress for report <?= esc($report['id'], 'attr') ?>">
+                        <?php foreach ($progressLabels as $step => $stepLabel): ?>
+                        <li class="<?= $step <= $progressStep ? 'report-progress-reached' : '' ?>" <?= $step === $progressStep ? 'aria-current="step"' : '' ?>>
+                            <span class="report-progress-dot" aria-hidden="true"><?= $step < $progressStep ? '✓' : $step + 1 ?></span>
+                            <span><?= esc($stepLabel) ?></span>
+                        </li>
+                        <?php endforeach; ?>
+                    </ol>
+                    <?php endif; ?>
                     <span class="student-report-date">Submitted: <?= esc($report['created_at']) ?></span>
                 </li>
                 <?php endforeach; ?>

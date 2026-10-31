@@ -4,6 +4,21 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class StudentReportLayoutTest extends CIUnitTestCase
 {
+    public function testReportProgressReflectsOnlyRecordedStatus(): void
+    {
+        helper('url');
+        foreach (['pending_review' => [3, 'Submitted'], 'verified' => [3, 'Under review'], 'resolved' => [3, 'Closed'], 'rejected_fake' => [2, 'Review completed'], 'unknown' => [0, '']] as $status => [$steps, $current]) {
+            $dom = new DOMDocument();
+            @$dom->loadHTML(view('reports/student_report_status', ['studentReports' => [['id' => 1, 'status' => $status, 'created_at' => '2026-11-01 10:00:00']]]));
+            $xpath = new DOMXPath($dom);
+            $this->assertSame($steps, $xpath->query('//ol[contains(@class,"report-progress")]/li')->length);
+            $selected = $xpath->query('//ol/li[@aria-current="step"]/span[last()]');
+            $this->assertSame($steps ? 1 : 0, $selected->length);
+            if ($steps) $this->assertSame($current, trim($selected->item(0)->textContent));
+            if ($status === 'rejected_fake') $this->assertSame(0, $xpath->query('//ol/li/span[text()="Closed"]')->length);
+        }
+    }
+
     public function testWorkspaceNavigationHasTheSameThreeDestinationsOnEveryPage(): void
     {
         helper(['url', 'form']);
