@@ -131,3 +131,5 @@
 .student-report-panel[hidden] { display: none !important; }
 
 .student-form-page--report .report-expectation-note { margin: 0 0 24px; padding: 14px 16px; border: 1px solid #cfd9d4; border-radius: 8px; background: #edf6ef; color: #3d4943; font-size: 14px; line-height: 1.6; }
+
+.student-form-page--report .report-urgent-note { margin: -12px 0 24px; color: #3d4943; font-size: 14px; line-height: 1.6; }

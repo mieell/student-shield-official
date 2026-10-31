@@ -171,7 +171,7 @@ class BullyReportController extends BaseController
             ->where('users.id', $userId)
             ->get()->getRow();
         if ($reporter && !empty($reporter->email)) {
-            $this->sendLocalEmail($reporter->email, "Thank you for speaking up. Your report has been received for counselor review. This confirmation does not mean the concern has been resolved. If you are in immediate danger, seek help from a trusted adult or school staff right away.");
+            $this->sendLocalEmail($reporter->email, "Thank you for speaking up. Your report has been received for counselor review. You can check its progress in My reports. If you need help while waiting, please approach the Guidance Office or a trusted school staff member. If you are in immediate danger, seek help from a trusted adult or school staff right away.");
         }
 
         // 2. Alert the Counselor Immediately (SMS & Email) — so they can investigate ASAP
@@ -187,7 +187,7 @@ class BullyReportController extends BaseController
         // NOTE: Parent SMS & Email alerts are now triggered via Stage 2 (Counselor Verification)
         // See AdminController::verifyIncident() — counselor clicks "Verify & Alert Parents" on the dashboard
 
-        return redirect()->to('/report/bullying')->with('message', 'Your report has been submitted for counselor review. You can check its status in My reports. Submission does not guarantee an immediate response or resolution.');
+        return redirect()->to('/report/bullying')->with('message', 'Your report has been received for counselor review. You can check its progress in My reports. If you need help while waiting, please approach the Guidance Office or a trusted school staff member.');
     }
 
     private function sendLocalSms($phone, $message)
