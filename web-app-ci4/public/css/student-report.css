@@ -1,4 +1,12 @@
 /* Incident reporting uses the same page grid and account header as Safe Space. */
+/* Keep Safari's scrolling form surfaces opaque and avoid animating input geometry. */
+.student-form-page--report .student-entry-form input[type="text"],
+.student-form-page--report .report-description .textarea-field { background: #fff; box-shadow: none; transition: border-color .15s ease; }
+@media (max-width: 1099px) {
+    .student-form-page--report .vent-workspace { grid-template-columns: minmax(0, 1fr); }
+    .student-form-page--report .report-support { display: block; width: 100%; }
+    .student-form-page--report .report-guidance-card { width: 100%; }
+}
 .student-form-page--report .student-section-label { color: var(--school-green); }
 .student-form-page--report .report-fields { display: grid; gap: 24px; min-width: 0; }
 .student-form-page--report .report-fields label.block, .student-form-page--report .report-fields label, .student-form-page--report .role-prompt { display: block; margin-bottom: 10px; color: var(--form-text); font-size: 16px; font-weight: 600; line-height: 1.4; }
