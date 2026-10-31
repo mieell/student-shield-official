@@ -25,7 +25,10 @@ class BullyReportController extends BaseController
             ->orderBy('id', 'DESC')->limit(50)->get()->getResultArray();
 
         return $this->response->setHeader('Cache-Control', 'no-store')
-            ->setBody(view('reports/bullying_form', ['studentReports' => $reports]));
+            ->setBody(view('reports/bullying_form', [
+                'studentReports' => $reports,
+                'showReportHistory' => $this->request->getGet('view') === 'reports',
+            ]));
     }
 
     public function submit()

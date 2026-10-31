@@ -6,11 +6,11 @@ $reportStatuses = [
     'rejected_fake' => ['Review completed', 'The counselor did not verify this report. Contact the Guidance Office for clarification.'],
 ];
 ?>
-<details id="my-reports" class="student-report-tracker">
-    <summary>My reports <span><?= count($studentReports) ?></span></summary>
+<section id="my-reports" class="student-report-tracker" aria-labelledby="my-reports-title">
+    <h3 id="my-reports-title">My reports</h3>
     <div class="student-report-tracker-body">
         <p>Your latest 50 submissions. Refresh this page to check for updates.</p>
-        <a href="<?= base_url('report/bullying') ?>#my-reports">Refresh report status</a>
+        <a href="<?= base_url('report/bullying') ?>?view=reports">Refresh report status</a>
         <?php if (!$studentReports): ?>
             <p>You have not submitted any reports yet.</p>
         <?php else: ?>
@@ -26,7 +26,4 @@ $reportStatuses = [
             </ul>
         <?php endif; ?>
     </div>
-</details>
-<script>
-if (window.location.hash === '#my-reports') document.getElementById('my-reports').open = true;
-</script>
+</section>

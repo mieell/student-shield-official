@@ -4,6 +4,19 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class StudentReportLayoutTest extends CIUnitTestCase
 {
+    public function testReportViewsShowOnlyTheSelectedPanel(): void
+    {
+        helper(['url', 'form']);
+        foreach ([false, true] as $history) {
+            $dom = new DOMDocument();
+            @$dom->loadHTML(view('reports/bullying_form', ['showReportHistory' => $history]));
+            $xpath = new DOMXPath($dom);
+            $this->assertSame($history ? 1 : 0, $xpath->query('//*[@id="bullyingForm"]/ancestor::*[@hidden]')->length);
+            $this->assertSame($history ? 0 : 1, $xpath->query('//*[@id="my-reports"]/ancestor::*[@hidden]')->length);
+            $this->assertSame(1, $xpath->query('//nav[@aria-label="Incident report views"]/a[@aria-current="page"]')->length);
+        }
+    }
+
     public function testReportLayoutPreservesNativeUploadAndReporterContracts(): void
     {
         helper(['url', 'form']);

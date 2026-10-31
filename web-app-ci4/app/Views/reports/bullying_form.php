@@ -1,3 +1,4 @@
+<?php $showReportHistory = $showReportHistory ?? false; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,8 +83,15 @@
                     </div>
                 <?php endif; ?>
 
-                <?= view('reports/student_report_status', ['studentReports' => $studentReports ?? []]) ?>
+                <nav class="student-report-tabs" aria-label="Incident report views">
+                    <a href="<?= base_url('report/bullying') ?>" <?= !$showReportHistory ? 'aria-current="page"' : '' ?>>Submit a report</a>
+                    <a href="<?= base_url('report/bullying') ?>?view=reports" <?= $showReportHistory ? 'aria-current="page"' : '' ?>>My reports</a>
+                </nav>
+                <div <?= !$showReportHistory ? 'hidden' : '' ?> class="student-report-panel">
+                    <?= view('reports/student_report_status', ['studentReports' => $studentReports ?? []]) ?>
+                </div>
 
+                <div class="student-report-panel" <?= $showReportHistory ? 'hidden' : '' ?>>
                 <div class="vent-workspace">
                 <div class="vent-composer">
                 <!-- Incident Report Form -->
@@ -187,6 +195,7 @@
                         </div>
                     </section>
                 </aside>
+                </div>
                 </div>
                 <?= view('partials/student_form_footer') ?>
         </div>
