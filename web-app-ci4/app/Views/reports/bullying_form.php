@@ -69,6 +69,8 @@
                     <p><?= $showReportHistory ? 'Check the status of your submitted bullying reports.' : 'Your guidance counselor will review your report and help with the next steps.' ?></p>
                 </header>
 
+                <p class="report-expectation-note">Report status shows the school's review progress. Submitting a report does not guarantee an immediate response or resolution. If you are in immediate danger, seek help from a trusted adult or school staff right away.</p>
+
                 <!-- Flash Messages -->
                 <?php if (session()->getFlashdata('message')): ?>
                     <div class="bg-emerald-50 border-l-4 border-emerald-400 p-4 mb-5 rounded-r-xl flex items-center gap-3 animate-[shake_0.5s_ease-in-out]">

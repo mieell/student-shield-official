@@ -129,3 +129,5 @@
 .student-report-status { padding: 4px 10px; border-radius: 6px; background: #edf6ef; color: #235d3a; font-weight: 600; }
 .student-report-date { font-size: 12px; color: #526259; overflow-wrap: anywhere; }
 .student-report-panel[hidden] { display: none !important; }
+
+.student-form-page--report .report-expectation-note { margin: 0 0 24px; padding: 14px 16px; border: 1px solid #cfd9d4; border-radius: 8px; background: #edf6ef; color: #3d4943; font-size: 14px; line-height: 1.6; }

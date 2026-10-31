@@ -1,8 +1,8 @@
 <?php
 $reportStatuses = [
-    'pending_review' => ['Submitted', 'Your report is awaiting counselor review.'],
-    'verified' => ['Under review', 'The counselor has verified your report. Follow-up may still be ongoing.'],
-    'resolved' => ['Resolved', 'The counselor has marked this report as resolved.'],
+    'pending_review' => ['Submitted', 'Your report was received and is awaiting counselor review.'],
+    'verified' => ['Under review', 'Your counselor is reviewing the report. Further follow-up may be needed.'],
+    'resolved' => ['Closed by counselor', 'The counselor has marked this report as closed. If the concern continues, please contact the Guidance Office.'],
     'rejected_fake' => ['Review completed', 'The counselor did not verify this report. Contact the Guidance Office for clarification.'],
 ];
 ?>

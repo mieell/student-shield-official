@@ -88,9 +88,9 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertStringContainsString('Report #731', $html);
         $this->assertStringNotContainsString('Report #732', $html);
         $this->assertStringNotContainsString('SECRET_INVESTIGATION', $html);
-        $this->assertStringContainsString('Your report is awaiting counselor review.', $html);
+        $this->assertStringContainsString('Your report was received and is awaiting counselor review.', $html);
         $this->assertStringContainsString('no-store', $response->getHeaderLine('Cache-Control'));
-        foreach (['verified' => 'The counselor has verified your report.', 'resolved' => 'The counselor has marked this report as resolved.', 'rejected_fake' => 'The counselor did not verify this report.'] as $status => $text) {
+        foreach (['verified' => 'Your counselor is reviewing the report.', 'resolved' => 'The counselor has marked this report as closed.', 'rejected_fake' => 'The counselor did not verify this report.'] as $status => $text) {
             $this->rbacDb->table('bully_reports')->where('id', 731)->update(['status' => $status]);
             $response = $this->controller(\App\Controllers\BullyReportController::class, 'report/bullying')->index();
             $this->assertStringContainsString($text, $response->getBody());
