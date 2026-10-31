@@ -133,12 +133,7 @@ class AuthController extends BaseController
         if ($user && $passwordValid && \App\Libraries\RoleAccess::enabled($user)) {
             $roleNames = [1 => 'counselor', 2 => 'super_admin', 3 => 'principal'];
 
-            // Temporary production pause: OTP resumes automatically after 24 hours.
-            // An explicit environment setting can end or extend the pause.
-            $otpSetting = env('staffLogin.otpEnabled', null);
-            $otpPaused = $otpSetting === false
-                || ($otpSetting === null && time() < strtotime('2026-10-22T15:52:00+00:00'));
-            if ($otpPaused) {
+            if ($this->demoOtpBypassAllowed($user)) {
                 $this->clearOtpSession();
                 session()->regenerate();
                 session()->set([
@@ -150,7 +145,7 @@ class AuthController extends BaseController
                     'isLoggedIn'    => true,
                     'last_activity' => time(),
                 ]);
-                $this->logAudit('USER_LOGIN', 'system', $user['id']);
+                $this->logAudit('DEMO_LOGIN_OTP_BYPASS', 'system', $user['id']);
                 return redirect()->to(\App\Libraries\RoleAccess::home((int) $user['role']));
             }
 
@@ -223,6 +218,16 @@ class AuthController extends BaseController
         }
 
         return redirect()->back()->with('error', 'Invalid credentials provided.');
+    }
+
+    protected function demoOtpBypassAllowed(array $user, ?int $now = null): bool
+    {
+        // Temporary testing exception; passwords and account-status checks run first.
+        $demoRoles = ['Principal' => 3, 'Counselor' => 1, 'Superadmin' => 2];
+        return env('staffLogin.demoOtpBypassEnabled', true) === true
+            && ($now ?? time()) < strtotime('2026-11-15T01:26:00+08:00')
+            && isset($demoRoles[$user['name'] ?? ''])
+            && $demoRoles[$user['name']] === (int) ($user['role'] ?? -1);
     }
 
     public function otpView()
