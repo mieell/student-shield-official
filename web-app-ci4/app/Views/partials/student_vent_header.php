@@ -4,7 +4,7 @@
             <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM logo" width="48" height="48">
             <span><strong>StudentShield</strong><span>Student portal</span></span>
         </a>
-        <?= view('partials/student_form_navigation', ['page' => $page ?? 'vent', 'showSignout' => false, 'showMyReports' => true, 'showReportIcon' => true]) ?>
+        <?= view('partials/student_workspace_navigation', ['page' => $page ?? 'vent']) ?>
         <details id="ventAccountMenu" class="vent-account-menu" open>
             <summary aria-label="Account menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></summary>
             <form action="<?= base_url('logout') ?>" method="POST">

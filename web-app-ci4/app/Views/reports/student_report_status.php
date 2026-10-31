@@ -6,8 +6,7 @@ $reportStatuses = [
     'rejected_fake' => ['Review completed', 'The counselor did not verify this report. Contact the Guidance Office for clarification.'],
 ];
 ?>
-<section id="my-reports" class="student-report-tracker" aria-labelledby="my-reports-title">
-    <h3 id="my-reports-title">My reports</h3>
+<section id="my-reports" class="student-report-tracker" aria-label="Submitted report statuses">
     <div class="student-report-tracker-body">
         <p>Your latest 50 submissions. Refresh this page to check for updates.</p>
         <a href="<?= base_url('report/bullying') ?>?view=reports">Refresh report status</a>

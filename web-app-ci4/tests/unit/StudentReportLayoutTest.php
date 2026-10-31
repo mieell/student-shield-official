@@ -4,6 +4,24 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class StudentReportLayoutTest extends CIUnitTestCase
 {
+    public function testWorkspaceNavigationHasTheSameThreeDestinationsOnEveryPage(): void
+    {
+        helper(['url', 'form']);
+        foreach (['vent', 'report', 'reports'] as $page) {
+            $dom = new DOMDocument();
+            @$dom->loadHTML(view('partials/student_vent_header', ['page' => $page]));
+            $xpath = new DOMXPath($dom);
+            $links = $xpath->query('//nav[@aria-label="Student page navigation"]/a');
+            $this->assertCount(3, $links);
+            $this->assertSame(['Safe Space', 'Report Bullying', 'My reports'], array_map(
+                static fn ($link) => trim($link->textContent), iterator_to_array($links)
+            ));
+            $this->assertSame(1, $xpath->query('//nav/a[@aria-current="page"]')->length);
+            $this->assertSame(0, $xpath->query('//*[@data-student-back]')->length);
+            $this->assertSame(1, $xpath->query('//a[contains(@class,"vent-brand")][contains(@href,"student/dashboard")]')->length);
+        }
+    }
+
     public function testReportViewsShowOnlyTheSelectedPanel(): void
     {
         helper(['url', 'form']);
