@@ -256,14 +256,8 @@
 
                 <!-- Case Status Tracker Banner -->
                 <div class="bg-white/10 backdrop-blur border border-white/15 p-4 rounded-xl flex items-center gap-4 self-stretch md:self-auto">
-                    <div>
-                        <p class="text-[10px] text-emerald-200 font-bold uppercase tracking-widest">Case Status</p>
-                        <p id="currentStatusText" class="text-lg font-heading font-bold text-white mt-0.5">Active Monitoring</p>
-                    </div>
                     <div class="flex flex-col gap-2">
-                        <button onclick="openStatusModal()" class="no-print bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm">
-                            Manage Case
-                        </button>
+                        <a href="<?= base_url('admin/incidents') ?>" class="no-print bg-white text-emerald-900 font-bold px-3 py-2 rounded-lg text-xs">Review incident reports</a>
                         <!-- Student Pending Request Badge -->
                         <div id="pendingRequestBadge" class="hidden no-print bg-yellow-400/20 border border-yellow-400/50 text-yellow-300 text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 animate-pulse">
                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
@@ -457,17 +451,17 @@
                         <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                        Add Documentation Note
+                        Counselor notes
                     </h3>
                     <form id="noteForm" onsubmit="submitNote(event)" class="space-y-4">
                         <div>
                             <label class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Note Type</label>
                             <select id="noteType" class="mt-1 w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-700/30 focus:border-emerald-700 outline-none">
-                                <option value="general">General Documentation</option>
-                                <option value="observation">Behavioral Observation</option>
-                                <option value="intervention">Action Taken / Intervention</option>
-                                <option value="recommendation">Guidance Recommendation</option>
-                                <option value="follow_up">Follow-up Assessment</option>
+                                <option value="general">General note</option>
+                                <option value="observation">Observation</option>
+                                <option value="intervention">Action taken</option>
+                                <option value="recommendation">Recommendation</option>
+                                <option value="follow_up">Follow-up</option>
                             </select>
                         </div>
                         <div>
@@ -475,7 +469,7 @@
                             <textarea id="noteContent" rows="5" placeholder="Enter clinical assessment, guidance note, or meeting summary..." required class="mt-1 w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-1 focus:ring-emerald-700 outline-none resize-none"></textarea>
                         </div>
                         <button type="submit" class="w-full bg-primary hover:bg-primary-darker text-white font-bold py-2.5 rounded-xl transition shadow-md">
-                            Save Counselor Note
+                            Save note
                         </button>
                     </form>
                 </div>
@@ -487,7 +481,7 @@
                     <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                     </svg>
-                    Case Status Progression Log
+                    Previous case status history (read-only)
                 </h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse text-sm">
@@ -513,41 +507,6 @@
     <!-- Print Only Confidential Footer -->
     <div class="hidden print:block fixed bottom-0 left-0 right-0 text-center text-[10px] text-gray-400 font-mono border-t border-gray-200 pt-2">
         StudentShield Wellness Report • Prepared on <span class="print-date"></span> • STRICTLY CONFIDENTIAL
-    </div>
-
-    <!-- Status Change Modal (No-print) -->
-    <div id="statusModal" class="no-print fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4" onclick="if(event.target===this)closeStatusModal()" role="dialog" aria-modal="true" aria-label="Update Case Status">
-        <div class="bg-white rounded-2xl w-[92%] max-w-md shadow-2xl border border-gray-200 max-h-[90dvh] overflow-y-auto">
-            <div class="p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold font-heading text-emerald-950">Update Case Management Status</h3>
-                <button onclick="closeStatusModal()" aria-label="Close" class="p-2 min-w-[40px] min-h-[40px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-emerald-700">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-            </div>
-            <form onsubmit="submitStatus(event)" class="space-y-4">
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">New Status</label>
-                    <select id="newStatusSelect" class="mt-1 w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-700/30 focus:border-emerald-700 outline-none">
-                        <option value="active_monitoring">Active Monitoring</option>
-                        <option value="intervention_ongoing">Intervention Ongoing</option>
-                        <option value="parent_consultation_required">Parent Consultation Required</option>
-                        <option value="escalated">Escalated to Guidance Board</option>
-                        <option value="under_investigation">Under Investigation</option>
-                        <option value="resolved">Resolved Case</option>
-                        <option value="closed">Closed Case</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Action / Meeting Remarks</label>
-                    <textarea id="statusRemarks" rows="4" placeholder="Describe the reason for status change or counseling session highlights..." required class="mt-1 w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-1 focus:ring-emerald-700 outline-none resize-none"></textarea>
-                </div>
-                <button type="submit" class="w-full bg-primary hover:bg-primary-darker text-white font-bold py-2.5 rounded-xl transition shadow-md">
-                    Update Status & Log Case Event
-                </button>
-            </form>
-            </div>
-        </div>
     </div>
 
     <!-- Google Meet publication dialog -->
@@ -673,18 +632,6 @@
                         risk === 'HIGH' ? 'bg-orange-500 text-white' :
                         risk === 'MEDIUM' ? 'bg-yellow-500 text-slate-900' : 'bg-emerald-600 text-white'
                     }`;
-
-                    // Case Status
-                    const cleanStatus = {
-                        'active_monitoring': 'Active Monitoring',
-                        'intervention_ongoing': 'Intervention Ongoing',
-                        'parent_consultation_required': 'Parent Consultation Required',
-                        'escalated': 'Escalated',
-                        'under_investigation': 'Under Investigation',
-                        'resolved': 'Resolved Case',
-                        'closed': 'Closed Case'
-                    };
-                    document.getElementById('currentStatusText').innerText = cleanStatus[data.currentStatus] || 'Active Monitoring';
 
                     // Summary Stats
                     document.getElementById('statTotalVents').innerText = data.totalVents;
@@ -986,8 +933,8 @@
             notes.forEach(n => {
                 const dateStr = n.created_at ? new Date(n.created_at.replace(' ', 'T')).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'N/A';
                 const typeLabels = {
-                    'general': 'General Documentation',
-                    'observation': 'Behavioral Observation',
+                    'general': 'General note',
+                    'observation': 'Observation',
                     'intervention': 'Action/Intervention',
                     'recommendation': 'Recommendation',
                     'follow_up': 'Follow-Up Note'
@@ -1014,7 +961,7 @@
             });
         }
 
-        // Render Case Status Progression Log
+        // Render Previous case status history (read-only)
         function renderStatusHistoryTable(history) {
             const tbody = document.getElementById('statusHistoryTableBody');
             tbody.innerHTML = '';
@@ -1107,46 +1054,6 @@
             });
         }
 
-        // Status Modal Handlers
-        function openStatusModal() {
-            document.getElementById('statusModal').classList.remove('hidden');
-            document.getElementById('statusModal').classList.add('flex');
-        }
-
-        function closeStatusModal() {
-            document.getElementById('statusModal').classList.add('hidden');
-            document.getElementById('statusModal').classList.remove('flex');
-            document.getElementById('statusRemarks').value = '';
-        }
-
-        function submitStatus(e) {
-            e.preventDefault();
-            const status = document.getElementById('newStatusSelect').value;
-            const remarks = document.getElementById('statusRemarks').value;
-
-            const formData = new FormData();
-            formData.append('status', status);
-            formData.append('remarks', remarks);
-
-            fetch(`${formBaseUrl}/${studentId}/status`, {
-                method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
-                body: formData
-            })
-            .then(res => {
-                if (!res.ok) throw new Error("HTTP error " + res.status);
-                return res.json();
-            })
-            .then(data => {
-                closeStatusModal();
-                loadCaseData();
-            })
-            .catch(err => {
-                console.error("Status update error:", err);
-                alert("Failed to update status.");
-            });
-        }
-
         function startVideoMeeting() {
             document.getElementById('googleMeetError').classList.add('hidden');
             document.getElementById('googleMeetModal').classList.remove('hidden');
@@ -1221,10 +1128,8 @@
         // Escape key closes any open modal on this page
         document.addEventListener('keydown', function(e) {
             if (e.key !== 'Escape') return;
-            const statusModal = document.getElementById('statusModal');
             const meetModal  = document.getElementById('googleMeetModal');
-            if (statusModal && !statusModal.classList.contains('hidden')) closeStatusModal();
-            else if (meetModal && !meetModal.classList.contains('hidden')) hideGoogleMeetDialog();
+            if (meetModal && !meetModal.classList.contains('hidden')) hideGoogleMeetDialog();
         });
     </script>
     <?= view('partials/session_idle_modal') ?>

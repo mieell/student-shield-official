@@ -242,9 +242,13 @@ class AdminController extends BaseController
     {
         if (!$this->guardStaffAccess()) return $this->forbidden();
         $db = \Config\Database::connect();
-        $db->table('bully_reports')->where('id', $id)->update(['status' => 'resolved']);
+        $db->table('bully_reports')->where('id', $id)->where('status', 'verified')
+            ->where('deleted_at', null)->update(['status' => 'resolved']);
+        if ($db->affectedRows() !== 1) {
+            return redirect()->to('/admin/incidents')->with('error', 'Only an active, verified report can be closed. Refresh the incidents list to check its status.');
+        }
         $this->logAudit('RESOLVE', 'incident', (int) $id);
-        return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id resolved.");
+        return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id closed. Its student-facing status has been updated.");
     }
 
     /**

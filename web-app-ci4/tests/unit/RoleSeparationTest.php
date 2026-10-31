@@ -102,6 +102,25 @@ final class RoleSeparationTest extends CIUnitTestCase
         }
     }
 
+    public function testClosingVerifiedReportUpdatesOnlyThatReportAndStudentView(): void
+    {
+        $this->rbacDb->table('bully_reports')->insert(['id' => 731, 'reporter_student_id' => 10, 'status' => 'verified', 'created_at' => '2026-11-01 10:00:00']);
+        $this->rbacDb->table('bully_reports')->insert(['id' => 732, 'reporter_student_id' => 10, 'status' => 'verified', 'deleted_at' => '2026-11-01']);
+        $this->login(0);
+        $this->assertSame(403, $this->controller(AdminController::class, 'admin/incident/resolve/731')->resolveIncident(731)->getStatusCode());
+        $this->login(1);
+        $response = $this->controller(AdminController::class, 'admin/incident/resolve/731')->resolveIncident(731);
+        $this->assertStringEndsWith('/admin/incidents', $response->getHeaderLine('Location'));
+        $this->assertSame('resolved', $this->rbacDb->table('bully_reports')->where('id', 731)->get()->getRowArray()['status']);
+        foreach ([1 => 'pending_review', 732 => 'verified'] as $id => $status) {
+            $this->controller(AdminController::class, 'admin/incident/resolve/' . $id)->resolveIncident($id);
+            $this->assertSame($status, $this->rbacDb->table('bully_reports')->where('id', $id)->get()->getRowArray()['status']);
+        }
+        $this->login(0);
+        $html = $this->controller(\App\Controllers\BullyReportController::class, 'report/bullying')->index()->getBody();
+        $this->assertStringContainsString('Closed by counselor', $html);
+    }
+
     public function testIncidentArchiveAndRestoreStayOnIncidents(): void
     {
         $this->login(1);

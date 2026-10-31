@@ -4,6 +4,23 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class StaffPagesTest extends CIUnitTestCase
 {
+    public function testCaseProfileKeepsNotesAndMeetingsWithoutDuplicateStatusControls(): void
+    {
+        helper(['url', 'form']);
+        session()->set(['isLoggedIn' => true, 'role' => 1]);
+        $html = view('case_summary', ['studentId' => 10]);
+        $dom = new DOMDocument();
+        @$dom->loadHTML($html);
+        $xpath = new DOMXPath($dom);
+        $this->assertSame(0, $xpath->query('//*[@id="statusModal" or @id="newStatusSelect" or @id="currentStatusText"]')->length);
+        foreach (['noteType', 'noteContent', 'statusHistoryTableBody', 'btnStartVideoMeeting', 'pendingRequestBadge'] as $id) {
+            $this->assertSame(1, $xpath->query('//*[@id="' . $id . '"]')->length);
+        }
+        $this->assertStringContainsString('Review incident reports', $html);
+        $this->assertStringNotContainsString('submitStatus(', $html);
+        session()->remove(['isLoggedIn', 'role']);
+    }
+
     public function testRegistrationNotificationIsCounselorOnly(): void
     {
         helper(['url', 'form']);

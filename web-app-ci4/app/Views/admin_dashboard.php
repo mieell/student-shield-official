@@ -1400,6 +1400,12 @@ $pageDescriptions = [
                                     </form>
                                 ` : ''}
                                 ${isVerified && !showArchivedIncidents ? `
+                                    <form action="<?= base_url('admin/incident/resolve/') ?>${incident.id}" method="POST">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" onclick="return confirm('Close this individual report after completing the necessary follow-up? The student will see Closed by counselor. Other reports and the overall student case will stay unchanged.');" class="w-full text-xs font-semibold text-white bg-[#235D3A] hover:bg-[#1b492d] px-3 py-2 rounded-lg min-h-[44px]">
+                                            Close report
+                                        </button>
+                                    </form>
                                     <span class="text-xs font-semibold px-3 py-2 rounded-lg text-[#235D3A] bg-[#235D3A]/10 border border-[#235D3A]/20 flex items-center justify-center gap-1.5 w-full">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                         Alerts Sent
