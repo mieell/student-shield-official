@@ -1,4 +1,20 @@
 /* Safe Space keeps the school's colors and puts writing ahead of support options. */
+@media (max-width: 899px) {
+    body.student-form-page--vent .vent-support { gap: 18px; padding-top: 18px; }
+    body.student-form-page--vent .vent-support-intro { padding: 16px 18px; }
+    body.student-form-page--vent .vent-support-intro h2 { font-size: 21px; margin-bottom: 6px; }
+    body.student-form-page--vent .vent-session-support { padding-top: 0; border-top: 0; }
+    body.student-form-page--vent .vent-session-support > h2 { padding-left: 0; margin-bottom: 12px; }
+    body.student-form-page--vent .meet-icon-wrap { position: static; flex-shrink: 0; width: 44px; height: 44px; }
+    body.student-form-page--vent .meet-icon-wrap svg { width: 24px; height: 24px; }
+    body.student-form-page--vent .meet-card-header > div:last-child { padding-left: 0; min-width: 0; }
+    body.student-form-page--vent .meet-card-header { gap: 12px; margin-bottom: 14px; }
+    body.student-form-page--vent .vent-urgent-support { margin-top: 18px; padding-top: 18px; }
+    body.student-workspace-page .vent-footer { flex-direction: column; justify-content: center; text-align: center; gap: 8px; padding: 18px 12px calc(18px + env(safe-area-inset-bottom)); }
+    body.student-workspace-page .vent-footer-brand { justify-content: center; flex-wrap: wrap; gap: 8px; }
+    body.student-workspace-page .vent-footer-brand img { width: 28px; height: 28px; }
+    body.student-workspace-page .vent-copyright { font-size: 11px; line-height: 1.6; }
+}
 .student-workspace-page { --form-background: #f5f8f5; --form-text: #203d2c; --form-border: #a5b7ab; --form-divider: #d8e3db; }
 .student-workspace-page *, .student-workspace-page *::before, .student-workspace-page *::after { box-sizing: border-box; }
 .student-workspace-page h1, .student-workspace-page h2, .student-workspace-page h3 { font-family: Nunito, sans-serif; }
