@@ -13,7 +13,7 @@ final class StudentReportLayoutTest extends CIUnitTestCase
             $xpath = new DOMXPath($dom);
             $this->assertSame($history ? 1 : 0, $xpath->query('//*[@id="bullyingForm"]/ancestor::*[@hidden]')->length);
             $this->assertSame($history ? 0 : 1, $xpath->query('//*[@id="my-reports"]/ancestor::*[@hidden]')->length);
-            $this->assertSame(1, $xpath->query('//nav[@aria-label="Incident report views"]/a[@aria-current="page"]')->length);
+            $this->assertSame(1, $xpath->query('//nav[@aria-label="Student page navigation"]/a[@aria-current="page"]')->length);
         }
     }
 

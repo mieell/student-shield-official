@@ -1,4 +1,4 @@
-<?php $isIncidentPage = ($page ?? 'vent') === 'report'; ?>
+<?php $isIncidentPage = in_array($page ?? 'vent', ['report', 'reports'], true); ?>
 <style>
     .student-form-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 24px; }
     .student-form-nav .back-link { margin-right: auto; }
@@ -25,6 +25,12 @@
         <?php if ($showReportIcon ?? false): ?><svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="<?= $isIncidentPage ? 'M8 10h8M8 14h5M21 12a9 9 0 0 1-9 9H3l2-4a9 9 0 1 1 16-5Z' : 'M5 21V4m0 0c5-4 9 4 15 0v10c-6 4-10-4-15 0' ?>"/></svg><?php endif; ?>
         <?= $isIncidentPage ? 'Safe Space' : 'Report Bullying' ?>
     </a>
+    <?php if ($showMyReports ?? false): ?>
+    <?php if ($isIncidentPage): ?>
+    <a href="<?= base_url('report-bullying') ?>" class="nav-control report-link" <?= ($page ?? '') === 'report' ? 'aria-current="page"' : '' ?>>Report Bullying</a>
+    <?php endif; ?>
+    <a href="<?= base_url('report/bullying') ?>?view=reports" class="nav-control reports-history-link" <?= ($page ?? '') === 'reports' ? 'aria-current="page"' : '' ?>>My reports</a>
+    <?php endif; ?>
     <?php if ($showSignout ?? true): ?>
     <form action="<?= base_url('logout') ?>" method="POST" class="student-desktop-signout">
         <?= csrf_field() ?>

@@ -249,3 +249,9 @@
     .student-workspace-page .vent-urgent-support > p { font-size: 14px; }
     .student-workspace-page .vent-crisis-details > summary { min-height: 44px; font-size: 15px; }
 }
+
+.student-workspace-page .vent-header .student-form-nav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }
+@media (max-width: 767px) {
+ .student-workspace-page .vent-header .student-form-nav { flex-wrap: wrap; justify-content: flex-start; gap: 4px 12px; }
+ .student-workspace-page .vent-header .student-form-nav .nav-control { min-height: 44px; }
+}

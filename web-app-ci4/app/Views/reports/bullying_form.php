@@ -56,7 +56,7 @@
 </head>
 <body class="student-form-page student-form-page--report student-workspace-page antialiased min-h-screen">
 
-    <?= view('partials/student_vent_header', ['page' => 'report']) ?>
+    <?= view('partials/student_vent_header', ['page' => $showReportHistory ? 'reports' : 'report']) ?>
     <main class="student-form-content vent-content">
         <div class="student-form-body">
                 <!-- Page heading stays ahead of the form on every screen size. -->
@@ -65,8 +65,8 @@
                         <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m10.3 3.9-8 14a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0ZM12 9v4m0 4h.01" /></svg>
                         Incident Report
                     </span>
-                    <h2>Tell us what happened.</h2>
-                    <p>Your guidance counselor will review your report and help with the next steps.</p>
+                    <h2><?= $showReportHistory ? 'My reports' : 'Tell us what happened.' ?></h2>
+                    <p><?= $showReportHistory ? 'Check the status of your submitted bullying reports.' : 'Your guidance counselor will review your report and help with the next steps.' ?></p>
                 </header>
 
                 <!-- Flash Messages -->
@@ -83,10 +83,7 @@
                     </div>
                 <?php endif; ?>
 
-                <nav class="student-report-tabs" aria-label="Incident report views">
-                    <a href="<?= base_url('report/bullying') ?>" <?= !$showReportHistory ? 'aria-current="page"' : '' ?>>Submit a report</a>
-                    <a href="<?= base_url('report/bullying') ?>?view=reports" <?= $showReportHistory ? 'aria-current="page"' : '' ?>>My reports</a>
-                </nav>
+
                 <div <?= !$showReportHistory ? 'hidden' : '' ?> class="student-report-panel">
                     <?= view('reports/student_report_status', ['studentReports' => $studentReports ?? []]) ?>
                 </div>
