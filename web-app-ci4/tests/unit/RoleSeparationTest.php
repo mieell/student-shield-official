@@ -78,6 +78,29 @@ final class RoleSeparationTest extends CIUnitTestCase
         return $controller;
     }
 
+    public function testStudentReportTrackingIsPrivateAndReflectsUpdates(): void
+    {
+        $this->login(0);
+        $this->rbacDb->table('bully_reports')->insert(['id' => 731, 'reporter_student_id' => 10, 'status' => 'pending_review', 'created_at' => '2026-11-01 10:00:00', 'incident_details' => 'SECRET_INVESTIGATION']);
+        $this->rbacDb->table('bully_reports')->insert(['id' => 732, 'reporter_student_id' => 11, 'victim_student_id' => 10, 'status' => 'resolved', 'created_at' => '2026-11-01 11:00:00']);
+        $response = $this->controller(\App\Controllers\BullyReportController::class, 'report/bullying')->index();
+        $html = $response->getBody();
+        $this->assertStringContainsString('Report #731', $html);
+        $this->assertStringNotContainsString('Report #732', $html);
+        $this->assertStringNotContainsString('SECRET_INVESTIGATION', $html);
+        $this->assertStringContainsString('Your report is awaiting counselor review.', $html);
+        $this->assertStringContainsString('no-store', $response->getHeaderLine('Cache-Control'));
+        foreach (['verified' => 'The counselor has verified your report.', 'resolved' => 'The counselor has marked this report as resolved.', 'rejected_fake' => 'The counselor did not verify this report.'] as $status => $text) {
+            $this->rbacDb->table('bully_reports')->where('id', 731)->update(['status' => $status]);
+            $response = $this->controller(\App\Controllers\BullyReportController::class, 'report/bullying')->index();
+            $this->assertStringContainsString($text, $response->getBody());
+        }
+        foreach ([1, 2, 3] as $role) {
+            $this->login($role);
+            $this->assertSame(403, $this->controller(\App\Controllers\BullyReportController::class, 'report/bullying')->index()->getStatusCode());
+        }
+    }
+
     public function testIncidentArchiveAndRestoreStayOnIncidents(): void
     {
         $this->login(1);

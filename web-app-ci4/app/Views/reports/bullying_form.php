@@ -82,6 +82,8 @@
                     </div>
                 <?php endif; ?>
 
+                <?= view('reports/student_report_status', ['studentReports' => $studentReports ?? []]) ?>
+
                 <div class="vent-workspace">
                 <div class="vent-composer">
                 <!-- Incident Report Form -->

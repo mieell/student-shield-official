@@ -19,7 +19,13 @@ class BullyReportController extends BaseController
             }
         }
 
-        return view('reports/bullying_form');
+        $reports = \Config\Database::connect()->table('bully_reports')
+            ->select('id, status, created_at')
+            ->where('reporter_student_id', (int) $userId)
+            ->orderBy('id', 'DESC')->limit(50)->get()->getResultArray();
+
+        return $this->response->setHeader('Cache-Control', 'no-store')
+            ->setBody(view('reports/bullying_form', ['studentReports' => $reports]));
     }
 
     public function submit()
