@@ -513,6 +513,12 @@ final class RoleSeparationTest extends CIUnitTestCase
         $policy = new \ReflectionMethod($controller, 'demoOtpBypassAllowed');
         $policy->setAccessible(true);
         $expiry = strtotime('2026-11-15T01:26:00+08:00');
+        foreach (['Superadmin', 'SuperAdmin', 'superadmin'] as $name) {
+            $this->assertTrue($policy->invoke($controller, ['name' => $name, 'role' => 2], $expiry - 1));
+            $this->assertFalse($policy->invoke($controller, ['name' => $name, 'role' => 2], $expiry));
+            $this->assertFalse($policy->invoke($controller, ['name' => $name, 'role' => 1], $expiry - 1));
+        }
+        $this->assertFalse($policy->invoke($controller, ['name' => 'Superadmin1', 'role' => 2], $expiry - 1));
         $demo = ['name' => 'Principal', 'role' => 3];
         $this->assertTrue($policy->invoke($controller, $demo, $expiry - 1));
         $this->assertFalse($policy->invoke($controller, $demo, $expiry));

@@ -224,10 +224,15 @@ class AuthController extends BaseController
     {
         // Temporary testing exception; passwords and account-status checks run first.
         $demoRoles = ['Principal' => 3, 'Counselor' => 1, 'Superadmin' => 2];
+        $accountName = (string) ($user['name'] ?? '');
+        // MySQL may accept Superadmin while returning the stored spelling SuperAdmin.
+        if ((int) ($user['role'] ?? -1) === 2 && strcasecmp($accountName, 'Superadmin') === 0) {
+            $accountName = 'Superadmin';
+        }
         return env('staffLogin.demoOtpBypassEnabled', true) === true
             && ($now ?? time()) < strtotime('2026-11-15T01:26:00+08:00')
-            && isset($demoRoles[$user['name'] ?? ''])
-            && $demoRoles[$user['name']] === (int) ($user['role'] ?? -1);
+            && isset($demoRoles[$accountName])
+            && $demoRoles[$accountName] === (int) ($user['role'] ?? -1);
     }
 
     public function otpView()
