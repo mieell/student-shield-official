@@ -1,17 +1,35 @@
 # StudentShield
 
+**School reporting and counselor review platform · Capstone project**
+
 StudentShield is a capstone web application for emotional-distress screening, bullying reports, and counseling follow-up at **Saint Vincent Blessed School of Manila (SVBSM)**. It gives students a private reporting channel and helps authorized school personnel organize concerns and prioritize review.
 
 **Website:** [studentshield.app](https://studentshield.app)
 
 Screening supports counselor assessment; it does not diagnose mental illness, predict clinical outcomes, or replace professional care. Automated notifications are delivery attempts, not proof that a recipient received, read, or acted on a message.
 
+## Project overview
+
+StudentShield connects a role-based PHP application with a Python text-screening service. It combines student reporting, counselor review, and school-level summaries in one workflow.
+
+- **Web engineering:** CodeIgniter 4, JavaScript, Tailwind CSS, and MySQL/MariaDB.
+- **Service integration:** authenticated FastAPI requests, multilingual text screening, and a PHP fallback when the ML service is unavailable.
+- **Access and privacy:** role-based authorization, encrypted vent text, restricted clinical records, and audit logging.
+- **Delivery:** separate GitHub Actions deployments for shared PHP hosting and a Docker-based Hugging Face Space.
+- **Verification:** PHP and Python test suites, including authorization, screening rules, and workflow checks. See the testing instructions below.
+
+### Reporting workflow
+
+Students submit fictional or real concerns through their authorized accounts. Counselors review individual reports and record notes or arrange sessions. Students can check their own report references and progress in **My reports**: Submitted → Under review → Closed by counselor. Verification and parent-alert attempts do not automatically close a report.
+
+The principal views aggregate summaries, while the super administrator manages accounts and access. The repository presents the implementation; access to staff tools and private records requires authorization. No shared production credentials are published here.
+
 ## Features and roles
 
 | Role | Access |
 |---|---|
-| Student | Registration with a twelve-digit Learner Reference Number (LRN), Safe Space vents and optional feelings, bullying reports with optional evidence, counseling requests, and assigned Google Meet access. |
-| Counselor | Student registration approval, vent and incident review, incident verification, case notes and statuses, student risk history, and counseling sessions. |
+| Student | Registration with a twelve-digit Learner Reference Number (LRN), Safe Space vents and optional feelings, bullying reports with optional evidence and private status tracking, counseling requests, and assigned Google Meet access. |
+| Counselor | Student registration approval, vent and incident review, incident verification and report closure, counselor notes, student risk history, and counseling sessions. |
 | Super Admin | Account creation and management, roles and access restrictions, and audit metadata. Individual clinical case records and counseling sessions are restricted. |
 | Principal | Aggregate analytics, report filters, and summary CSV exports. Individual clinical records are restricted. |
 | Parent / Guardian | Eligible notifications and receipts; no portal account. |
