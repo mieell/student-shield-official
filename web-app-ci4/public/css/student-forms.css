@@ -19,58 +19,7 @@
 .student-form-page h2,
 .student-form-page h3,
 .student-form-page .font-heading { font-family: 'Nunito', sans-serif; }
-.student-form-page .student-form-layout { min-height: 100vh; align-items: flex-start; }
 
-.student-form-page .brand-panel .bg-grid {
-    position: absolute; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-    background-size: 48px 48px;
-}
-
-.student-form-page .brand-panel {
-    position: sticky;
-    top: 0;
-    width: 32%;
-    max-width: 420px;
-    min-height: 100vh;
-    height: 100vh;
-    padding: 40px 32px 28px;
-    /* Vibrant school green brought back, slightly softened to prevent eye glare */
-    background:
-        radial-gradient(ellipse at 85% 85%, rgba(0,0,0,0.15) 0%, transparent 60%),
-        radial-gradient(ellipse at 70% 10%, rgba(217,170,46,0.08) 0%, transparent 45%),
-        linear-gradient(160deg, #128F42 0%, #0E7C38 55%, #09682D 100%);
-    overflow: auto;
-    gap: 40px;
-}
-.student-form-page .brand-panel > div:first-child > a { margin-bottom: 48px; }
-.student-form-page .brand-panel h2 { font-size: clamp(32px, 3.2vw, 46px); line-height: 1.15; }
-.student-form-page .brand-panel .text-white\/80,
-.student-form-page .brand-panel .text-white\/90 { color: rgba(255,255,255,0.95); }
-.student-form-page .brand-panel .text-white\/60,
-.student-form-page .brand-panel .text-white\/70 { color: rgba(255, 255, 255, 0.80); }
-.student-form-page .brand-panel .text-gold\/80 { color: var(--school-cream, #FFF4C7); }
-.student-form-page .student-form-main { min-width: 0; background: var(--form-background); }
-.student-form-page .student-mobile-header { display: none; position: sticky; top: 0; z-index: 50; width: 100%; border-bottom: 1px solid var(--form-divider); background: var(--form-surface); box-shadow: none; }
-.student-mobile-header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; }
-.student-mobile-brand { display: flex; min-width: 0; min-height: 44px; align-items: center; gap: 10px; border-radius: 8px; text-decoration: none; }
-.student-mobile-brand img { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
-.student-mobile-brand-text { display: flex; flex-direction: column; gap: 2px; }
-.student-mobile-brand-name { color: var(--form-text); font: 700 15px/1.3 'Nunito', sans-serif; }
-.student-mobile-header-row form { margin: 0; flex-shrink: 0; }
-.student-mobile-signout { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px; border: 1px solid var(--form-divider); border-radius: 10px; background: var(--form-surface); color: var(--form-muted); font: 600 13px/1.5 'Nunito', sans-serif; cursor: pointer; }
-.student-mobile-signout:hover { background: var(--form-mint); border-color: var(--form-border); }
-.student-mobile-signout svg { width: 16px; height: 16px; flex-shrink: 0; }
-.student-form-page .student-mobile-header .mobile-section-name {
-    color: var(--form-primary);
-    font-size: 12px;
-    font-weight: 500;
-    text-transform: none;
-    letter-spacing: 0;
-}
-.student-form-page--report .student-mobile-header .mobile-section-name { color: var(--form-report); }
 .student-form-page .student-form-content { width: 100%; max-width: 840px; padding: 32px 40px; }
 @media (min-width: 1024px) {
     .student-form-page--vent .student-form-content {
@@ -118,7 +67,7 @@
 .student-form-page .field-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .student-form-page .field-heading label { font-size: 16px; font-weight: 600; color: var(--form-text); }
 .student-form-page .char-count { flex-shrink: 0; padding: 4px 8px; border: 0; border-radius: 6px; box-shadow: none; background: var(--form-background); color: var(--form-muted); font: 500 12px/1.5 'Nunito', sans-serif; }
-.student-form-page .breathing-guide { display: flex; align-items: center; gap: 10px; min-height: 24px; margin-bottom: 16px; color: var(--form-muted); font-size: 14px; }
+
 .student-form-page #breathDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(160deg, #16A34A 0%, #0F8A3A 55%, #0A7530 100%); box-shadow: none; }
 .student-form-page #breathText { font-weight: 400; letter-spacing: 0; }
 .student-form-page .textarea-field,
@@ -224,47 +173,17 @@
 .student-form-page #saveDraftBtn:hover { background: var(--form-mint); }
 .student-form-page #evidence_file { padding: 10px; font-size: 14px; }
 .student-form-page #evidence_file::file-selector-button { min-height: 44px; margin-right: 12px; padding: 8px 12px; border: 0; border-radius: 8px; background: var(--form-mint); color: var(--form-primary); font: 600 13px/1.5 'Nunito', sans-serif; cursor: pointer; }
-.student-secondary {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    gap: 16px;
-    margin-top: 24px;
-    width: 100%;
-}
-.student-form-page--report .student-secondary {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
-.student-form-page--report .student-affirmation-card {
-    width: 100%;
-    text-align: center;
-    align-items: center;
-    justify-content: center;
-}
-.student-affirmation-card {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 18px 20px;
-    border: 1px solid var(--form-divider);
-    border-radius: 16px;
-    background: var(--form-surface);
-}
-.student-affirmation-card p { margin: 0; color: var(--form-text); font: 500 13px/1.6 'Nunito', sans-serif; }
+
 /* student-meet-card styles managed in partial */
-.student-form-page .student-form-footer { flex-wrap: wrap; margin-top: 24px; color: var(--form-muted); font-size: 12px; gap: 10px; }
+
 .student-form-page a:focus-visible,
 .student-form-page button:focus-visible,
 .student-form-page input[type="checkbox"]:focus-visible { outline: 2px solid var(--form-primary); outline-offset: 3px; }
-.student-form-page .brand-panel a:focus-visible { outline-color: #EAC255; }
+
 .student-form-page > .fixed.bottom-6 { width: max-content; max-width: calc(100% - 32px); overflow-wrap: anywhere; }
 .student-form-page > .fixed.bottom-6 svg { flex-shrink: 0; }
 @media (max-width: 1023px) {
-    .student-form-page .brand-panel { display: none; }
-    .student-form-page .student-mobile-header { display: block; }
+
     .student-form-page .student-form-content { max-width: 760px; padding: 24px; }
     .student-form-page .student-form-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .student-form-page .student-form-nav .back-link { grid-column: auto; justify-self: stretch; margin-right: 0; }
@@ -273,50 +192,12 @@
 .mood-toggle, .mood-done { display: none; }
 .mood-panel[hidden] { display: none; }
 @media (max-width: 599px) {
-    .mood-picker.is-enhanced .mood-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        width: 100%;
-        min-height: 48px;
-        padding: 12px 14px;
-        border: 1px solid var(--form-border);
-        border-radius: 12px;
-        background: var(--form-surface);
-        color: var(--form-text);
-        font: 500 14px/1.5 'Nunito', sans-serif;
-        text-align: left;
-        cursor: pointer;
-    }
+
     .mood-toggle svg { flex-shrink: 0; transition: transform 160ms ease-in-out; }
     .mood-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
-    .mood-picker.is-enhanced .mood-panel {
-        margin-top: 8px;
-        padding: 12px;
-        border: 1px solid var(--form-divider);
-        border-radius: 12px;
-        background: var(--form-surface);
-    }
-    .student-form-page .mood-picker.is-enhanced #moodSelect {
-        max-height: 212px;
-        overflow-y: auto;
-        padding: 3px;
-        scrollbar-width: thin;
-    }
+
     .student-form-page .mood-picker .mood-btn { min-height: 44px; padding-inline: 8px; }
-    .mood-picker.is-enhanced .mood-done {
-        display: block;
-        width: 100%;
-        min-height: 44px;
-        margin-top: 12px;
-        border: 1px solid var(--form-divider);
-        border-radius: 8px;
-        background: var(--form-mint);
-        color: var(--form-primary);
-        font: 600 14px/1.5 'Nunito', sans-serif;
-        cursor: pointer;
-    }
+
     .mood-toggle:focus-visible, .mood-done:focus-visible { outline: 2px solid var(--form-primary); outline-offset: 3px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -333,7 +214,7 @@
     .student-form-page #moodSelect { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .student-form-page .role-btn svg { display: none; }
     .student-form-page .confidentiality-option { padding: 14px 12px; }
-    .student-secondary { grid-template-columns: minmax(0, 1fr); }
+
     .student-form-page .student-meet-card { max-width: none; }
 }
 @media (max-width: 359px) {
@@ -344,8 +225,4 @@
     .student-form-page *,
     .student-form-page *::before,
     .student-form-page *::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
-}
-
-@media (max-width: 767px) {
-    .student-secondary { grid-template-columns: 1fr; }
 }

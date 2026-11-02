@@ -18,6 +18,9 @@ from deep_translator import GoogleTranslator
 import nltk
 from risk_history import evaluate_risk_history
 from violent_threats import detect_violent_threat
+from translation_gate import TranslationGate
+
+translation_gate = TranslationGate()
 
 try:
     nltk.data.find('tokenizers/punkt')
@@ -1274,6 +1277,7 @@ async def root_health_check():
         "service": "StudentShield AI Engine",
         "version": "7.3.0",
         "api_docs": "/docs",
+        "translation_policy": "english-skip-cache-cooldown-v1",
         "message": "Send POST requests to /analyze-text to classify vents.",
     }
 
@@ -1282,28 +1286,10 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
     ### STAGE 0: SLANG NORMALIZATION & GLOBAL TRANSLATION      
     ## ┘
     normalized_text = normalize_slang(text)
-    translated_text = normalized_text
-    try:
-        raw_translation = GoogleTranslator(source='auto', target='en').translate(normalized_text)
-        if raw_translation and isinstance(raw_translation, str):
-            clean_tr = raw_translation.strip()
-            # Guard against Google Translate HTML 500 / scraper rate limit errors
-            if (
-                clean_tr
-                and not clean_tr.startswith("Error 500")
-                and "Server Error" not in clean_tr
-                and "That’s an error" not in clean_tr
-                and "That's an error" not in clean_tr
-                and "<html" not in clean_tr.lower()
-            ):
-                translated_text = clean_tr
-            else:
-                logger.warning(f"GoogleTranslator returned error/HTML response; using normalized text instead.")
-    except Exception as e:
-        logger.warning(f"Translation failed, falling back to normalized: {e}")
-        translated_text = normalized_text
-
-    logger.info(f"Normalized/Translated: '{text[:80]}' → '{translated_text[:80]}'")
+    translated_text = translation_gate.translate(
+        normalized_text,
+        lambda value: GoogleTranslator(source='auto', target='en').translate(value),
+    )
 
     ## ┐
     ### STAGE 1: SCORE COMPONENTS                              

@@ -217,7 +217,7 @@
 .student-workspace-page .vent-support-intro h2::before { width: 5px; left: 0; }
 .student-workspace-page .vent-support-intro p { padding-left: 18px; }
 .student-workspace-page .vent-session-support { min-height: 0; padding: 24px; border: 1px solid var(--form-divider); border-radius: 10px; background: white; }
-.student-workspace-page .vent-talk-description { margin-bottom: 24px; }
+
 .student-workspace-page .vent-urgent-support { min-height: 0; padding: 20px 0 0; margin-top: 24px; border: 0; border-top: 1px solid var(--form-divider); border-radius: 0; }
 .student-workspace-page .vent-urgent-support h2 { font-size: 18px; margin-bottom: 6px; }
 .student-workspace-page .meet-card-header { flex-direction: column; text-align: center; gap: 12px; }
@@ -238,12 +238,10 @@
     .student-workspace-page .vent-content { padding-inline: 12px; }
 }
 
-.student-workspace-page .meet-icon-wrap:has(.counselor-portrait) { width: 100px; height: 100px; background: transparent; }
-.student-workspace-page .meet-icon-wrap .counselor-portrait { width: 100px; height: 100px; }
 @media (min-width: 900px) {
     .student-form-page--vent .vent-support p { font-size: 15px; line-height: 1.5; }
     .student-form-page--vent .vent-support h2 { margin-bottom: 12px; }
-    .student-workspace-page .vent-talk-description { margin-bottom: 16px; }
+
     .student-workspace-page .meet-card-header { margin-bottom: 16px; }
     .student-workspace-page .vent-urgent-support { margin-top: 18px; padding-top: 14px; }
     .student-workspace-page .vent-urgent-support > p { font-size: 14px; }
