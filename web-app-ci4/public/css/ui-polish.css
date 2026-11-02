@@ -190,7 +190,7 @@ body.staff-layout #staffMain.principal-workspace .risk-composition { height: 12p
     body.student-workspace-page .vent-support { padding-left: 28px; }
     body.student-workspace-page .vent-support-intro { padding: 20px; }
     body.student-form-page--report .role-btn { min-height: 50px; border-radius: 10px; }
-    body.student-registration .registration-heading { grid-template-columns: 64px minmax(0,1fr); align-items: center; justify-items: start; gap: 18px; text-align: left; margin-bottom: 20px; }
+    body.student-registration .registration-heading { grid-template-columns: 64px minmax(0,1fr) 64px; align-items: center; justify-items: center; gap: 18px; text-align: center; margin-bottom: 20px; }
     body.staff-layout #staffMain.principal-workspace .metric { min-height: 96px; }
     body.staff-layout #staffMain.principal-workspace .analytics-charts > .role-panel { padding: 20px 22px; }
     body.staff-layout #staffMain.principal-workspace .daily-trend-plot,
