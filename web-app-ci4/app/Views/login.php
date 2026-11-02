@@ -145,16 +145,6 @@
             100% { opacity: 0.2; transform: scale(1.1) translate(-20px, 20px) translateZ(0); }
         }
         
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-        }
         
         /* Gold gradient button */
         .submit-btn {
@@ -186,27 +176,6 @@
             );
         }
 
-        /* Splash Screen Animations */
-        @keyframes scaleIn {
-            0% { transform: translateY(15px) scale(0.95); opacity: 0; }
-            100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        @keyframes typing {
-            from { width: 0; opacity: 1; }
-            to { width: 100%; opacity: 1; }
-        }
-        @keyframes blink {
-            50% { border-color: transparent; }
-        }
-        @keyframes fadeInSplash {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes progress {
-            0% { width: 0%; }
-            40% { width: 60%; }
-            100% { width: 100%; }
-        }
         
         /* Fit shorter screens through spacing, while keeping controls readable. */
         body.student-login { padding: clamp(12px, 2vh, 24px) 16px; }
@@ -233,6 +202,7 @@
         }
     </style>
 <link rel="stylesheet" href="<?= base_url('css/unified-login.css?v=' . filemtime(FCPATH . 'css/unified-login.css')) ?>">
+<?= view('partials/ui_polish') ?>
 </head>
 <body class="student-login bg-student min-h-[100dvh] w-full flex flex-col items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-x-hidden overflow-y-auto" onmousemove="updateSpotlight(event)">
 
@@ -278,7 +248,7 @@
         <div class="glow-blob bg-primary-light w-[350px] h-[350px] sm:w-[500px] sm:h-[500px] bottom-[-10%] left-[-15%] mix-blend-screen" style="animation-delay: -5s; animation-direction: alternate-reverse; opacity:0.1;"></div>
     </div>
 
-    <div class="login-shell w-full max-w-[480px] z-20 relative animate-[fadeInUp_0.8s_cubic-bezier(0.16,1,0.3,1)] my-auto">
+    <div class="login-shell w-full max-w-[480px] z-20 relative my-auto">
         
         <!-- Responsive Card Density: p-5 on mobile, p-8 on tablet, p-12 on desktop -->
         <div class="student-card p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-[2.5rem] relative overflow-hidden group hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] transition-shadow duration-500">
@@ -301,9 +271,10 @@
                 </div>
             </div>
 
+            <div class="login-fields">
             <!-- Error Flash -->
             <?php if (session()->getFlashdata('error')): ?>
-                <div class="bg-red-500/10 backdrop-blur-md border border-red-500/30 p-3.5 sm:p-4 mb-5 sm:mb-8 rounded-2xl animate-[shake_0.5s_ease-in-out] shadow-lg">
+                <div role="alert" class="auth-error bg-red-500/10 backdrop-blur-md border border-red-500/30 p-3.5 sm:p-4 mb-5 sm:mb-8 rounded-2xl shadow-lg">
                     <div class="flex items-start gap-3 sm:gap-4">
                         <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                             <i class="fas fa-exclamation text-red-400 text-sm"></i>
@@ -370,84 +341,10 @@
                     </p>
                 </div>
             </form>
+            </div>
             
         </div>
         
-    </div>
-
-    <!-- Modals (With Sticky Headers & Footers and Independent Scrollable Content) -->
-    <div id="termsModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-3 sm:p-4">
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal('termsModal')"></div>
-        <div class="relative bg-[#0d2114] border border-white/10 rounded-2xl sm:rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-[scaleIn_0.3s_ease-out] overflow-hidden">
-            <!-- Sticky Header -->
-            <div class="p-4 sm:p-6 border-b border-white/10 flex justify-between items-center sticky top-0 z-20 bg-[#0d2114]/95 backdrop-blur-md shrink-0">
-                <h2 class="text-lg sm:text-xl font-heading font-bold text-white flex items-center gap-2">
-                    <i class="fas fa-shield-alt text-gold"></i> Terms & Conditions
-                </h2>
-                <button type="button" onclick="closeModal('termsModal')" class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors focus:outline-none min-h-[36px] min-w-[36px]"><i class="fas fa-times text-base"></i></button>
-            </div>
-            <!-- Scrollable Body -->
-            <div class="p-4 sm:p-6 overflow-y-auto flex-1 text-white/80 text-[13px] sm:text-sm space-y-4 font-sans leading-relaxed custom-scrollbar">
-                <p><strong class="text-gold">1. Acceptance of Terms:</strong> By accessing and using StudentShield, you agree to comply with these Terms & Conditions. This platform is designed to promote a safe and supportive school environment at St. Vincent Blessed School of Manila (SVBSM).</p>
-                <p><strong class="text-gold">2. Eligibility & Guardian Consent:</strong> You must be an actively enrolled student. If you are under 18 years of age, you represent that you have obtained verifiable consent from your parent or legal guardian to use this service.</p>
-                <p><strong class="text-gold">3. Acceptable Use:</strong> The platform must be used responsibly. Submitting false reports, impersonating others, or using the platform to harass or bully others is strictly prohibited and may result in disciplinary action from the school.</p>
-                <p><strong class="text-gold">4. Confidentiality vs. Anonymity:</strong> While reports and venting logs are kept confidential, total anonymity is waived in cases where there is an imminent threat to life, self-harm, or severe danger. Authorized school administrators reserve the right to identify users to prevent harm.</p>
-                <p><strong class="text-gold">5. Interventions:</strong> School counselors or designated safety officers may intervene based on the severity of the submitted reports to ensure the physical and mental well-being of the students involved.</p>
-                <p><strong class="text-gold">6. Not an Emergency Service:</strong> StudentShield is not a real-time emergency response system. If you are in immediate danger, please contact local emergency authorities or proceed to the nearest hospital or police station.</p>
-            </div>
-            <!-- Sticky Footer -->
-            <div class="p-3.5 sm:p-4 border-t border-white/10 bg-[#08150d]/95 backdrop-blur-md text-right rounded-b-2xl sm:rounded-b-3xl sticky bottom-0 z-20 shrink-0">
-                <button type="button" onclick="closeModal('termsModal')" class="px-6 py-2.5 bg-gold hover:bg-gold-light text-black text-sm rounded-xl font-bold transition-colors focus:outline-none min-h-[44px]">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="privacyModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-3 sm:p-4">
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal('privacyModal')"></div>
-        <div class="relative bg-[#0d2114] border border-white/10 rounded-2xl sm:rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-[scaleIn_0.3s_ease-out] overflow-hidden">
-            <!-- Sticky Header -->
-            <div class="p-4 sm:p-6 border-b border-white/10 flex justify-between items-center sticky top-0 z-20 bg-[#0d2114]/95 backdrop-blur-md shrink-0">
-                <h2 class="text-lg sm:text-xl font-heading font-bold text-white flex items-center gap-2">
-                    <i class="fas fa-user-lock text-gold"></i> Data Privacy Policy
-                </h2>
-                <button type="button" onclick="closeModal('privacyModal')" class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors focus:outline-none min-h-[36px] min-w-[36px]"><i class="fas fa-times text-base"></i></button>
-            </div>
-            <!-- Scrollable Body -->
-            <div class="p-4 sm:p-6 overflow-y-auto flex-1 text-white/80 text-[13px] sm:text-sm space-y-4 font-sans leading-relaxed custom-scrollbar">
-                <p>This policy outlines how we handle your personal data in strict compliance with the Data Privacy Act of 2012 (Republic Act No. 10173) of the Philippines for St. Vincent Blessed School of Manila (SVBSM).</p>
-                <p><strong class="text-gold">1. Data Collection & Legitimate Purpose:</strong> We collect personal information and sensitive personal information (such as your name, ID, and health/incident reports) solely for the legitimate purpose of processing incident reports, providing guidance counseling, and ensuring a safe educational environment.</p>
-                <p><strong class="text-gold">2. Data Processing & Protection:</strong> Your data is protected using end-to-end encryption and strict organizational, physical, and technical security measures. Only designated, authorized school personnel (such as counselors and the Data Protection Officer) have access to identifiable information.</p>
-                <p><strong class="text-gold">3. Data Retention & Disposal:</strong> We retain your personal data only for as long as necessary to fulfill the stated purposes or as required by school policy and the law. Once the retention period expires, data is securely disposed of or anonymized.</p>
-                <p><strong class="text-gold">4. Third-Party Sharing:</strong> We do not sell or share your data with third parties for marketing. Information may only be disclosed to law enforcement, medical professionals, or government authorities if mandated by law or necessary for emergency intervention to protect your vital interests.</p>
-                <p><strong class="text-gold">5. Data Subject Rights:</strong> As a data subject under RA 10173, you have the right to be informed, object to processing, access, rectify, erase, or block your personal data, as well as the right to data portability and the right to file a complaint with the National Privacy Commission (NPC) for any damages. To exercise these rights, you or your guardian may contact the school's Data Protection Officer (DPO).</p>
-            </div>
-            <!-- Sticky Footer -->
-            <div class="p-3.5 sm:p-4 border-t border-white/10 bg-[#08150d]/95 backdrop-blur-md text-right rounded-b-2xl sm:rounded-b-3xl sticky bottom-0 z-20 shrink-0">
-                <button type="button" onclick="closeModal('privacyModal')" class="px-6 py-2.5 bg-gold hover:bg-gold-light text-black text-sm rounded-xl font-bold transition-colors focus:outline-none min-h-[44px]">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="guardianModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeModal('guardianModal')"></div>
-        <div class="relative bg-[#0d2114] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl animate-[scaleIn_0.3s_ease-out]">
-            <div class="p-5 sm:p-6 border-b border-white/10 flex justify-between items-center">
-                <h2 class="text-lg sm:text-xl font-heading font-bold text-white">Guardian Consent</h2>
-                <button type="button" onclick="closeModal('guardianModal')" class="text-white/50 hover:text-white transition-colors focus:outline-none"><i class="fas fa-times text-lg"></i></button>
-            </div>
-            <div class="p-5 sm:p-6 overflow-y-auto text-white/80 text-[13px] sm:text-sm space-y-4 font-sans leading-relaxed">
-                <p>In compliance with the Data Privacy Act of 2012 (RA 10173), processing the personal data and sensitive personal information of minors requires the explicit, free, and informed consent of a parent or legal guardian. By checking this box, you confirm that:</p>
-                <ul class="list-disc pl-5 space-y-2">
-                    <li>Your parent or legal guardian has reviewed and agreed to the Terms & Conditions and Data Privacy Policy of StudentShield.</li>
-                    <li>They consent to the collection, processing, and retention of your personal and sensitive personal information for the purposes of school safety and counseling.</li>
-                    <li>They understand that in cases of imminent threat, self-harm, or severe danger to your vital interests, the school may lift anonymity to provide critical and life-saving interventions.</li>
-                </ul>
-                <p class="mt-4 italic text-white/50 text-xs">If you have not discussed this with your parent or guardian, please do so before creating an account or logging in.</p>
-            </div>
-            <div class="p-4 border-t border-white/10 bg-black/20 text-right rounded-b-2xl">
-                <button type="button" onclick="closeModal('guardianModal')" class="px-5 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-xl font-semibold transition-colors focus:outline-none">Close</button>
-            </div>
-        </div>
     </div>
 
 <script>
@@ -502,20 +399,6 @@
         const overlay = document.getElementById('spotlight-overlay');
         overlay.style.setProperty('--x', `${e.clientX}px`);
         overlay.style.setProperty('--y', `${e.clientY}px`);
-    }
-
-    function openModal(id) {
-        const modal = document.getElementById(id);
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal(id) {
-        const modal = document.getElementById(id);
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        document.body.style.overflow = '';
     }
 
     document.querySelector('form').addEventListener('submit', function() {

@@ -28,14 +28,11 @@
 .student-workspace-page .vent-header .nav-control { color: white; background: transparent; border: 0; padding-inline: 10px; font-size: 13px; }
 .student-workspace-page .vent-header .nav-control:hover { background: #ffffff18; }
 .student-workspace-page .vent-header :is(.report-link, .vent-link) { color: #fff4c7; border: 1px solid #f2c300; border-radius: 7px; }
-.vent-account-menu { position: relative; flex-shrink: 0; }
-.vent-account-menu > summary { display: none; }
-.vent-account-menu form { margin: 0; }
-.vent-account-menu button { min-height: 44px; padding: 10px 18px; border: 1px solid #ffffff90; border-radius: 7px; background: transparent; color: white; font-size: 13px; font-weight: 600; cursor: pointer; }
-.vent-account-menu button:hover { background: #ffffff18; }
-.vent-account-menu button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
-.vent-account-menu button svg { width: 20px; height: 20px; flex-shrink: 0; }
-.student-workspace-page .vent-header a:focus-visible, .student-workspace-page .vent-header button:focus-visible, .vent-account-menu > summary:focus-visible { outline: 2px solid #f2c300; outline-offset: 3px; }
+.vent-sign-out { flex-shrink: 0; margin: 0; }
+.vent-sign-out button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 18px; border: 1px solid #ffffff90; border-radius: 7px; background: transparent; color: white; font-size: 13px; font-weight: 600; cursor: pointer; }
+.vent-sign-out button:hover { background: #ffffff18; }
+.vent-sign-out button svg { width: 20px; height: 20px; flex-shrink: 0; }
+.student-workspace-page .vent-header a:focus-visible, .student-workspace-page .vent-header button:focus-visible { outline: 2px solid #f2c300; outline-offset: 3px; }
 .student-workspace-page .vent-content { max-width: 1280px; margin-inline: auto; padding: 36px 28px 24px; }
 .student-workspace-page .student-page-header { margin-bottom: 26px; max-width: 800px; }
 .student-workspace-page .student-section-label { font-size: 13px; margin-bottom: 10px; }
@@ -108,7 +105,7 @@
     .vent-brand img { width: 74px; height: 74px; }
     .vent-brand strong { font-size: 26px; }
     .vent-brand > span > span { text-transform: uppercase; letter-spacing: 4px; font-size: 11px; font-weight: 600; }
-    .student-workspace-page .vent-header .nav-control, .vent-account-menu button { min-height: 50px; padding: 10px 20px; font-size: 16px; border-radius: 10px; }
+    .student-workspace-page .vent-header .nav-control, .vent-sign-out button { min-height: 50px; padding: 10px 20px; font-size: 16px; border-radius: 10px; }
     .student-workspace-page .vent-header :is(.report-link, .vent-link) { color: #f2c300; border-color: #f2c300; }
     .student-workspace-page .vent-header .student-form-nav { gap: 24px; }
     .student-workspace-page .vent-header .back-link { border-right: 1px solid #ffffff80; border-radius: 0; padding-right: 30px; }
@@ -165,14 +162,8 @@
     .vent-brand img { width: 40px; height: 40px; }
     .vent-brand strong { font-size: 18px; }
     .vent-brand > span > span { font-size: 10px; margin-top: 1px; }
-    .vent-account-menu { grid-column: 2; grid-row: 1; margin-right: 12px; }
-    .vent-account-menu > summary { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: white; cursor: pointer; list-style: none; border-radius: 6px; }
-    .vent-account-menu > summary::-webkit-details-marker { display: none; }
-    .vent-account-menu > summary svg { width: 24px; height: 24px; }
-    .vent-account-menu[open] > summary { background: #ffffff18; }
-    .vent-account-menu form { position: absolute; z-index: 60; right: 0; top: 50px; width: 160px; padding: 8px; border: 1px solid var(--form-divider); border-radius: 8px; background: white; box-shadow: 0 4px 12px #203d2c12; }
-    .vent-account-menu button { width: 100%; color: var(--form-primary); border: 0; text-align: left; }
-    .vent-account-menu button:hover { background: var(--form-mint); }
+    .vent-sign-out { grid-column: 2; grid-row: 1; margin-right: 12px; }
+    .vent-sign-out button { padding: 8px 10px; gap: 7px; font-size: 12px; }
     .student-workspace-page .vent-header .student-form-nav { grid-column: 1 / -1; display: flex; justify-content: space-between; border-top: 3px solid #f2c300; padding: 8px 12px 0; background: var(--form-background); }
     .student-workspace-page .vent-header .student-form-nav .nav-control { color: var(--form-primary); padding: 8px 6px; min-height: 44px; border: 0; background: transparent; font-size: 12px; }
     .student-workspace-page .vent-header .student-form-nav :is(.report-link, .vent-link) { color: #796000; }
@@ -257,7 +248,7 @@
 @media (max-width: 1023px) {
  .student-workspace-page .vent-header-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0; padding: 0; }
  .student-workspace-page .vent-brand { margin: 10px 18px; }
- .student-workspace-page .vent-account-menu { grid-column: 2; grid-row: 1; margin-right: 12px; }
+ .student-workspace-page .vent-sign-out { grid-column: 2; grid-row: 1; margin-right: 12px; }
  .student-workspace-page .vent-header .student-workspace-nav { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; padding: 8px 12px 10px; gap: 6px; border-top: 1px solid #ffffff40; background: transparent; }
  .student-workspace-page .vent-header .student-workspace-nav .nav-control { flex-direction: column; gap: 4px; min-width: 0; min-height: 60px; padding: 8px 2px; font-size: 12px; }
 }

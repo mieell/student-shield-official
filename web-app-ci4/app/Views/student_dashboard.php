@@ -103,6 +103,7 @@
             box-shadow: inset 0 0 0 30px rgba(255,255,255,0.03);
         }
     </style>
+<?= view('partials/ui_polish') ?>
 </head>
 <body class="student-home school-student-page text-white antialiased min-h-screen flex flex-col items-center justify-center relative overflow-x-hidden bg-student">
     <div class="bg-grid"></div>
@@ -135,7 +136,6 @@
     <!-- Main Content (Centered) -->
     <div class="student-home-content w-full max-w-6xl mx-auto px-6 py-16 mt-10 relative z-20 flex flex-col items-center">
         
-        <div class="student-home-meeting w-full max-w-lg mx-auto mb-10 shadow-lg rounded-2xl overflow-hidden"><?= view('partials/student_meet_card') ?></div>
 
         
         <!-- Header Section -->
@@ -217,6 +217,8 @@
             <?php endif; ?>
 
         </div>
+
+        <div class="student-home-meeting w-full max-w-5xl mx-auto shadow-lg rounded-2xl overflow-hidden"><?= view('partials/student_meet_card') ?></div>
 
         <div class="student-home-footer mt-16 text-center">
             <p class="text-white/70 text-xs font-medium tracking-wider">© 2026 StudentShield · SVBSM</p>

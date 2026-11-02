@@ -50,10 +50,6 @@
     </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <style>
-        @media (max-width: 1440px) { html { font-size: 15px; } }
-        @media (max-width: 1280px) { html { font-size: 14px; } }
-        @media (max-width: 768px) { html { font-size: 16px; } } /* Reset for mobile */
-        
         body { font-family: 'Nunito', sans-serif; background-color: #0F8A3A; overflow-x: hidden; }
         h1, h2, h3, .font-heading { font-family: 'Nunito', sans-serif; }
 
@@ -105,14 +101,8 @@
         }
         
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .submit-btn {
@@ -153,6 +143,7 @@
             *, ::before, ::after { animation: none !important; transition: none !important; }
         }
     </style>
+<?= view('partials/ui_polish') ?>
 </head>
 <body class="student-registration bg-student min-h-[100dvh] w-full flex flex-col items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-x-hidden overflow-y-auto" onmousemove="updateSpotlight(event)">
 
@@ -163,20 +154,18 @@
         <div class="glow-blob bg-primary-light w-[400px] h-[400px] sm:w-[600px] sm:h-[600px] bottom-[-10%] left-[-15%] mix-blend-screen" style="animation-delay: -5s; animation-direction: alternate-reverse;"></div>
     </div>
 
-    <!-- Increased max width to fit 2 column layout, my-auto ensures centered on large and fully scrollable on small -->
-    <div class="w-full max-w-[700px] z-20 relative animate-[fadeInUp_0.8s_cubic-bezier(0.16,1,0.3,1)] my-auto py-4 sm:py-6">
+    <div class="registration-shell w-full z-20 relative animate-[fadeInUp_0.32s_ease-out] my-auto">
         
         <!-- Responsive Card Density: p-4 on mobile, p-8 on tablet, p-10 on desktop -->
         <div class="student-card p-4 sm:p-8 md:p-10 rounded-2xl sm:rounded-[2.5rem] relative overflow-hidden group hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] transition-shadow duration-500">
             
-            <div class="text-center mb-5 sm:mb-8">
-                <div class="flex flex-col items-center justify-center mb-3 sm:mb-4">
-                    <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="w-16 h-16 sm:w-24 sm:h-24 object-contain mx-auto mb-2 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
-                    <p class="text-white/90 font-semibold text-sm sm:text-base tracking-wide">St. Vincent Blessed School of Manila, Inc.</p>
+            <div class="registration-heading">
+                <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
+                <div class="registration-heading-copy">
+                    <p class="text-white/90 font-semibold text-sm tracking-wide">St. Vincent Blessed School of Manila, Inc.</p>
+                    <h1 class="font-heading font-extrabold tracking-tight text-white leading-tight">Student <span class="text-gold">Registration</span></h1>
+                    <p class="text-white/90 font-medium text-sm">Create your secure account</p>
                 </div>
-                
-                <h1 class="text-[1.65em] sm:text-[2rem] font-heading font-extrabold tracking-tight text-white mb-1 leading-tight">Student <span class="text-gold">Registration</span></h1>
-                <p class="text-white/70 font-medium text-sm sm:text-base">Create your secure account</p>
             </div>
 
             <!-- Error/Success Flash -->
@@ -197,7 +186,7 @@
             <?php endif; ?>
 
             <!-- Registration Form -->
-            <form action="<?= base_url('register/process') ?>" method="post" class="space-y-3.5 sm:space-y-4 relative z-10 w-full">
+            <form action="<?= base_url('register/process') ?>" method="post" class="registration-form relative z-10 w-full">
                 <?= csrf_field() ?>
                 
                 <div class="space-y-1.5">
@@ -217,7 +206,7 @@
                     <input type="text" name="lrn" id="lrn" required inputmode="numeric" pattern="[0-9]{12}" minlength="12" maxlength="12" value="<?= set_value('lrn') ?>" aria-describedby="lrnHelp" class="w-full px-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none" placeholder="Enter your 12-digit LRN">
                     <p id="lrnHelp" class="text-xs text-white/80 ml-1">Use the LRN on your school record or report card.</p>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+                <div class="registration-school-fields grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
                     <div class="space-y-1.5">
                         <label for="grade_level" class="block text-sm sm:text-base font-bold text-white/80 ml-1 uppercase tracking-wider">Grade Level</label>
                         <div class="relative group/input">
@@ -226,7 +215,7 @@
                             </div>
                             <input type="text" name="grade_level" id="grade_level" required value="<?= set_value('grade_level') ?>"
                                    class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none"
-                                   placeholder="Grade 7, Grade 11, etc.">
+                                   placeholder="e.g. Grade 8">
                         </div>
                     </div>
 
@@ -255,7 +244,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 pt-1 sm:pt-2">
+                <div class="registration-password-fields grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 pt-1 sm:pt-2">
                     <div class="space-y-1.5">
                         <label for="password" class="block text-sm sm:text-base font-bold text-white/80 ml-1 uppercase tracking-wider">Create Password</label>
                         <div class="relative group/input">
@@ -291,7 +280,7 @@
                 </div>
 
                 <!-- Touch-Optimized Terms & Privacy Checkbox (Min 44px height) -->
-                <div class="pt-1">
+                <div class="registration-consent pt-1">
                     <label class="flex items-start gap-3 p-2 -ml-2 rounded-xl cursor-pointer min-h-[44px] select-none hover:bg-white/5 transition-colors group/checkbox">
                         <div class="relative flex items-center justify-center mt-0.5 shrink-0">
                             <input type="checkbox" name="terms" id="terms" required class="peer sr-only" <?= set_checkbox('terms', '1') ?>>
@@ -435,17 +424,21 @@
         overlay.style.setProperty('--y', `${e.clientY}px`);
     }
 
+    function passwordRequirements(value) {
+        return {
+            'req-length': value.length >= 8,
+            'req-upper': /[A-Z]/.test(value),
+            'req-lower': /[a-z]/.test(value),
+            'req-number': /[0-9]/.test(value),
+            'req-special': /[^A-Za-z0-9]/.test(value)
+        };
+    }
+
     document.querySelector('form').addEventListener('submit', function(e) {
         const pass = document.getElementById('password').value;
         const confirmPass = document.getElementById('password_confirm').value;
         
-        const hasLength = pass.length >= 8;
-        const hasUpper = /[A-Z]/.test(pass);
-        const hasLower = /[a-z]/.test(pass);
-        const hasNumber = /[0-9]/.test(pass);
-        const hasSpecial = /[^A-Za-z0-9]/.test(pass);
-        
-        if (!hasLength || !hasUpper || !hasLower || !hasNumber || !hasSpecial || pass !== confirmPass) {
+        if (!Object.values(passwordRequirements(pass)).every(Boolean) || pass !== confirmPass) {
             e.preventDefault();
             alert('Please ensure your password meets all security requirements and that passwords match.');
             return;
@@ -462,17 +455,7 @@
     });
 
     document.getElementById('password').addEventListener('input', function(e) {
-        const val = e.target.value;
-        
-        const reqs = {
-            'req-length': val.length >= 8,
-            'req-upper': /[A-Z]/.test(val),
-            'req-lower': /[a-z]/.test(val),
-            'req-number': /[0-9]/.test(val),
-            'req-special': /[^A-Za-z0-9]/.test(val)
-        };
-
-        for (const [id, isValid] of Object.entries(reqs)) {
+        for (const [id, isValid] of Object.entries(passwordRequirements(e.target.value))) {
             const el = document.getElementById(id);
             const icon = el.querySelector('i');
             
@@ -496,15 +479,7 @@
         const confirm = document.getElementById('password_confirm').value;
         const msg = document.getElementById('password-match-msg');
         
-        if (confirm.length > 0) {
-            if (pass !== confirm) {
-                msg.classList.remove('hidden');
-            } else {
-                msg.classList.add('hidden');
-            }
-        } else {
-            msg.classList.add('hidden');
-        }
+        msg.classList.toggle('hidden', confirm.length === 0 || pass === confirm);
     }
 </script>
 </body>

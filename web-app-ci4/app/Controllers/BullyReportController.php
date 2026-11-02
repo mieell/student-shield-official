@@ -2,8 +2,6 @@
 
 namespace App\Controllers;
 
-use App\Models\BullyReportModel;
-
 class BullyReportController extends BaseController
 {
     public function index()

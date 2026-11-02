@@ -490,6 +490,7 @@ $pageDescriptions = [
         }
     </style>
     <link rel="stylesheet" href="<?= base_url('css/staff-layout.css?v=' . filemtime(FCPATH . 'css/staff-layout.css')) ?>">
+<?= view('partials/ui_polish') ?>
 </head>
 
 <body class="school-staff-page staff-layout font-sans antialiased text-gray-800 min-h-screen flex flex-col relative">
@@ -1206,7 +1207,7 @@ $pageDescriptions = [
                                         ${escapeHtml(vent.name.charAt(0))}
                                     </div>
                                     <div>
-                                        <span class="text-sm font-medium text-gray-900 block group-hover:text-primary transition-colors hover:underline">${escapeHtml(vent.name)}</span>
+                                        <span class="staff-student-name text-sm font-medium text-gray-900 block group-hover:text-primary transition-colors hover:underline">${escapeHtml(vent.name)}</span>
                                         ${vent.section ? `<span class="text-[11px] text-gray-600 font-bold block mt-0.5">Section: <span class="font-normal text-gray-600">${escapeHtml(vent.section)}</span></span>` : ''}
                                         ${vent.student_id ? `<span class="staff-student-number">${escapeHtml(vent.student_id)}</span>` : ''}
                                         ${contactDetails.trim() ? `<details class="staff-student-details" onclick="event.stopPropagation()"><summary>Student details</summary><div>${contactDetails}</div></details>` : ''}

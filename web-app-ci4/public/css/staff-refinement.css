@@ -85,9 +85,6 @@
 .staff-layout .principal-workspace .metric > span:first-child { font-size:13px; max-width:26ch; color:#52665a; }
 .staff-layout .principal-workspace .metric:nth-child(n+5) { min-height:80px; padding:12px 18px; background:#eaf3ed; border-color:transparent; }
 .staff-layout .principal-workspace .metric:nth-child(n+5) strong { font-size:23px; }
-.staff-layout .principal-workspace .analytics-help { display:flex; flex-wrap:wrap; gap:4px 24px; padding:8px 2px 0; }
-.staff-layout .principal-workspace .analytics-counting-note { margin:0; font-size:12px; flex:1; min-width:220px; }
-.staff-layout .principal-workspace .analytics-counting-note summary { min-height:38px; font-size:12px; justify-content:flex-start; gap:10px; }
 .staff-layout .principal-workspace .analytics-charts { grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:16px; align-items:start; }
 .staff-layout .principal-workspace .analytics-charts .role-panel { margin-top:16px; }
 .staff-layout .principal-workspace .bar-track { height:10px; }

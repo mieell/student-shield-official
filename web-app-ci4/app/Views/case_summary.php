@@ -154,6 +154,7 @@
             }
         }
     </style>
+<?= view('partials/ui_polish') ?>
 </head>
 <body class="school-staff-page font-sans antialiased text-gray-900 leading-normal">
 

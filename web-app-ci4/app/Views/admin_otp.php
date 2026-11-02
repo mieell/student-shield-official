@@ -127,6 +127,7 @@
             75% { transform: translateX(-5px); }
         }
     </style>
+<?= view('partials/ui_polish') ?>
 </head>
 <body class="bg-admin min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
 

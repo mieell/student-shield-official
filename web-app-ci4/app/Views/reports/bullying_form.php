@@ -53,6 +53,7 @@
     <link rel="stylesheet" href="<?= base_url('css/student-forms.css?v=4') ?>">
     <link rel="stylesheet" href="<?= base_url('css/student-vent.css?v=' . filemtime(FCPATH . 'css/student-vent.css')) ?>">
     <link rel="stylesheet" href="<?= base_url('css/student-report.css?v=' . filemtime(FCPATH . 'css/student-report.css')) ?>">
+<?= view('partials/ui_polish') ?>
 </head>
 <body class="student-form-page student-form-page--report student-workspace-page antialiased min-h-screen">
 

@@ -26,6 +26,11 @@ final class PrincipalOverviewViewTest extends CIUnitTestCase
         $this->assertStringContainsString('eligible guardian notification attempts', $html);
         $this->assertStringContainsString('principal/reports/export?', $html);
         $this->assertStringNotContainsString('NAN', $html);
+        $information = '//section[@aria-labelledby="reportInformationTitle"]';
+        $this->assertCount(1, $xpath->query($information . '//h2[contains(.,"Additional information")]'));
+        $this->assertCount(2, $xpath->query($information . '//details/summary'));
+        $this->assertStringContainsString('not currently online', $xpath->query($information)->item(0)->textContent);
+        $this->assertStringContainsString('Archived records are excluded', $xpath->query($information)->item(0)->textContent);
         session()->destroy();
     }
 }

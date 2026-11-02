@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="<?= base_url('css/staff-layout.css?v=' . filemtime(FCPATH . 'css/staff-layout.css')) ?>">
 <link rel="stylesheet" href="<?= base_url('css/role-workspaces.css?v=' . filemtime(FCPATH . 'css/role-workspaces.css')) ?>">
 <link rel="stylesheet" href="<?= base_url('css/accounts-directory.css?v=' . filemtime(FCPATH . 'css/accounts-directory.css')) ?>">
+<?= view('partials/ui_polish') ?>
 </head><body class="school-staff-page staff-layout role-workspace">
 <?= view('partials/staff_navigation', ['staffPage' => 'users', 'staffPageLabel' => 'System accounts']) ?>
 <main id="staffMain" class="staff-main role-main accounts-workspace">

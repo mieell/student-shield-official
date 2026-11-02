@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="<?= base_url('css/staff-layout.css?v=' . filemtime(FCPATH . 'css/staff-layout.css')) ?>">
 <link rel="stylesheet" href="<?= base_url('css/role-workspaces.css?v=' . filemtime(FCPATH . 'css/role-workspaces.css')) ?>">
 <link rel="stylesheet" href="<?= base_url('css/staff-account.css?v=' . filemtime(FCPATH . 'css/staff-account.css')) ?>">
+<?= view('partials/ui_polish') ?>
 </head><body class="school-staff-page staff-layout role-workspace">
 <?= view('partials/staff_navigation', ['staffPage' => $page, 'staffPageLabel' => ucfirst($page)]) ?>
 <?php

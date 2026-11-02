@@ -16,7 +16,10 @@
 .staff-layout #staffMain.accounts-workspace .account-filter-panel > summary { min-height:42px; gap:10px; }
 .staff-layout #staffMain.accounts-workspace .account-filter-panel > .account-toolbar { width:260px; max-width:calc(100vw - 48px); }
 .staff-layout #staffMain.accounts-workspace .account-list { margin:0; }
-.staff-layout #staffMain.accounts-workspace :is(.account-column-headings,.account-row) { display:grid; grid-template-columns:minmax(150px,1.7fr) minmax(90px,1fr) minmax(105px,1fr) 68px; align-items:center; column-gap:14px; }
+.staff-layout #staffMain.accounts-workspace :is(.account-column-headings,.account-row) { display:grid; grid-template-columns:minmax(150px,1.7fr) minmax(90px,1fr) minmax(105px,1fr) 140px; align-items:center; column-gap:14px; }
+.staff-layout #staffMain.accounts-workspace .directory-actions { overflow-wrap:normal; }
+.staff-layout #staffMain.accounts-workspace .directory-actions summary { white-space:nowrap; }
+.staff-layout #staffMain.accounts-workspace:not(.directory-enhanced) .directory-actions:has(details[open]) { grid-column:1 / -1; grid-row:auto; width:100%; }
 .staff-layout #staffMain.accounts-workspace .account-column-headings { padding:12px 22px; font-size:12px; font-weight:600; background:#edf5ef; color:#365940; border-bottom:1px solid #dce7df; }
 .staff-layout #staffMain.accounts-workspace .account-row { padding:14px 22px; margin:0; min-height:76px; border-bottom:1px solid #e5ece7; transition:background .15s; }
 .staff-layout #staffMain.accounts-workspace .account-row:hover { background:#f6faf7; }

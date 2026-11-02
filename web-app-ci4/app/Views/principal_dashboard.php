@@ -9,6 +9,7 @@ $riskTotal = array_sum($riskCounts);
 <script src="https://cdn.tailwindcss.com"></script>
 <?= view('partials/school_brand') ?>
 <link rel="stylesheet" href="<?= base_url('css/staff-layout.css?v=' . filemtime(FCPATH . 'css/staff-layout.css')) ?>"><link rel="stylesheet" href="<?= base_url('css/role-workspaces.css?v=' . filemtime(FCPATH . 'css/role-workspaces.css')) ?>">
+<?= view('partials/ui_polish') ?>
 </head><body class="school-staff-page staff-layout role-workspace">
 <?= view('partials/staff_navigation', ['staffPage' => 'principal', 'staffPageLabel' => 'School overview']) ?>
 <link rel="stylesheet" href="<?= base_url('css/principal-overview.css?v=' . filemtime(FCPATH . 'css/principal-overview.css')) ?>">
@@ -56,7 +57,28 @@ $riskTotal = array_sum($riskCounts);
 <?php if (!$groups[$key]): ?><p>No matching events in this period.</p><?php else: $max = max(1, ...array_column($groups[$key], 'total')); ?>
 <?php foreach ($groups[$key] as $row): ?><div class="bar-row"><span><?= esc($row['label'] ?: 'Not classified') ?></span><div class="bar-track" aria-hidden="true"><div class="bar-fill" style="width:<?= round($row['total'] * 100 / $max, 2) ?>%"></div></div><strong><?= $row['total'] ?></strong></div><?php endforeach; endif; ?>
 </section><?php endforeach; ?></div>
-<div class="analytics-help"><details class="analytics-counting-note"><summary>How these numbers are counted</summary><p>All summaries use the selected filters. Registered and active counts refer to accounts registered during this period; event and risk filters further limit those counts to accounts with matching events. Today/week/month counts are intersected with your selected period. Active means approved and enabled, not currently online.</p></details><details class="analytics-counting-note"><summary>Event and attention definitions</summary><p>Attention means an unreviewed High or Critical Safe Space entry. Bullying reports are counted once, grouped by the linked victim’s grade/section, or the reporter’s when no victim account is linked. Archived records are excluded.</p></details></div>
+<section class="report-information" aria-labelledby="reportInformationTitle">
+    <div class="report-information-heading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></svg>
+        <div><h2 id="reportInformationTitle">Additional information</h2><p>A guide to reading this report.</p></div>
+    </div>
+    <div class="report-information-notes">
+        <details class="report-information-note">
+            <summary>How these numbers are counted</summary>
+            <div>
+                <p>All summaries use the selected filters. Registered and active counts refer to accounts registered during this period; event and risk filters further limit those counts to accounts with matching events.</p>
+                <p>Today/week/month counts are intersected with your selected period. <strong>Active</strong> means approved and enabled, not currently online.</p>
+            </div>
+        </details>
+        <details class="report-information-note">
+            <summary>Event and attention definitions</summary>
+            <div>
+                <p><strong>Attention</strong> means an unreviewed High or Critical Safe Space entry.</p>
+                <p>Bullying reports are counted once, grouped by the linked victim’s grade/section, or the reporter’s when no victim account is linked. Archived records are excluded.</p>
+            </div>
+        </details>
+    </div>
+</section>
 </main>
 <script src="<?= base_url('js/principal-overview.js?v=' . filemtime(FCPATH . 'js/principal-overview.js')) ?>" defer></script>
 <script src="<?= base_url('js/daily-trend.js?v=' . filemtime(FCPATH . 'js/daily-trend.js')) ?>" defer></script>

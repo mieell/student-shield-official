@@ -53,6 +53,7 @@
         .thead-green th { color: rgba(255,255,255,0.92); font-weight: 600; letter-spacing: 0.05em; font-size: 0.75rem; }
     </style>
     <link rel="stylesheet" href="<?= base_url('css/staff-layout.css?v=' . filemtime(FCPATH . 'css/staff-layout.css')) ?>">
+<?= view('partials/ui_polish') ?>
 </head>
 <body class="school-staff-page staff-layout min-h-screen">
 

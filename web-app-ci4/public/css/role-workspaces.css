@@ -116,8 +116,6 @@
 .risk-LOW .bar-fill { background: #0f8a3a; }
 
 .analytics-filter-panel > summary { display: flex; margin-top: 16px; }
-.analytics-counting-note { margin-top: 14px; font-size: 13px; color: #526259; }
-.analytics-counting-note > summary { font-size: 13px; }
 @media (max-width: 700px) {
     .analytics-filter-panel > summary { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin-top: 14px; border: 1px solid #d8e3db; background: white; border-radius: 10px; padding: 12px 14px; font-weight: 600; color: #173e25; }
     .analytics-filter-panel > summary span { font-size: 12px; font-weight: 400; color: #526259; }
