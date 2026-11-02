@@ -12,7 +12,6 @@ import os
 import hmac
 import logging
 import torch
-import numpy as np
 from transformers import pipeline
 from deep_translator import GoogleTranslator
 import nltk
@@ -135,100 +134,6 @@ if distress_classifier is None:
     )
     logger.info(f"Loaded baseline fallback model: {fallback_model}")
 
-def get_mdeberta_embedding(text: str) -> np.ndarray:
-    try:
-        inputs = distress_classifier.tokenizer(
-            text, return_tensors="pt", truncation=True, max_length=512
-        )
-        with torch.no_grad():
-            if hasattr(distress_classifier.model, "deberta"):
-                outputs = distress_classifier.model.deberta(**inputs)
-            elif hasattr(distress_classifier.model, "base_model"):
-                outputs = distress_classifier.model.base_model(**inputs)
-            else:
-                outputs = distress_classifier.model(**inputs)
-            
-            last_hidden = outputs.last_hidden_state if hasattr(outputs, "last_hidden_state") else outputs[0]
-            attention_mask = inputs["attention_mask"].unsqueeze(-1)
-            sum_embeddings = torch.sum(last_hidden * attention_mask, dim=1)
-            sum_mask = torch.clamp(attention_mask.sum(dim=1), min=1e-9)
-            mean_pooled = (sum_embeddings / sum_mask).squeeze(0)
-            return mean_pooled.cpu().numpy()
-    except Exception as e:
-        logger.error(f"Error extracting mDeBERTa embedding: {e}")
-        return np.zeros(768, dtype=np.float32)
-
-CRISIS_PHRASES = [
-    "I want to kill myself", "I wish I could disappear", "I shouldn't exist",
-    "maybe life would be easier without me", "there's no point in living",
-    "I just want the pain to stop", "gusto ko nang mamahinga", "pagod na akong lumaban",
-    "I don't want to be here anymore", "nobody would care if I was gone",
-    "gusto ko maglaho na lang", "sana wag na ko magising bukas", "wala nang tutulong sakin",
-    "mas okay na sana kung wala ako", "I already gave my things away",
-    "everyone would be better without me", "I finished everything I needed to do",
-    "take care of yourself", "I won't bother you anymore", "I'm just a problem for everyone",
-    "di nako makaya ang kasakit", "mabannogakon ti panagbiag ko",
-    # Added for the 7 new depression patterns
-    "wala na akong gana sa lahat kahit mga bagay na gusto ko dati",
-    "may magbabago ba kung wala ako",
-    "para saan pa ako",
-    "kung wala na ako siguro mas maayos pa",
-    ### v7.1: Expanded Taglish/Gen-Z crisis anchors 
-    "tapusin ko na buhay ko", "ayoko na sa mundong ito",
-    "di ko na kaya ang lahat", "konti na lang susuko na ko",
-    "sana kunin na ako", "hirap na hirap na ko mabuhay",
-    "walang silbi ang buhay ko", "pabigat lang ako sa mundo",
-    "nasa tipping point na ko", "di na worth it mabuhay",
-    "gusto ko na lang mawala ng tuluyan", "di na ko lalaban pa",
-    "bakit pa ako bumabangon", "wala namang maghahanap sakin",
-    "mag-isa na lang ako lagi, walang may paki",
-    "parang extra lang ako sa lahat ng tao",
-    "normal naman ako sa harap nila pero sa loob namamatay na ko",
-    "manhid na ko sa lahat, wala na kong nararamdaman",
-    "ang hirap magpanggap na okay araw-araw",
-    "paulit-ulit ko na lang iniisip kung may silbi pa ba ako",
-    # Bisaya expanded
-    "gilaay na jud ko sa tanan", "wala na koy gana mubuhi",
-    "way pulos ang akong kinabuhi", "gusto na ko mahunong",
-    # Ilocano expanded
-    "awan serserbi ti biag ko", "kayat kon matayen",
-    "narigat unay ti riknak saan ko kayat agbiag",
-    ### v7.1: Breakup → crisis escalation anchors 
-    "iniwan niya ako, wala na akong dahilan mabuhay",
-    "pinagpalit niya ako, wala na akong silbi",
-    "niloko niya ako, ayoko na sa lahat",
-    "bakit di ako sapat, walang may gusto sakin",
-    "break up na kami, wala nang point mag-continue",
-    "iniwan na naman ako, palaging iniwan, pabigat lang talaga ako",
-    "wasak puso ko, di ko na kayang magpatuloy",
-    "nobody loves me, I just want to disappear",
-    "she left me and I have nothing left",
-    "he cheated on me, I feel so worthless and alone",
-    ### v7.4: Reddit/PH research — real student passive crisis language
-    "gaano katagal pa ba",                        # how much longer will this last
-    "sana may makapansin",                         # I wish someone would notice
-    "sana may makapansin sa akin",
-    "parang hindi na ko buo",                      # I don't feel whole anymore
-    "di na ko buo",
-    "di ko alam kung gaano ko pa ito kakayanin",
-    "di ko alam kung kailan matatapos",
-    "pagod na akong magpanggap",
-    "pagod na ako sa lahat",
-    "tired of pretending to be okay",
-    "I just want it to be over",
-    "sana matapos na lahat",
-    "gusto ko nang tumigil sa lahat",
-    "wala na kong lakas lumaban",
-    "kapag mag-isa ako naiiyak na lang ako",
-    "pag mag-isa na ko iba na ang nararamdaman ko",
-]
-
-logger.info(f"Pre-computing embeddings for {len(CRISIS_PHRASES)} crisis phrases using mDeBERTa...")
-CRISIS_EMBEDDINGS = np.vstack([get_mdeberta_embedding(p) for p in CRISIS_PHRASES])
-_norms = np.linalg.norm(CRISIS_EMBEDDINGS, axis=1, keepdims=True)
-_norms[_norms == 0] = 1e-9
-CRISIS_EMBEDDINGS_NORM = CRISIS_EMBEDDINGS / _norms
-
 ### Taglish / Gen-Z Slang Normalizer 
 TAGLISH_SLANG_MAP = {
     "naliyak": "umiyak", "naiyak": "umiyak", "naiiyak": "umiiyak",
@@ -322,8 +227,6 @@ def normalize_slang(text: str) -> str:
         normalized = re.sub(r'\b' + re.escape(slang) + r'\b', proper, normalized, flags=re.IGNORECASE)
     return normalized
 
-logger.info(f"Encoded {len(CRISIS_PHRASES)} multilingual crisis anchor phrases.")
-
 class RiskHistoryEntry(BaseModel):
     risk_level: str
     created_at: str
@@ -342,23 +245,6 @@ class MLResponse(BaseModel):
 
 
 # HELPER FUNCTIONS
-
-def get_semantic_similarity(text: str) -> float:
-    try:
-        sentences = nltk.sent_tokenize(text)
-        if not sentences:
-            return 0.0
-            
-        sent_embeds = np.vstack([get_mdeberta_embedding(s) for s in sentences])
-        s_norms = np.linalg.norm(sent_embeds, axis=1, keepdims=True)
-        s_norms[s_norms == 0] = 1e-9
-        sent_embeds_norm = sent_embeds / s_norms
-
-        similarities = np.dot(sent_embeds_norm, CRISIS_EMBEDDINGS_NORM.T)
-        return float(np.max(similarities))
-    except Exception as e:
-        logger.error(f"Semantic similarity error: {e}")
-        return 0.0
 
 def get_risk_components(translated_text: str, normalized_text: str) -> tuple[float, float]:
     try:

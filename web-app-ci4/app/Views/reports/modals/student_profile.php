@@ -194,7 +194,7 @@
                 document.getElementById('spParentEmail').innerText = u.parent_email || 'N/A';
                 document.getElementById('spParentPhone').innerText = u.parent_phone || 'N/A';
 
-                // Render trajectory badge from FAISS 14-day memory
+                // Render trajectory from the database-backed 14-day risk history.
                 var trajectoryBadge = document.getElementById('spTrajectoryBadge');
                 var traj = (data.current_trajectory || 'INSUFFICIENT_DATA').toUpperCase();
                 var prob = data.escalation_prob || 0;

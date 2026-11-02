@@ -32,11 +32,11 @@ student-shield/
 │   ├── public/           # Web root (point server here)
 │   └── .env              # Environment config (NOT committed — see below)
 ├── ml_service/           # Python FastAPI ML service
-│   ├── main.py           # FastAPI app (risk analysis, FAISS memory)
+│   ├── main.py           # FastAPI app (risk analysis, authenticated inference)
 │   ├── Dockerfile        # HF Spaces Docker config (port 7860)
 │   ├── requirements.txt  # Python deps
-│   ├── models/           # Trained sklearn/joblib models
-│   ├── faiss_memory/     # FAISS vector store for student history
+│   ├── models/           # Optional local Transformer checkpoints
+│   ├── risk_history.py   # Trajectory from database-backed risk history
 │   └── data/             # Training data
 ├── .github/workflows/
 │   └── deploy_hf.yml     # Auto-deploys ml_service/ to Hugging Face on push
@@ -159,9 +159,6 @@ COUNSELOR_EMAIL = <counselor-email>
 # LOCAL SMS GATEWAY (Android phone on LAN — only works locally)
 sms.GatewayUrl = <sms-gateway-url>
 
-# CLOUD SMS (CloudSMS API)
-CLOUDSMS_APP_KEY=<cloud-sms-key>
-CLOUDSMS_APP_SECRET=<cloud-sms-secret>
 ```
 
 > ⚠️ **On production (InfinityFree)**, the server has its own `.env` with the InfinityFree DB hostname, username, and password. You cannot SSH in to see it — it was set manually via their file manager.
@@ -209,9 +206,9 @@ status (Pending/Reviewed/Flagged), created_at, deleted_at
 **File:** `ml_service/main.py` (FastAPI)
 
 - Exposes `/analyze-text` (POST) — main endpoint used by `VentController.php`
-- Accepts: `{ "raw_text": "...", "student_id": "..." }`
+- Accepts: `{ "raw_text": "...", "student_id": "...", "risk_history": [] }`
 - Returns: `{ "risk_level": "LOW|MEDIUM|HIGH|CRITICAL", "risk_score": 1-100, "trajectory": "...", "escalation_probability": 0.0-0.99 }`. Despite its name, `risk_score` is a banded percentage, not a 0-1 probability.
-- Uses: trained mDeBERTa + RoBERTa models + FAISS vector memory for per-student trajectory tracking
+- Uses: trained mDeBERTa + RoBERTa models; `risk_history.py` evaluates risk labels/timestamps supplied from the web database. No FAISS memory is used by the active pipeline.
 - API key auth: the `X-API-KEY` header must match `ML_API_KEY` in both deployment environments. Do not document the value.
 
 **Fallback:** If the HF Space is cold-starting or unreachable, `VentController.php` automatically falls back to `localKeywordFallback()` — a PHP keyword heuristic that still catches high-risk Taglish phrases. No user-facing error is shown.
