@@ -600,6 +600,8 @@ CAT3_WORDS = [
 
 ### EMOTIONAL DISTRESS 
 EMOTIONAL_DISTRESS = [
+    # Persistent first-person fatigue differs from ordinary tiredness after an activity.
+    r"\bi(?:['’]ve| have)\s+been\s+tired\s+for\s+(?:so\s+long|weeks|months)\b",
     r"\bdepressed\b", r"\bdepression\b", r"can't take this anymore",
     r"\btired all the time\b", r"\bnothing feels right\b", r"\bgoing through the motions\b",
     r"\bno point in trying\b", r"\bhoping the days pass faster\b", r"\beverything feels off\b",
@@ -689,6 +691,7 @@ EMOTIONAL_DISTRESS = [
 
 ### SOCIAL ISOLATION / WITHDRAWAL 
 SOCIAL_ISOLATION = [
+    r"\b(?:thinking|feel(?:ing)?)(?:\s+like|\s+that)?\s+(?:nobody|no one)\s+(?:really\s+)?(?:knows|understands)\s+me\b",
     r"want(?:ed)?\s+to\s+be\s+alone", r"\bleave me alone\b", r"\bi feel alone\b",
     r"\bso alone\b", r"\ball alone\b", r"\bfeel(?:ing)?\s+lonely\b",
     r"\bno one (?:cares|understands|listens)\b",
@@ -1140,6 +1143,7 @@ SELF_WORTH = [
 # Maps to pattern #7: "di naman halata kasi normal naman ako kausap
 #                      pero pag mag-isa na, iba na"
 MASKED_DEPRESSION = [
+    r"\bi(?:['’]m| am)\s+(?:just\s+)?pretending\s+to\s+keep\s+up\b",
     # English
     r"\bi seem fine\b.{0,30}\b(but|pero|except)\b",
     r"\blook okay\b.{0,30}\b(but|pero|outside|sa labas)\b",
@@ -1669,7 +1673,8 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
     ### STAGE 7.5: POSITIVE VENT GUARD (suppress false MEDIUM on grateful posts)
     ## ┘
     severe_flags = violent_threat or has_cat1 or has_cat2 or has_sexual or has_finality
-    if has_positive and not severe_flags and not (has_emotional or has_isolation or has_anhedonia or has_self_worth or has_masked_dep):
+    # Positive wording may explain an already LOW result, never erase a raised assessment.
+    if risk == "LOW" and has_positive and not severe_flags and not (has_emotional or has_isolation or has_anhedonia or has_self_worth or has_masked_dep):
         risk       = "LOW"
         risk_score = min(risk_score, 0.28)
         reason     = "NLP: Positive/grateful vent — no active distress indicators."

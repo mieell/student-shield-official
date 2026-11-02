@@ -74,3 +74,40 @@ def test_explicit_self_harm_is_critical_despite_low_scores(analyzer, text):
 ])
 def test_other_directed_harm_and_ordinary_sadness_are_not_critical(analyzer, text):
     assert analyzer(text)["risk_level"] != "CRITICAL"
+
+
+@pytest.mark.parametrize("component", [0.0, 0.28, 0.60])
+def test_mixed_distress_is_not_erased_by_positive_mentions(analyzer, monkeypatch, component):
+    text = (Path(__file__).parent / "fixtures" / "mixed_distress.txt").read_text(encoding="utf-8")
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (component, component))
+    result = analyzer(text)
+    assert result["risk_level"] in {"MEDIUM", "HIGH"}
+    assert "Positive/grateful" not in result["flag_reason"]
+
+
+@pytest.mark.parametrize("text", [
+    "I've been tired for so long. I'm grateful my friends care about me.",
+    "I have been tired for months, even though I am excited for my friends.",
+    "I'm just pretending to keep up. My classmates are excited about the future.",
+    "I feel like nobody really knows me. I'm grateful for my family.",
+])
+def test_indirect_distress_survives_positive_context(analyzer, text):
+    assert analyzer(text)["risk_level"] in {"MEDIUM", "HIGH"}
+
+
+@pytest.mark.parametrize("text", [
+    "I am grateful for my friends and excited about our plans.",
+    "I am tired after football practice, but grateful for a great afternoon.",
+    "I haven't been tired for months. I'm excited about my future.",
+    "I'm not pretending to keep up. I'm grateful for my friends.",
+    "I used to be tired, but I feel good now and I'm grateful.",
+    "Masaya ako at sobrang thankful sa mga kaibigan ko.",
+])
+def test_positive_and_ordinary_fatigue_entries_stay_low(analyzer, text):
+    assert analyzer(text)["risk_level"] == "LOW"
+
+
+def test_positive_words_do_not_override_strong_neural_distress(analyzer, monkeypatch):
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.90, 0.90))
+    result = analyzer("I'm grateful for the people in my life.")
+    assert result["risk_level"] == "HIGH"
