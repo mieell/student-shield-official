@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Libraries\ExplicitCrisisGuard;
+use App\Libraries\GeminiVentFallback;
+use App\Libraries\VentRiskAnalyzer;
 use App\Libraries\ViolentThreats;
 
 class VentController extends BaseController
@@ -100,7 +102,6 @@ class VentController extends BaseController
         }
 
         $response = false;
-        $curlError = 'ML_API_KEY is not configured';
         $httpCode = 0;
         if ($mlApiKey !== '') {
             $ch = curl_init($mlApiBase . '/analyze-text');
@@ -111,54 +112,30 @@ class VentController extends BaseController
             ]);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+            // Leave time for a bounded backup request on shared PHP hosting.
+            $backupEnabled = filter_var(env('GEMINI_VENT_FALLBACK_ENABLED', false), FILTER_VALIDATE_BOOLEAN);
+            curl_setopt($ch, CURLOPT_TIMEOUT, $backupEnabled ? 15 : 60);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $backupEnabled ? 3 : 15);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Existing hosting compatibility setting; tracked separately.
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             $response = curl_exec($ch);
-            $curlError = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
         } else {
-            log_message('error', 'ML_API_KEY is not configured; using the local safety fallback');
+            log_message('error', 'ML_API_KEY is not configured; checking vent fallback.');
         }
 
-        $mlResult = json_decode($response, true);
-        $sentimentScore        = 0.0;
-        $riskLevel             = 'LOW';
-        $trajectory            = 'INSUFFICIENT_DATA';
-        $escalationProbability = 0.0;
-
-        if ($mlResult && isset($mlResult['risk_level'])) {
-            $sentimentScore        = isset($mlResult['risk_score']) ? (float)$mlResult['risk_score'] : (float)($mlResult['risk_percent'] ?? 0.0);
-            $riskLevel             = $mlResult['risk_level'];
-            $trajectory            = $mlResult['trajectory'] ?? 'INSUFFICIENT_DATA';
-            $escalationProbability = (float)($mlResult['escalation_probability'] ?? 0.0);
-
-            // Enforce explicit crisis signals even when ML succeeds but returns
-            // a lower-risk result, before persistence and notifications.
-            $guardedResult = ExplicitCrisisGuard::enforce($text, [
-                'risk_level' => $riskLevel,
-                'risk_percent' => $sentimentScore,
-            ]);
-            $riskLevel = $guardedResult['risk_level'];
-            $sentimentScore = (float) $guardedResult['risk_percent'];
+        $mlResult = is_string($response) ? json_decode($response, true) : null;
+        if ($httpCode < 200 || $httpCode >= 300 || !VentRiskAnalyzer::valid($mlResult)) {
+            log_message('warning', 'Primary vent analysis unavailable (HTTP {status}); checking configured fallback.', ['status' => $httpCode]);
         }
-        else {
-            log_message('error', 'ML Service Error (HTTP ' . $httpCode . '): ' . ($curlError ?: 'Invalid response: ' . $response));
-            // Run full local keyword fallback only when ML service is unreachable
-            $localResult = $this->localKeywordFallback($text);
-            $riskLevel = $localResult['risk_level'];
-            $sentimentScore = (float)$localResult['risk_percent'];
-        }
-
-        // Explicit threats to others must survive a low ML prediction or an outage.
-        $safeResult = ViolentThreats::enforce($text, [
-            'risk_level' => $riskLevel,
-            'risk_percent' => $sentimentScore,
-        ]);
-        $riskLevel = $safeResult['risk_level'];
-        $sentimentScore = (float) $safeResult['risk_percent'];
+        $assessment = VentRiskAnalyzer::resolve($text, $mlResult, (int) $httpCode,
+            static fn (string $entry) => (new GeminiVentFallback())->analyze($entry),
+            fn (string $entry) => $this->localKeywordFallback($entry));
+        $riskLevel = $assessment['risk_level'];
+        $sentimentScore = $assessment['risk_percent'];
+        $trajectory = $assessment['trajectory'];
+        $escalationProbability = $assessment['escalation_probability'];
 
         // --- 2. DATA PRIVACY SECURE ENCRYPTION ---
         try {
@@ -195,7 +172,10 @@ class VentController extends BaseController
         }
 
         $db->table('vent_logs')->insert($insertData);
-        $this->logAudit('CREATE_VENT', 'vent', (int) $db->insertID());
+        $ventId = (int) $db->insertID();
+        $this->logAudit('CREATE_VENT', 'vent', $ventId);
+        // Keep provenance separate from model-performance evaluation and student-facing responses.
+        $this->logAudit('VENT_ANALYSIS_' . strtoupper($assessment['source']), 'vent', $ventId);
 
         $hideFromParents = $this->request->getPost('hide_from_parents') === '1';
 
