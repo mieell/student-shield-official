@@ -219,7 +219,7 @@ body.staff-layout #staffMain.principal-workspace .risk-composition { height: 12p
     body.staff-layout #staffMain .section-header { padding: 16px; }
     body.staff-layout #staffMain .staff-filter-bar { padding: 12px 16px; }
     body.staff-layout #staffMain .filter-quick { margin: 0 16px 12px; padding: 4px; max-width: calc(100% - 32px); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
-    body.staff-layout #staffMain .filter-quick button { white-space: nowrap; flex-shrink: 0; }
+    body.staff-layout #staffMain .filter-quick button { white-space: nowrap; flex-shrink: 0; min-height: 44px; }
     body.staff-layout #staffMain .staff-vents-table td { padding-block: 8px; }
     body.staff-layout #staffMain .staff-vents-table td[data-label=Action] { width: auto; }
     body.staff-layout #staffMain.accounts-workspace .directory-identity strong { font-size: 14px; }
