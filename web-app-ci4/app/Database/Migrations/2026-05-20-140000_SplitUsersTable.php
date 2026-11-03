@@ -204,31 +204,46 @@ class SplitUsersTable extends Migration
         $db = \Config\Database::connect();
 
         $students = $db->table('students')->get()->getResultArray();
-        foreach ($students as $student) {
-            $db->table('users')->where('id', $student['user_id'])->update([
-                'student_id'   => $student['student_id'],
-                'parent_phone' => $student['parent_phone'],
-                'parent_email' => $student['parent_email'],
-                'section'      => $student['section'],
-                'adviser_name' => $student['adviser_name'],
-                'grade_level'  => $student['grade_level'],
-            ]);
+        if (!empty($students)) {
+            $studentUpdates = [];
+            foreach ($students as $student) {
+                $studentUpdates[] = [
+                    'id'           => $student['user_id'],
+                    'student_id'   => $student['student_id'],
+                    'parent_phone' => $student['parent_phone'],
+                    'parent_email' => $student['parent_email'],
+                    'section'      => $student['section'],
+                    'adviser_name' => $student['adviser_name'],
+                    'grade_level'  => $student['grade_level'],
+                ];
+            }
+            $db->table('users')->updateBatch($studentUpdates, 'id');
         }
 
         $counselors = $db->table('counselors')->get()->getResultArray();
-        foreach ($counselors as $counselor) {
-            $db->table('users')->where('id', $counselor['user_id'])->update([
-                'parent_email' => $counselor['counselor_email'],
-                'parent_phone' => $counselor['counselor_phone'],
-            ]);
+        if (!empty($counselors)) {
+            $counselorUpdates = [];
+            foreach ($counselors as $counselor) {
+                $counselorUpdates[] = [
+                    'id'           => $counselor['user_id'],
+                    'parent_email' => $counselor['counselor_email'],
+                    'parent_phone' => $counselor['counselor_phone'],
+                ];
+            }
+            $db->table('users')->updateBatch($counselorUpdates, 'id');
         }
 
         $admins = $db->table('admins')->get()->getResultArray();
-        foreach ($admins as $admin) {
-            $db->table('users')->where('id', $admin['user_id'])->update([
-                'parent_email' => $admin['email'],
-                'parent_phone' => $admin['phone'],
-            ]);
+        if (!empty($admins)) {
+            $adminUpdates = [];
+            foreach ($admins as $admin) {
+                $adminUpdates[] = [
+                    'id'           => $admin['user_id'],
+                    'parent_email' => $admin['email'],
+                    'parent_phone' => $admin['phone'],
+                ];
+            }
+            $db->table('users')->updateBatch($adminUpdates, 'id');
         }
 
         // 3. Drop subclass tables
