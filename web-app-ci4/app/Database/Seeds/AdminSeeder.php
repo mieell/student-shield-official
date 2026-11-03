@@ -8,10 +8,15 @@ class AdminSeeder extends Seeder
 {
     public function run()
     {
+        $adminPassword = getenv('ADMIN_PASSWORD') ?: (function_exists('env') ? env('ADMIN_PASSWORD') : null);
+        if (empty($adminPassword)) {
+            $adminPassword = bin2hex(random_bytes(10));
+        }
+
         $userData = [
             'name'            => 'admin',
             'role'            => 2, // Super Admin
-            'password_hash'   => password_hash('admin123', PASSWORD_BCRYPT),
+            'password_hash'   => password_hash($adminPassword, PASSWORD_BCRYPT),
         ];
 
         // Check if admin already exists
@@ -25,7 +30,7 @@ class AdminSeeder extends Seeder
                 'email'   => 'admin@studentshield.org',
                 'phone'   => '09000000000'
             ]);
-            echo "Admin account created successfully. Username: admin, Password: admin123\n";
+            echo "Admin account created successfully. Username: admin, Password: {$adminPassword}\n";
         } else {
             echo "Admin account already exists.\n";
         }
