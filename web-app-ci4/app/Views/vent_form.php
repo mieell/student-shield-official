@@ -71,7 +71,7 @@
                     <h2>A space to say how you feel.</h2>
                     <p>Write at your own pace. Your guidance counselor can help you take the next step.</p>
                     </div>
-                    <img class="vent-heading-illustration" src="<?= base_url('images/safe-space-writing.webp') ?>" alt="" aria-hidden="true" width="2018" height="779" decoding="async">
+                    <img class="vent-heading-illustration" src="<?= base_url('images/safe-space-journal.webp') ?>" alt="" aria-hidden="true" width="800" height="300" decoding="async">
                 </header>
 
                 <!-- Flash Messages -->

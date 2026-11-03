@@ -320,3 +320,45 @@ body.staff-layout #staffMain :is([class~="text-[9px]"], [class~="text-[10px]"], 
 body.staff-layout #staffMain :is(.staff-vents-table, #logsTable) thead th { font-size: 13px; font-weight: 700; color: #2b4a35; }
 body.staff-layout #staffMain.principal-workspace :is(.daily-trend-scale span, .daily-trend-dates span, .daily-trend-value, .daily-trend-hint) { font-size: 12px; }
 body.staff-layout #staffMain.principal-workspace :is(.report-context p, .report-scope) { font-size: 13px; }
+
+/* Short laptop viewports: spend space on writing and actions, without scaling text. */
+@media (min-width: 900px) and (max-height: 850px) {
+    body.student-form-page--vent .vent-header-inner { min-height: 64px; padding-block: 8px; }
+    body.student-form-page--vent .vent-brand img { width: 44px; height: 44px; }
+    body.student-form-page--vent .vent-content { padding-block: 12px; }
+    body.student-form-page--vent .student-page-header { margin-bottom: 12px; }
+    body.student-form-page--vent .vent-heading-copy { padding-block: 0; }
+    body.student-form-page--vent .vent-heading-illustration { height: 94px; max-height: 94px; width: 100%; }
+    body.student-form-page--vent .student-page-header h2 { font-size: 30px; }
+    body.student-form-page--vent .student-page-header p { margin-top: 6px; font-size: 15px; }
+    body.student-form-page--vent .vent-workspace { padding: 16px; gap: 20px; align-items: start; }
+    body.student-form-page--vent .vent-workspace #ventForm { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px 18px; height: auto; }
+    body.student-form-page--vent :is(.vent-writing-field, .vent-submit-row) { grid-column: 1 / -1; }
+    body.student-form-page--vent .textarea-field { min-height: 140px; height: clamp(140px, 22vh, 180px); flex: none; }
+    body.student-form-page--vent .confidentiality-option { align-self: start; padding: 12px; }
+    body.student-form-page--vent .mood-help { margin-bottom: 8px; }
+    body.student-form-page--vent .mood-toggle { min-height: 44px; padding-block: 9px; }
+    body.student-form-page--vent .vent-support { gap: 14px; padding-left: 20px; }
+    body.student-form-page--vent .vent-support-intro { padding: 12px; }
+    body.student-form-page--vent .vent-support-intro h2 { font-size: 20px; margin-bottom: 6px; }
+    body.student-form-page--vent .vent-session-support { padding-top: 14px; }
+    body.student-form-page--vent .vent-session-support > h2 { font-size: 22px; padding-left: 60px; }
+    body.student-form-page--vent .meet-icon-wrap { top: 18px; width: 48px; height: 48px; }
+    body.student-form-page--vent .meet-icon-wrap svg { width: 26px; height: 26px; }
+    body.student-form-page--vent .meet-card-header { margin-bottom: 12px; }
+    body.student-form-page--vent .meet-card-header > div:last-child { padding-left: 60px; }
+    body.student-form-page--vent .vent-urgent-support { margin-top: 14px; padding: 12px; }
+    body.student-form-page--vent .vent-footer { margin-top: 14px; padding-block: 12px; }
+    body.student-home .student-home-content { padding-block: 70px 14px; margin-top: 0; }
+    body.student-home .student-home-intro { margin-bottom: 18px; }
+    body.student-home .student-home-intro > p { max-width: 50em; font-size: 16px; line-height: 1.5; }
+    body.student-home .student-home-intro > span { margin-bottom: 8px; }
+    body.student-home .student-home-intro h1 { font-size: 36px; margin-bottom: 10px; }
+    body.student-home .student-home-actions > .glass-card { padding: 22px; }
+    body.student-home .student-home-actions > .glass-card > div:first-child { width: 48px; height: 48px; margin-bottom: 12px; }
+    body.student-home .student-home-actions > .glass-card > p { margin-bottom: 16px; }
+    body.student-home .student-home-actions > .glass-card > div:last-child { padding-top: 12px; }
+    body.student-home .student-home-meeting { margin-top: 14px; }
+    body.student-home .student-home-meeting .student-meet-card { padding: 12px 20px; }
+    body.student-home .student-home-footer { margin-top: 14px; }
+}
