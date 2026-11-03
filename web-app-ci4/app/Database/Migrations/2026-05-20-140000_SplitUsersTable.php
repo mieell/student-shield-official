@@ -52,12 +52,11 @@ class SplitUsersTable extends Migration
             'updated_at' => [
                 'type'    => 'DATETIME',
                 'null'    => true,
-                'default' => new \CodeIgniter\Database\RawSql('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
             ],
         ]);
         $this->forge->addPrimaryKey('user_id');
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('students');
+        $this->forge->createTable('students', true);
 
         // 2. Create `counselors` table
         $this->forge->addField([
@@ -83,12 +82,11 @@ class SplitUsersTable extends Migration
             'updated_at' => [
                 'type'    => 'DATETIME',
                 'null'    => true,
-                'default' => new \CodeIgniter\Database\RawSql('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
             ],
         ]);
         $this->forge->addPrimaryKey('user_id');
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('counselors');
+        $this->forge->createTable('counselors', true);
 
         // 3. Create `admins` table
         $this->forge->addField([
@@ -114,12 +112,11 @@ class SplitUsersTable extends Migration
             'updated_at' => [
                 'type'    => 'DATETIME',
                 'null'    => true,
-                'default' => new \CodeIgniter\Database\RawSql('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
             ],
         ]);
         $this->forge->addPrimaryKey('user_id');
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('admins');
+        $this->forge->createTable('admins', true);
 
         // 4. Migrate Data from `users` to profile tables
         $db = \Config\Database::connect();
