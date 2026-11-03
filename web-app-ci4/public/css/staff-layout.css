@@ -197,8 +197,22 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout #section-incidents td[data-label="Type"] { grid-column: 2; grid-row: 2; text-align: right; }
     .staff-layout #section-incidents td[data-label="Grade & Section"] { grid-column: 1 / -1; grid-row: 3; font-size: 12px; color: #61756b; }
     .staff-layout #section-incidents td[data-label="Description"] { grid-column: 1 / -1; grid-row: 4; padding-top: 8px !important; border-top: 1px solid #edf1ee; font-size: 13px; line-height: 1.5; }
-    .staff-layout #section-incidents td[data-label="Status"] { grid-column: 1; grid-row: 5; align-self: center; }
-    .staff-layout #section-incidents td[data-label="Action"] { grid-column: 2; grid-row: 5; text-align: right; }
+    .staff-layout #section-incidents td[data-label="Status"] { grid-column: 1 / -1; grid-row: 5; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding-top: 12px !important; border-top: 1px solid #e2e8e5; }
+    .staff-layout #section-incidents td[data-label="Action"] { grid-column: 1 / -1; grid-row: 6; text-align: left; background: transparent; }
+    .staff-layout #section-incidents .mobile-card-table tbody { display: grid; gap: 16px; padding: 12px; background: #f4f7f5; }
+    .staff-layout #section-incidents .mobile-card-table tbody tr { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding: 16px; margin-bottom: 0; border: 1px solid #d8e3db; border-radius: 16px; box-shadow: 0 3px 10px -8px #173e2540; }
+    .staff-layout #section-incidents td[data-label="Select"] { justify-self: end; width: 44px; min-height: 44px; align-items: center; justify-content: center; border: 1px solid #e2e8e5; border-radius: 10px; }
+    .staff-layout #section-incidents td[data-label="Reporter"] { overflow-wrap: anywhere; }
+    .staff-layout #section-incidents td[data-label="Type"] { text-align: left; }
+    .staff-layout #section-incidents td[data-label="Date"] { grid-column: 1 / -1; grid-row: 3; display: flex; flex-direction: row; gap: 8px; align-items: baseline; }
+    .staff-layout #section-incidents td[data-label="Description"] { padding: 12px !important; border: 1px solid #e2e8e5; border-radius: 10px; background: #f7faf8; }
+    .staff-layout #section-incidents td[data-label="Description"] p { font-style: normal; font-size: 14px; line-height: 1.6; }
+    .staff-layout #section-incidents td[data-label="Description"] > span { opacity: 1; min-height: 32px; display: inline-flex; align-items: center; }
+    .staff-layout #section-incidents td[data-label="Action"] > div { min-width: 0; display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; }
+    .staff-layout #section-incidents td[data-label="Action"] :is(form, button, a) { width: 100%; margin: 0; }
+    .staff-layout #section-incidents td[data-label="Action"] hr { display: none; }
+    .staff-layout #section-incidents td[data-label="Action"] button { border-radius: 10px; font-size: 13px; white-space: normal; }
+    .staff-layout #section-incidents td[data-label="Action"] form:last-child button { background: white; border: 1px solid #cfd9d4; color: #526259; }
     .staff-layout #section-incidents td[data-label="Select"]::before, .staff-layout #section-incidents td[data-label="Reporter"]::before, .staff-layout #section-incidents td[data-label="Action"]::before { display: none; }
     .staff-layout #section-incidents td[data-label="Action"] button, .staff-layout #section-incidents td[data-label="Action"] a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
     .staff-layout #section-alerts .mobile-card-table td { white-space: normal; overflow-wrap: anywhere; }
