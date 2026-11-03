@@ -6,6 +6,23 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class StudentNavigationViewTest extends CIUnitTestCase
 {
+    public function testActionSelectionPreservesReportingRestrictionsAndSafeSpaceAccess(): void
+    {
+        helper(['url', 'form']);
+        foreach ([false, true] as $locked) {
+            $dom = new \DOMDocument();
+            @$dom->loadHTML(view('student_dashboard', ['isLocked' => $locked]));
+            $xpath = new \DOMXPath($dom);
+            $actions = '//div[contains(@class,"student-home-actions")]';
+            $this->assertCount(1, $xpath->query($actions . '/a[@href="' . base_url('student/vent') . '"]'));
+            $this->assertCount($locked ? 0 : 1, $xpath->query($actions . '/a[@href="' . base_url('report-bullying') . '"]'));
+            $this->assertCount(1, $xpath->query('//nav/form[@method="POST"][contains(@action,"/logout")]/input[@name="' . csrf_token() . '"]'));
+            if ($locked) {
+                $this->assertStringContainsString('Reporting Suspended', $dom->textContent);
+            }
+        }
+    }
+
     public function testPasswordVisibilityControlDoesNotSubmitOrChangeLoginFields(): void
     {
         helper(['url', 'form']);

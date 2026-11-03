@@ -1,8 +1,8 @@
 /* Keep the existing green, gold, risk colors, and page backgrounds. */
 body {
     --ui-ease: cubic-bezier(.16, 1, .3, 1);
-    --ui-shadow: 0 2px 4px #173e2506, 0 10px 28px -16px #173e252e;
-    --ui-raised-shadow: 0 8px 24px -12px #173e2538;
+    --ui-shadow: 0 2px 3px -2px #173e2512, 0 12px 26px -20px #173e2530;
+    --ui-raised-shadow: 0 4px 8px -5px #173e2526, 0 18px 42px -18px #173e2538;
 }
 body :is(.metric, .stat-card, table, .char-count) { font-variant-numeric: tabular-nums; }
 body a { text-underline-offset: .2em; }
@@ -77,7 +77,7 @@ body.student-home .student-home-meeting { margin-block: 22px 0; max-width: 1024p
 body.student-home .student-home-meeting .student-meet-card { display: grid; grid-template-columns: minmax(0,1fr) minmax(180px,auto); align-items: center; gap: 16px; padding: 18px 24px; min-height: 0; height: auto; }
 body.student-home .student-home-meeting .meet-card-header { margin: 0; }
 body.student-home .student-home-meeting .meet-card-body { margin: 0; min-width: 0; }
-body.student-home .student-home-actions > .glass-card { border-radius: 20px; }
+body.student-home .student-home-actions > .glass-card { border-radius: 20px; background: #fff; border: 1px solid #ffffffb3; backdrop-filter: none; }
 body.student-home .student-home-actions > .glass-card > p { font-size: 15px; line-height: 1.65; }
 body.student-home .student-home-actions > .glass-card > div:last-child { text-transform: none; font-size: 15px; letter-spacing: 0; }
 body.student-workspace-page .student-report-tracker { border-radius: 16px; box-shadow: var(--ui-shadow); margin-bottom: 0; }
@@ -361,4 +361,144 @@ body.staff-layout #staffMain.principal-workspace :is(.report-context p, .report-
     body.student-home .student-home-meeting { margin-top: 14px; }
     body.student-home .student-home-meeting .student-meet-card { padding: 12px 20px; }
     body.student-home .student-home-footer { margin-top: 14px; }
+}
+
+/* StudentShield: a writing desk for students, a focused workspace for staff. */
+body { --finish-line: #d7e3db; --finish-ink: #203d2c; --finish-mint: #edf6f0; }
+body:is(.student-workspace-page,.staff-layout) ::selection { color: #173e25; background: #dceee1; }
+body:is(.student-workspace-page,.staff-layout) :is(input,textarea) { caret-color: #0f8a3a; }
+
+/* A centered welcome and two equally weighted, direct choices. */
+body.student-home .student-home-content { display: grid; grid-template-columns: minmax(0,1fr); align-items: center; gap: 24px; max-width: 1140px; padding: 90px 32px 24px; margin-top: 0; }
+body.student-home .student-home-intro { text-align: center; margin: 0; }
+body.student-home .student-home-intro h1 { font-size: clamp(34px,3.3vw,44px); line-height: 1.15; letter-spacing: -.035em; margin: 0 auto 12px; text-wrap: balance; }
+body.student-home .student-home-intro > p { font-size: 16px; line-height: 1.6; margin: 0 auto; max-width: 73ch; }
+body.student-home .student-home-artwork { display: block; width: 310px; max-width: 75%; height: 128px; object-fit: contain; margin: 0 auto 12px; }
+body.student-home .student-home-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; max-width: none; }
+body.student-home .student-home-actions > .glass-card { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 8px 18px; align-items: start; border-radius: 18px; padding: 26px; background: #fff; box-shadow: 0 4px 8px -5px #05341840, 0 18px 36px -24px #05341880; transition: border-color 180ms ease, box-shadow 180ms ease; }
+body.student-home .student-home-actions .student-choice-icon { grid-column: 1; grid-row: 1 / 3; width: 44px; height: 44px; margin: 0; background: transparent; border: 0; box-shadow: none; color: #235d3a; border-radius: 0; transform: none; }
+body.student-home .student-choice-icon svg { width: 30px; height: 30px; }
+body.student-home .student-home-actions > .glass-card > h2 { grid-column: 2; font-size: 24px; line-height: 1.25; letter-spacing: -.025em; margin: 3px 0 0; color: #203d2c; }
+body.student-home .student-home-actions > .glass-card > p { grid-column: 2; margin: 0; font-size: 14px; line-height: 1.65; color: #526259; }
+body.student-home .student-home-actions > .glass-card > div:last-child { grid-column: 2; border: 0; margin: 4px 0 0; padding: 6px 0 0; min-height: 36px; font-size: 14px; font-weight: 800; color: #235d3a; }
+body.student-home .student-home-meeting { grid-column: 1 / -1; max-width: none; margin: 0; border: 1px solid #ffffff4d; border-radius: 14px; box-shadow: none; }
+body.student-home .student-home-meeting .student-meet-card { padding: 16px 22px; border: 0; border-radius: inherit; }
+body.student-home .student-home-footer { grid-column: 1 / -1; margin: 0; }
+
+/* The form is the foreground; support is one continuous, quiet rail. */
+body.student-workspace-page .vent-header { border-bottom-width: 2px; }
+body.student-workspace-page .student-page-header h2 { font-weight: 800; letter-spacing: -.03em; }
+body.student-workspace-page .student-section-label { text-transform: none; letter-spacing: 0; color: #526259; font-weight: 600; }
+body.student-form-page--vent .vent-workspace { padding: 0; gap: 0; overflow: hidden; border-radius: 20px; border: 1px solid var(--finish-line); box-shadow: var(--ui-raised-shadow); }
+body.student-form-page--vent .vent-composer { padding: 28px; }
+body.student-form-page--vent .vent-support { padding: 28px; border: 0; border-left: 1px solid var(--finish-line); background: var(--finish-mint); gap: 26px; }
+body.student-form-page--vent .vent-support-intro { padding: 0; border: 0; background: transparent; border-radius: 0; }
+body.student-form-page--vent .vent-support-intro :is(h2,p) { padding-left: 0; }
+body.student-form-page--vent .vent-support-intro h2 { font-size: 23px; line-height: 1.3; margin-bottom: 10px; }
+body.student-form-page--vent .vent-support-intro h2::before { display: none; }
+body.student-form-page--vent .vent-session-support { padding: 22px 0 0; border: 0; border-top: 1px solid #cbded1; background: transparent; border-radius: 0; }
+body.student-form-page--vent .vent-session-support > h2 { padding-left: 0; font-size: 23px; }
+body.student-form-page--vent .meet-icon-wrap { position: static; width: 32px; height: 32px; background: transparent; border-radius: 0; }
+body.student-form-page--vent .meet-icon-wrap svg { width: 26px; height: 26px; }
+body.student-form-page--vent .meet-card-header { gap: 12px; margin-block: 12px 18px; }
+body.student-form-page--vent .meet-card-header > div:last-child { padding-left: 0; }
+body.student-form-page--vent .vent-urgent-support { margin-top: 22px; padding: 18px 0 0; border: 0; border-top: 1px solid #cbded1; background: transparent; border-radius: 0; }
+body.student-workspace-page :is(.textarea-field,.mood-toggle,.student-entry-form input[type=text]) { border-color: #94aa9c; background: #fff; border-radius: 10px; }
+body.student-workspace-page .textarea-field { background: #fbfdfb; box-shadow: inset 0 2px 4px #173e2505; }
+body.student-workspace-page .textarea-field:focus { background: #fff; }
+body.student-workspace-page .char-count { background: transparent; padding: 0; color: #526259; }
+body.student-workspace-page #submitBtn { border: 1px solid #ffffff26; box-shadow: 0 3px 6px -3px #173e2540, inset 0 1px #ffffff26; border-radius: 10px; }
+body.student-workspace-page .confidentiality-option { border: 1px solid var(--finish-line); background: #f4f8f5; border-radius: 10px; }
+body.student-workspace-page .report-upload { border-radius: 10px; background: #f6faf7; }
+body.student-form-page--report .vent-workspace { gap: 24px; box-shadow: none; }
+body.student-form-page--report .report-guidance-card { border-radius: 18px; border: 1px solid #e5dbb9; background: #fffaf0; box-shadow: none; }
+body.student-form-page--report .student-entry-form { border-radius: 18px; border-color: var(--finish-line); box-shadow: var(--ui-shadow); }
+body.student-workspace-page .student-report-tracker-body > ul > li { border-radius: 14px; background: #fbfdfb; box-shadow: none; }
+body.student-workspace-page .student-report-date { padding-top: 12px; border-top: 1px solid #e2ebe5; display: block; }
+
+/* Staff: navigation identifies location; the queue and analytical panels lead. */
+body.staff-layout .staff-sidebar { box-shadow: 4px 0 18px -14px #05341840; }
+body.staff-layout .staff-sidebar .staff-nav-link[aria-current=page] { background: #fff; color: #235d3a; box-shadow: 0 3px 7px -5px #05341866; }
+body.staff-layout .staff-sidebar .staff-nav-link[aria-current=page] :is(svg,i) { color: #235d3a; }
+body.staff-layout .staff-sidebar .staff-nav-link[aria-current=page]::before { background: transparent; }
+body.staff-layout #staffMain .staff-metrics { gap: 0; border: 1px solid var(--finish-line); border-radius: 14px; overflow: hidden; background: #fff; }
+body.staff-layout #staffMain .staff-metrics .stat-card { padding: 18px 22px; border: 0; border-right: 1px solid var(--finish-line); border-radius: 0; background: #fff; }
+body.staff-layout #staffMain .staff-metrics .stat-card:last-child { border-right: 0; }
+body.staff-layout #staffMain .staff-metrics .stat-card > div:first-child { background: transparent; width: 28px; height: 28px; border: 0; }
+body.staff-layout #staffMain .staff-metrics .stat-card .uppercase { font-size: 13px; font-weight: 500; }
+body.staff-layout #staffMain .staff-metrics .stat-card [id^=stat-] { font-size: 30px; font-family: Nunito,sans-serif; font-weight: 800; letter-spacing: -.025em; }
+body.staff-layout #staffMain .dashboard-card { border-color: var(--finish-line); border-radius: 16px; box-shadow: var(--ui-shadow); }
+body.staff-layout #staffMain .queue-heading { padding: 20px 24px 12px; }
+body.staff-layout #staffMain .queue-heading h3 { font: 800 21px/1.3 Nunito,sans-serif; }
+body.staff-layout #staffMain :is(.staff-vents-table,#logsTable,.mobile-card-table) thead th { font-size: 12px; font-weight: 600; color: #526259; background: #f5f9f6; text-transform: none; letter-spacing: 0; }
+body.staff-layout #staffMain .staff-filter-toggle { background: #fff; border-color: #b8cebf; border-radius: 9px; font-weight: 600; }
+body.staff-layout #staffMain .staff-review-button { border-radius: 9px; font-weight: 600; }
+body.staff-layout #staffMain.accounts-workspace .directory-panel { border-radius: 18px; box-shadow: var(--ui-shadow); border-color: var(--finish-line); }
+body.staff-layout #staffMain.accounts-workspace .accounts-directory-heading { padding-block: 22px 8px; }
+body.staff-layout #staffMain.accounts-workspace .account-row { padding-block: 16px; border-color: #e5ece7; }
+body.staff-layout #staffMain.accounts-workspace .directory-avatar { border: 2px solid #fff; box-shadow: 0 1px 4px #173e2514; }
+body.staff-layout #staffMain.accounts-workspace .account-inspect-button { border-radius: 8px; font-weight: 600; padding-inline: 16px; }
+
+/* Four overview figures sit above distinct trend and risk panels. */
+body.staff-layout #staffMain.principal-workspace .report-workspace { background: transparent; border: 0; border-radius: 0; overflow: visible; box-shadow: none; }
+body.staff-layout #staffMain.principal-workspace .metric-grid { background: transparent; gap: 14px; }
+body.staff-layout #staffMain.principal-workspace .metric { border: 1px solid var(--finish-line); border-radius: 14px; background: #fff; min-height: 116px; padding: 20px; gap: 10px; box-shadow: var(--ui-shadow); }
+body.staff-layout #staffMain.principal-workspace .metric:last-child { border-color: #e6d7a7; background: #fffaf0; }
+body.staff-layout #staffMain.principal-workspace .metric strong { font-size: 36px; letter-spacing: -.03em; }
+body.staff-layout #staffMain.principal-workspace .report-context { border: 0; padding: 16px 2px; }
+body.staff-layout #staffMain.principal-workspace .analytics-charts { gap: 20px; align-items: stretch; }
+body.staff-layout #staffMain.principal-workspace .analytics-charts > .role-panel { border: 1px solid var(--finish-line); border-radius: 16px; background: #fff; padding: 24px; box-shadow: var(--ui-shadow); }
+body.staff-layout #staffMain.principal-workspace .report-information { display: grid; grid-template-columns: minmax(220px,.8fr) minmax(0,1.5fr); gap: 24px; background: #edf6f0; border-color: #d5e5da; padding: 24px; }
+body.staff-layout #staffMain.principal-workspace .report-information-heading { margin: 0; align-items: start; }
+body.staff-layout #staffMain.principal-workspace .report-information-heading > svg { padding: 0; width: 24px; height: 24px; border-radius: 0; background: transparent; }
+body.staff-layout #staffMain.principal-workspace .report-information-notes { grid-template-columns: 1fr; gap: 0; }
+body.staff-layout #staffMain.principal-workspace .report-information-note { background: transparent; border: 0; border-radius: 0; }
+body.staff-layout #staffMain.principal-workspace .report-information-note + .report-information-note { border-top: 1px solid #ccdfd2; }
+body.staff-layout #staffMain.principal-workspace .report-information-note > summary { padding: 10px 0; min-height: 44px; }
+body.staff-layout #staffMain.principal-workspace .report-information-note > div { margin-inline: 0; }
+@media (hover:hover) and (pointer:fine) {
+    body.student-home .student-home-actions > a.glass-card:hover { transform: none; border-color: #f5d875; background: #fffdf7; box-shadow: 0 6px 12px -8px #05341859, 0 22px 40px -24px #05341880; }
+    body.student-home .student-home-actions > a.glass-card:hover > div:last-child svg { transform: translateX(4px); }
+    body.staff-layout #staffMain .staff-review-button:hover { color: #fff; background: #235d3a; border-color: #235d3a; }
+}
+@media (min-width:900px) and (max-height:850px) {
+    body.student-home .student-home-content { gap: 12px; padding-block: 76px 12px; }
+    body.student-home .student-home-intro h1 { font-size: 36px; margin-bottom: 8px; }
+    body.student-home .student-home-actions > .glass-card { padding: 20px 24px; }
+    body.student-home .student-home-artwork { width: 250px; height: 100px; margin-bottom: 8px; }
+    body.student-form-page--vent .vent-composer { padding: 20px; }
+    body.student-form-page--vent .vent-support { padding: 20px; gap: 16px; }
+    body.student-form-page--vent .vent-support-intro h2 { font-size: 21px; margin-bottom: 8px; }
+    body.student-form-page--vent .vent-session-support { padding-top: 16px; }
+    body.student-form-page--vent .meet-card-header { margin-block: 8px 12px; }
+    body.student-form-page--vent .vent-urgent-support { margin-top: 16px; padding-top: 14px; }
+}
+@media (max-width:899px) {
+    body.student-home .student-home-content { grid-template-columns: 1fr; padding: 90px 22px 22px; gap: 24px; max-width: 620px; }
+    body.student-home .student-home-intro h1 { max-width: 20ch; font-size: 32px; margin-bottom: 12px; }
+    body.student-home .student-home-intro > p { font-size: 16px; max-width: none; }
+    body.student-home .student-home-artwork { width: 240px; height: 100px; }
+    body.student-home .student-home-actions { grid-template-columns: 1fr; gap: 16px; }
+    body.student-home .student-home-actions > .glass-card { padding: 22px; gap: 8px 14px; }
+    body.student-home .student-home-actions > .glass-card > h2 { font-size: 22px; }
+    body.student-home .student-home-meeting { grid-column: 1; }
+    body.student-home .student-home-meeting .student-meet-card { display: flex; flex-direction: column; align-items: stretch; padding: 18px; }
+    body.student-form-page--vent .vent-composer { padding: 20px; }
+    body.student-form-page--vent .vent-support { padding: 24px 20px; border-left: 0; border-top: 1px solid var(--finish-line); }
+    body.student-form-page--vent .vent-session-support { padding-top: 0; border-top: 0; }
+    body.staff-layout #staffMain.principal-workspace .report-information { grid-template-columns: 1fr; gap: 14px; padding: 20px; }
+}
+@media (max-width:700px) {
+    body.staff-layout #staffMain.principal-workspace .metric-grid { gap: 10px; }
+    body.staff-layout #staffMain.principal-workspace .metric { min-height: 112px; padding: 16px; }
+    body.staff-layout #staffMain.principal-workspace .metric strong { font-size: 30px; }
+    body.staff-layout #staffMain.principal-workspace .analytics-charts > .role-panel { padding: 18px; }
+    body.staff-layout #staffMain .staff-metrics .stat-card { padding: 14px; }
+    body.staff-layout #staffMain .staff-metrics .stat-card [id^=stat-] { font-size: 26px; }
+    body.student-workspace-page .student-report-tracker-body > ul > li { padding: 16px; }
+}
+@media (max-width:500px) {
+    body.student-home .student-home-actions .student-choice-icon { grid-row: 1; }
+    body.student-home .student-home-actions > .glass-card > p,
+    body.student-home .student-home-actions > .glass-card > div:last-child { grid-column: 1 / -1; }
 }
