@@ -6,6 +6,21 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class StudentNavigationViewTest extends CIUnitTestCase
 {
+    public function testPasswordVisibilityControlDoesNotSubmitOrChangeLoginFields(): void
+    {
+        helper(['url', 'form']);
+        $dom = new \DOMDocument();
+        @$dom->loadHTML(view('login'));
+        $xpath = new \DOMXPath($dom);
+        $form = '//form[@method="post"][contains(@action,"login/authenticate")]';
+        $this->assertCount(1, $xpath->query($form));
+        $this->assertCount(1, $xpath->query($form . '//input[@name="' . csrf_token() . '"]'));
+        $this->assertCount(1, $xpath->query($form . '//input[@id="password"][@name="password"][@type="password"][@autocomplete="current-password"][@required]'));
+        $this->assertCount(1, $xpath->query($form . '//button[@id="togglePassword"][@type="button"][@aria-controls="password"][@aria-pressed="false"][@aria-label="Show password"]'));
+        $this->assertCount(1, $xpath->query($form . '//input[@name="remember"][@type="checkbox"]'));
+        $this->assertCount(1, $xpath->query($form . '//button[@type="submit"]'));
+    }
+
     public function testEveryStudentWorkspaceHasDirectSecureSignOutAndPageLinks(): void
     {
         helper(['url', 'form']);

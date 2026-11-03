@@ -264,3 +264,29 @@ body.staff-reduce-motion *, body.staff-reduce-motion *::before, body.staff-reduc
     html { scroll-behavior: auto !important; }
     body *, body *::before, body *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Junior high readability pass: stronger small-text contrast, comfortable sizes, steady touch targets. */
+body:is(.student-login, .student-registration) :is([class~="text-white/60"], [class~="text-white/70"], [class~="text-white/80"]) { color: #fff; }
+body:is(.student-login, .student-registration) :is([class~="text-[10.5px]"], [class~="text-[11px]"]) { font-size: 12px; }
+body.student-home > nav span[class~="text-[10px]"] { font-size: 12px; letter-spacing: .06em; line-height: 1.25; }
+body.student-home > nav > a { min-width: 0; }
+body.student-home > nav > form { flex-shrink: 0; }
+body.student-home > nav > form button { min-height: 44px; white-space: nowrap; }
+body.student-home .student-home-intro > p { font-size: 17px; line-height: 1.6; max-width: 36em; }
+body.student-home .student-home-intro { margin-bottom: clamp(20px, 3.5vh, 36px); }
+body.student-registration :is(.text-xs, #password-criteria) { font-size: 13px; }
+body.student-registration #password-criteria > div { font-size: 13px; line-height: 1.4; }
+
+/* Show/hide password on the sign-in form. */
+body.student-login #password { padding-right: 80px; }
+body.student-login .password-toggle { position: absolute; inset-block: 0; right: 0; min-width: 64px; padding-inline: 14px; background: transparent; border: 0; border-radius: 0 12px 12px 0; color: #fff; font: 700 14px/1 Nunito, sans-serif; cursor: pointer; }
+body.student-login .password-toggle:hover { background: #ffffff1a; }
+
+/* Report form: 16px fields stop phones zooming on focus; labels and the draft button get a readable size. */
+body.student-workspace-page .student-entry-form :is(input[type=text], textarea) { font-size: 16px; }
+body.student-workspace-page .student-entry-form label.block { font-size: 15px; }
+body.student-workspace-page #saveDraftBtn { font-size: 14px; min-height: 44px; }
+
+@media (prefers-reduced-motion: reduce) {
+    body.student-home a.glass-card:hover, body.student-home .glass-card:hover { transform: none; }
+}

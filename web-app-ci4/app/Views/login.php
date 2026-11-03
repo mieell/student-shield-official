@@ -221,7 +221,7 @@
                 Student<span class="text-gold">Shield</span>
             </h1>
             
-            <p class="text-white/70 text-[10px] sm:text-[11px] font-semibold tracking-[0.15em] uppercase font-mono mb-8" id="splashStatusText">Initializing Data Vectors...</p>
+            <p class="text-white/70 text-[10px] sm:text-[11px] font-semibold tracking-[0.15em] uppercase font-mono mb-8" id="splashStatusText">Getting things ready...</p>
 
             <!-- Sleek Loading Bar -->
             <div class="w-48 sm:w-64 h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5 relative">
@@ -309,6 +309,7 @@
                         <input type="password" name="password" id="password" required autocomplete="current-password"
                                class="w-full pl-11 sm:pl-14 pr-4 sm:pr-12 py-3.5 sm:py-4 input-dark rounded-xl sm:rounded-[1.25rem] text-[16px] font-bold outline-none tracking-[0.1em]"
                                placeholder="••••••••">
+                        <button type="button" id="togglePassword" class="password-toggle" aria-controls="password" aria-pressed="false" aria-label="Show password">Show</button>
                     </div>
                 </div>
 
@@ -380,7 +381,7 @@
             const finishLoading = () => {
                 clearInterval(progressInterval);
                 if(bar) bar.style.width = '100%';
-                if(status) status.innerText = 'Connection Secured';
+                if(status) status.innerText = 'Ready';
                 setTimeout(hideSplash, 300); // Fade out slightly after hitting 100%
             };
 
@@ -400,6 +401,19 @@
         overlay.style.setProperty('--x', `${e.clientX}px`);
         overlay.style.setProperty('--y', `${e.clientY}px`);
     }
+
+    (function () {
+        const pw = document.getElementById('password');
+        const toggle = document.getElementById('togglePassword');
+        if (!pw || !toggle) return;
+        toggle.addEventListener('click', function () {
+            const show = pw.type === 'password';
+            pw.type = show ? 'text' : 'password';
+            toggle.textContent = show ? 'Hide' : 'Show';
+            toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+            toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        });
+    })();
 
     document.querySelector('form').addEventListener('submit', function() {
         const btn = document.getElementById('submitBtn');

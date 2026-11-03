@@ -41,7 +41,7 @@
     background: var(--form-surface, #FFFFFF);
     color: var(--form-text, #24352B);
     text-align: left;
-    font: 400 14px/1.5 'Inter', sans-serif;
+    font: 400 14px/1.5 'Nunito', 'Inter', sans-serif;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -65,7 +65,7 @@
 }
 .meet-card-title {
     margin: 0;
-    font: 600 15px/1.3 'Outfit', sans-serif;
+    font: 700 16px/1.3 'Nunito', 'Inter', sans-serif;
     color: var(--form-text, #24352B);
 }
 .meet-card-subtitle {
@@ -93,7 +93,7 @@
     min-height: 40px;
     padding: 8px 16px;
     border-radius: 10px;
-    font: 600 13px/1.4 'Inter', sans-serif;
+    font: 600 14px/1.4 'Nunito', 'Inter', sans-serif;
     text-decoration: none;
     cursor: pointer;
     box-sizing: border-box;
@@ -120,7 +120,7 @@
     background: #FDF2F2;
     border: 1px solid #F5C2C2;
     color: #B3261E;
-    font: 600 12px/1.4 'Inter', sans-serif;
+    font: 600 13px/1.4 'Nunito', 'Inter', sans-serif;
     padding: 7px 14px;
     border-radius: 8px;
     cursor: pointer;

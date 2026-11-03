@@ -50,7 +50,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="<?= base_url('css/student-forms.css?v=7') ?>">
+    <link rel="stylesheet" href="<?= base_url('css/student-forms.css?v=' . filemtime(FCPATH . 'css/student-forms.css')) ?>">
     <link rel="stylesheet" href="<?= base_url('css/student-vent.css?v=' . filemtime(FCPATH . 'css/student-vent.css')) ?>">
     <link rel="stylesheet" href="<?= base_url('css/safe-space.css?v=' . filemtime(FCPATH . 'css/safe-space.css')) ?>">
 <?= view('partials/ui_polish') ?>

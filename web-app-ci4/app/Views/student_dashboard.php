@@ -145,7 +145,7 @@
                 How can we help you today?
             </h1>
             <p class="text-white/90 text-[15px] sm:text-base max-w-xl mx-auto leading-relaxed font-normal">
-                Choose the path that best fits what you need right now. Whether you just need someone to listen, or you need immediate intervention, we are here for you.
+                Pick what fits right now. Want to get something off your chest? Use Safe Space. Is someone bullying you or someone else? Make a report. Either way, someone is here to help.
             </p>
         </div>
 
@@ -162,7 +162,7 @@
                 
                 <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3 group-hover:text-primary transition-colors">Safe Space (Vent)</h2>
                 <p class="text-gray-600 text-sm leading-relaxed mb-8 flex-1">
-                    Empty your mind and let it out. This is an encrypted, judgment-free zone where you can write out your feelings, anxieties, or daily struggles. Only connected counselors can read what you write.
+                    Write down how you feel, what worries you, or what made today hard. It is encrypted and judgment-free, and only your connected counselors can read what you write.
                 </p>
                 
                 <div class="mt-auto flex items-center text-primary font-bold text-[13px] tracking-wide uppercase border-t border-gray-200 pt-5">
@@ -189,7 +189,7 @@
                 </div>
                 <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3">Incident Report</h2>
                 <p class="text-gray-600 text-sm leading-relaxed mb-8 flex-1">
-                    Your reporting privilege has been temporarily suspended due to multiple false reports. Please visit the Guidance Office to restore access.
+                    Reporting is paused on your account after several reports were marked as false. Please visit the Guidance Office to get it back.
                 </p>
                 <div class="mt-auto flex items-center text-gray-400 font-bold text-[13px] tracking-wide uppercase border-t border-gray-200 pt-5">
                     <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -206,11 +206,11 @@
                 
                 <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3 group-hover:text-red-700 transition-colors">Incident Report</h2>
                 <p class="text-gray-600 text-sm leading-relaxed mb-8 flex-1">
-                    Formal report for urgent matters. If you or someone you know is experiencing <strong>bullying, severe harassment, threats, or danger</strong>, use this path. This alerts personnel immediately for action.
+                    Use this if you or someone you know is dealing with <strong>bullying, serious harassment, threats, or danger</strong>. Your guidance counselor will review your report and help with the next steps.
                 </p>
                 
                 <div class="mt-auto flex items-center text-red-600 font-bold text-[13px] tracking-wide uppercase border-t border-gray-200 pt-5">
-                    File a Formal Report
+                    Make a Report
                     <svg class="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </div>
             </a>

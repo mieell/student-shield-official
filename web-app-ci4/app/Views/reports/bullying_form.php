@@ -50,7 +50,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="<?= base_url('css/student-forms.css?v=4') ?>">
+    <link rel="stylesheet" href="<?= base_url('css/student-forms.css?v=' . filemtime(FCPATH . 'css/student-forms.css')) ?>">
     <link rel="stylesheet" href="<?= base_url('css/student-vent.css?v=' . filemtime(FCPATH . 'css/student-vent.css')) ?>">
     <link rel="stylesheet" href="<?= base_url('css/student-report.css?v=' . filemtime(FCPATH . 'css/student-report.css')) ?>">
 <?= view('partials/ui_polish') ?>
@@ -126,8 +126,8 @@
                                 <input type="text" id="victim_name" name="victim_name" class="w-full bg-white/80 border border-gray-300 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-xl px-4 py-3 text-[14px] focus:ring-2 focus:ring-calm-200 focus:border-calm-400 outline-none transition-all placeholder-gray-400 font-medium" placeholder="Full name of the victim">
                             </div>
                             <div id="aggressorNameBox" class="md:col-span-2">
-                                <label for="aggressor_name" class="block text-xs font-semibold text-gray-800 mb-2">Who is the aggressor? <span class="text-red-400">*</span></label>
-                                <input type="text" id="aggressor_name" name="bully_name" required class="w-full bg-white/80 border border-gray-300 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-xl px-4 py-3 text-[14px] focus:ring-2 focus:ring-calm-200 focus:border-calm-400 outline-none transition-all placeholder-gray-400 font-medium" placeholder="Full name of the aggressor">
+                                <label for="aggressor_name" class="block text-xs font-semibold text-gray-800 mb-2">Who is doing the bullying? <span class="text-red-400">*</span></label>
+                                <input type="text" id="aggressor_name" name="bully_name" required class="w-full bg-white/80 border border-gray-300 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-xl px-4 py-3 text-[14px] focus:ring-2 focus:ring-calm-200 focus:border-calm-400 outline-none transition-all placeholder-gray-400 font-medium" placeholder="Enter their full name">
                             </div>
                         </div>
 
@@ -341,7 +341,7 @@
             const role = document.getElementById('roleInput').value;
             const victimName = document.getElementById('victim_name').value.trim();
 
-            if (!aggressor) { e.preventDefault(); alert("Please enter the aggressor's name."); document.getElementById('aggressor_name').focus(); return; }
+            if (!aggressor) { e.preventDefault(); alert("Please tell us who is doing the bullying."); document.getElementById('aggressor_name').focus(); return; }
             if (!details) { e.preventDefault(); alert('Please describe what happened.'); document.getElementById('incident_details').focus(); return; }
             if (role === 'bystander' && !victimName) { e.preventDefault(); alert("Please enter the victim's name."); document.getElementById('victim_name').focus(); return; }
 
