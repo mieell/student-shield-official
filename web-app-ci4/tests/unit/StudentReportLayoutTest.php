@@ -4,6 +4,26 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class StudentReportLayoutTest extends CIUnitTestCase
 {
+    public function testReadableDatesRetainTheOriginalAndEscapeMalformedValues(): void
+    {
+        helper('url');
+        $html = view('reports/student_report_status', ['studentReports' => [
+            ['id' => 1, 'status' => 'pending_review', 'created_at' => '2026-11-01 17:40:20'],
+            ['id' => 2, 'status' => 'unknown', 'created_at' => '<script>alert(1)</script>'],
+            ['id' => 3, 'status' => 'resolved', 'created_at' => '1970-01-01 00:00:00 UTC'],
+        ]]);
+        $this->assertStringContainsString('Nov 1, 2026 at 5:40 PM', $html);
+        $dom = new DOMDocument();
+        @$dom->loadHTML($html);
+        $date = (new DOMXPath($dom))->query('//span[contains(@class,"student-report-date")]')->item(0);
+        $this->assertSame('2026-11-01 17:40:20', $date->getAttribute('title'));
+        $this->assertStringContainsString('student-report-status--pending_review', $html);
+        $this->assertStringContainsString('Jan 1, 1970', $html);
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
+        $this->assertStringContainsString('Awaiting update', $html);
+        $this->assertStringNotContainsString('Your counselor has not updated this yet', $html);
+    }
+
     public function testReportProgressReflectsOnlyRecordedStatus(): void
     {
         helper('url');

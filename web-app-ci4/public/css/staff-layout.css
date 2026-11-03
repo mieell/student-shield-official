@@ -162,7 +162,7 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout .staff-vents-table tr[data-risk="CRITICAL"] { border-left-color: #e04b3f; }
     .staff-layout .staff-vents-table tr[data-risk="HIGH"] { border-left-color: #f59e0b; }
     .staff-layout .staff-vents-table tr[data-risk="MEDIUM"] { border-left-color: #2a5db0; }
-    .staff-layout .staff-vents-table tr[data-risk="LOW"] { border-left-color: #235d3a; }
+    .staff-layout .staff-vents-table tr[data-risk="LOW"] { border-left-color: #0f8a3a; }
     .staff-layout .staff-vents-table td { padding: 0 !important; min-width: 0 !important; width: 100% !important; grid-column: 1 / -1; border: 0; gap: 4px; }
     .staff-layout .staff-vents-table td::before { font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; color: #61756b; }
     .staff-layout .staff-vents-table td[data-label="Select"] { grid-column: 2; grid-row: 1; align-items: flex-end; }
@@ -193,7 +193,7 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout #section-incidents .mobile-card-table td { padding: 0 !important; grid-column: 1 / -1; white-space: normal; min-width: 0; border: 0; }
     .staff-layout #section-incidents td[data-label="Reporter"] { grid-column: 1; grid-row: 1; }
     .staff-layout #section-incidents td[data-label="Select"] { grid-column: 2; grid-row: 1; }
-    .staff-layout #section-incidents td[data-label="Perpetrator"] { grid-column: 1; grid-row: 2; }
+    .staff-layout #section-incidents td[data-label="Person named"] { grid-column: 1; grid-row: 2; }
     .staff-layout #section-incidents td[data-label="Type"] { grid-column: 2; grid-row: 2; text-align: right; }
     .staff-layout #section-incidents td[data-label="Grade & Section"] { grid-column: 1 / -1; grid-row: 3; font-size: 12px; color: #61756b; }
     .staff-layout #section-incidents td[data-label="Description"] { grid-column: 1 / -1; grid-row: 4; padding-top: 8px !important; border-top: 1px solid #edf1ee; font-size: 13px; line-height: 1.5; }

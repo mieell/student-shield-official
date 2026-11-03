@@ -697,7 +697,7 @@ $pageDescriptions = [
                                     class="rounded border-white/40 text-[#F2C300]"></th>
                             <th class="px-6 py-4">Date</th>
                             <th class="px-6 py-4">Reporter</th>
-                            <th class="px-6 py-4">Perpetrator</th>
+                            <th class="px-6 py-4">Person named</th>
                             <th class="px-6 py-4">Type</th>
                             <th class="px-6 py-4 w-1/3">Description</th>
                             <th class="px-6 py-4 text-center">Status</th>
@@ -949,7 +949,7 @@ $pageDescriptions = [
                 labels: ['Critical', 'High', 'Medium', 'Low'],
                 datasets: [{
                     data: [0, 0, 0, 0],
-                    backgroundColor: ['#E04B3F', '#F59E0B', '#2A5DB0', '#235D3A'],
+                    backgroundColor: ['#E04B3F', '#F59E0B', '#2A5DB0', '#0F8A3A'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }]
@@ -958,9 +958,35 @@ $pageDescriptions = [
                 maintainAspectRatio: false,
                 cutout: '70%',
                 plugins: {
-                    legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true, padding: 20, font: { size: 13 },
+                            generateLabels(chart) {
+                                const counts = chart.data.datasets[0].data;
+                                return Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart)
+                                    .map(item => ({ ...item, text: item.text + ' · ' + (counts[item.index] || 0) }));
+                            }
+                        }
+                    }
                 }
-            }
+            },
+            plugins: [{
+                id: 'centerTotal',
+                afterDraw(chart) {
+                    const area = chart.chartArea;
+                    if (!area) return;
+                    const total = chart.data.datasets[0].data.reduce((sum, n) => sum + (Number(n) || 0), 0);
+                    const x = (area.left + area.right) / 2, y = (area.top + area.bottom) / 2, c = chart.ctx;
+                    c.save();
+                    c.textAlign = 'center'; c.textBaseline = 'middle';
+                    c.fillStyle = '#24352B'; c.font = '800 30px Nunito, Inter, sans-serif';
+                    c.fillText(String(total), x, y - 8);
+                    c.fillStyle = '#526259'; c.font = '600 13px Nunito, Inter, sans-serif';
+                    c.fillText(total === 1 ? 'entry' : 'entries', x, y + 18);
+                    c.restore();
+                }
+            }]
         };
         if (pieCtx) pieChart = new Chart(pieCtx, pieConfig);
 
@@ -1025,6 +1051,8 @@ $pageDescriptions = [
             // Update Pie Chart seamlessly without destroying
             if (pieChart) {
                 pieChart.data.datasets[0].data = [critical, high, medium, low];
+                pieChart.canvas.setAttribute('role', 'img');
+                pieChart.canvas.setAttribute('aria-label', `Risk distribution: Critical ${critical}, High ${high}, Medium ${medium}, Low ${low}. Total ${critical + high + medium + low} entries.`);
                 pieChart.update('none');
             }
             if (!areaChart) return; // Update without full animation redraw
@@ -1374,7 +1402,7 @@ $pageDescriptions = [
                                     ${incident.parent_email ? `<span class="text-xs text-gray-600 block">✉️ ${escapeHtml(incident.parent_email)}</span>` : ''}
                                 </div>
                             </td>
-                            <td data-label="Perpetrator" class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${escapeHtml(perpetratorName)}</td>
+                            <td data-label="Person named" class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${escapeHtml(perpetratorName)}</td>
                             <td data-label="Type" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-semibold">
                                 Bullying Report
                                 ${evidenceBadge ? '<br>' + evidenceBadge : ''}
@@ -1395,8 +1423,8 @@ $pageDescriptions = [
                                     </form>
                                     <form action="<?= base_url('admin/incident/reject/') ?>${incident.id}" method="POST">
                                         <?= csrf_field() ?>
-                                        <button type="submit" onclick="return confirm('REJECT this report as fake/unverified? No parent alerts will be sent.');" class="w-full text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors border border-red-200">
-                                            ✗ Reject (Fake)
+                                        <button type="submit" onclick="return confirm('Mark this report as false or unverified? No parent alerts will be sent.');" class="w-full text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors border border-red-200">
+                                            ✗ Mark as false report
                                         </button>
                                     </form>
                                 ` : ''}

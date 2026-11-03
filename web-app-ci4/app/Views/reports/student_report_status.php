@@ -17,7 +17,7 @@ $reportStatuses = [
                 <?php foreach ($studentReports as $report): ?>
                 <?php [$label, $description] = $reportStatuses[$report['status']] ?? ['Awaiting update', 'Contact the Guidance Office for an update.']; ?>
                 <li>
-                    <div><strong>Report #<?= esc($report['id']) ?></strong><span class="student-report-status"><?= esc($label) ?></span></div>
+                    <div><strong>Report #<?= esc($report['id']) ?></strong><span class="student-report-status student-report-status--<?= esc($report['status'] ?? 'unknown', 'attr') ?>"><?= esc($label) ?></span></div>
                     <p><?= esc($description) ?></p>
                     <?php
                     $progressStep = ['pending_review' => 0, 'verified' => 1, 'resolved' => 2, 'rejected_fake' => 1][$report['status']] ?? null;
@@ -34,7 +34,8 @@ $reportStatuses = [
                         <?php endforeach; ?>
                     </ol>
                     <?php endif; ?>
-                    <span class="student-report-date">Submitted: <?= esc($report['created_at']) ?></span>
+                    <?php $submittedAt = strtotime((string) ($report['created_at'] ?? '')); ?>
+                    <span class="student-report-date" title="<?= esc((string) ($report['created_at'] ?? ''), 'attr') ?>">Submitted: <?= $submittedAt !== false ? esc(date('M j, Y \a\t g:i A', $submittedAt)) : esc((string) ($report['created_at'] ?? '')) ?></span>
                 </li>
                 <?php endforeach; ?>
             </ul>

@@ -290,3 +290,33 @@ body.student-workspace-page #saveDraftBtn { font-size: 14px; min-height: 44px; }
 @media (prefers-reduced-motion: reduce) {
     body.student-home a.glass-card:hover, body.student-home .glass-card:hover { transform: none; }
 }
+
+/* Round 2: softer, friendlier student pages and easier-to-read staff screens. */
+
+/* Report page: one calm callout block, danger line first. */
+body.student-form-page--report .report-notices { display: grid; gap: 10px; margin: 0 0 24px; }
+body.student-form-page--report .report-urgent-note { margin: 0; padding: 14px 18px; border: 1px solid #ecd9a0; border-left: 5px solid var(--school-gold, #d9aa2e); border-radius: 12px; background: #fffaf0; color: var(--form-text); font-size: 16px; line-height: 1.55; }
+body.student-form-page--report .report-urgent-note strong { font-weight: 800; }
+body.student-form-page--report .report-expectation-note { margin: 0; padding: 0 4px; border: 0; background: transparent; color: var(--form-muted); font-size: 15px; line-height: 1.6; }
+
+/* My reports: readable dates, calmer colored status pills, bigger step labels. */
+body.student-workspace-page .student-report-status { padding: 6px 14px; border-radius: 999px; font-size: 13px; background: #edf6ef; color: #1c4d30; }
+body.student-workspace-page .student-report-status.student-report-status--pending_review { background: #fff4d6; color: #6b4e00; }
+body.student-workspace-page .student-report-status.student-report-status--verified { background: #e6eefb; color: #1f4a8a; }
+body.student-workspace-page .student-report-status.student-report-status--resolved { background: #e3f3e8; color: #17582f; }
+body.student-workspace-page .student-report-status.student-report-status--rejected_fake { background: #eef0ee; color: #3d4943; }
+body.student-workspace-page .student-report-tracker-body .report-progress li { font-size: 13px; }
+body.student-workspace-page .student-report-date { font-size: 13px; }
+body.student-workspace-page :is(.vent-storage-note, .report-review-note, #evidenceHelp, .field-help) { font-size: 13px; }
+
+/* Safe Space: a roomier writing box on big screens, and urgent help set apart in a soft card. */
+@media (min-width: 900px) and (min-height: 800px) {
+    body.student-form-page--vent .textarea-field { min-height: clamp(220px, 30vh, 320px); height: clamp(220px, 30vh, 320px); }
+}
+body.student-workspace-page .vent-urgent-support { margin-top: 20px; padding: 18px; border: 1px solid #ecd9a0; border-radius: 12px; background: #fffaf0; }
+
+/* Staff screens: no tiny text, clearer table headers, readable chart labels. */
+body.staff-layout #staffMain :is([class~="text-[9px]"], [class~="text-[10px]"], [class~="text-[11px]"]) { font-size: 12px; }
+body.staff-layout #staffMain :is(.staff-vents-table, #logsTable) thead th { font-size: 13px; font-weight: 700; color: #2b4a35; }
+body.staff-layout #staffMain.principal-workspace :is(.daily-trend-scale span, .daily-trend-dates span, .daily-trend-value, .daily-trend-hint) { font-size: 12px; }
+body.staff-layout #staffMain.principal-workspace :is(.report-context p, .report-scope) { font-size: 13px; }
