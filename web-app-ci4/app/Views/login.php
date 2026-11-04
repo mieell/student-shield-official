@@ -180,8 +180,8 @@
 
 
     <div class="login-scene" aria-hidden="true">
-        <img class="login-scene-art" src="<?= base_url('images/login-campus-quiet.webp') ?>"
-             srcset="<?= base_url('images/login-campus-quiet-small.webp') ?> 800w, <?= base_url('images/login-campus-quiet.webp') ?> 1600w"
+        <img class="login-scene-art" src="<?= base_url('images/login-campus-quiet.webp?v=' . filemtime(FCPATH . 'images/login-campus-quiet.webp')) ?>"
+             srcset="<?= base_url('images/login-campus-quiet-small.webp?v=' . filemtime(FCPATH . 'images/login-campus-quiet-small.webp')) ?> 800w, <?= base_url('images/login-campus-quiet.webp?v=' . filemtime(FCPATH . 'images/login-campus-quiet.webp')) ?> 1600w"
              sizes="100vw" width="1600" height="900" alt="" decoding="async" fetchpriority="high">
         <div id="spotlight-overlay" class="spotlight absolute inset-0 z-10"></div>
     </div>

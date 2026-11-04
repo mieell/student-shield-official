@@ -5,24 +5,24 @@ body.student-login.login-illustrated { background: #0f8a3a; isolation: isolate; 
 .login-illustrated .login-scene::after { content: ''; position: absolute; inset: 0; background: #2348321f; }
 body.student-login.login-illustrated .student-card {
     background: #0b5f30;
-    border: 1px solid #c8dcc1;
+    border: 1px solid #e1e8ca;
     border-radius: 24px;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    box-shadow: 0 18px 36px -20px #05341880;
+    box-shadow: 0 5px 12px -5px #0534184d, 0 26px 60px -24px #053418a6, inset 0 1px #ffffff26;
 }
 body.student-login.login-illustrated .login-heading { border-color: #dce8bc66; }
 body.student-login.login-illustrated .login-heading h1 .text-gold { color: #eac255; }
 body.student-login.login-illustrated .login-identity img { filter: drop-shadow(0 4px 8px #05341840); }
 body.student-login.login-illustrated .login-security { background: #06401e; border-color: #c7dba033; box-shadow: none; }
-body.student-login.login-illustrated .input-dark { background: #064923; border-color: #b9d8c1; color: #fff; box-shadow: none; }
+body.student-login.login-illustrated .input-dark { background: #064923; border-color: #b9d8c1; color: #fff; box-shadow: inset 0 2px 3px #05341826; }
 body.student-login.login-illustrated .input-dark::placeholder { color: #edf7f0; opacity: 1; }
 body.student-login.login-illustrated .input-dark:focus { background: #064b25; border-color: #fff4c7; box-shadow: 0 0 0 3px #fff4c72e; }
 body.student-login.login-illustrated .login-form .submit-btn {
     background: #eac255;
     border: 1px solid #f5d875;
     color: #164c2c;
-    box-shadow: none;
+    box-shadow: 0 5px 12px -7px #05341880, inset 0 1px #fff4c780;
 }
 body.student-login.login-illustrated .submit-btn :is(#btnText,#btnIcon,#btnSpinner) { color: #164c2c; mix-blend-mode: normal; }
 body.student-login.login-illustrated .password-toggle { color: #fff4c7; }
@@ -30,7 +30,7 @@ body.student-login.login-illustrated .login-form a { color: #fff0a8; }
 body.student-login.login-illustrated #remember { border-color: #cde3d3; }
 body.student-login.login-illustrated .auth-error { background: #06401e; }
 @media (hover:hover) and (pointer:fine) {
-    body.student-login.login-illustrated .login-form .submit-btn:hover { background: #f5d875; box-shadow: 0 5px 12px -8px #05341880; }
+    body.student-login.login-illustrated .login-form .submit-btn:hover { background: #f5d875; box-shadow: 0 7px 16px -7px #05341880, inset 0 1px #fff4c780; }
 }
 @media (max-width:799px) {
     body.student-login.login-illustrated {
