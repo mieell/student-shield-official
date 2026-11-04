@@ -66,47 +66,6 @@
                 linear-gradient(160deg, #128F42 0%, #0E7C38 55%, #09682D 100%);
         }
 
-        /* Visible cross-hatch grid */
-        .bg-grid {
-            position: absolute; inset: 0; z-index: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-            background-size: 40px 40px;
-        }
-
-        /* Large decorative ring arcs at corners */
-        .bg-rings {
-            position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
-        }
-        .bg-rings::before {
-            content: '';
-            position: absolute;
-            width: 520px; height: 520px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.10);
-            top: -200px; left: -200px;
-            box-shadow: inset 0 0 0 40px rgba(255,255,255,0.03);
-        }
-        .bg-rings::after {
-            content: '';
-            position: absolute;
-            width: 420px; height: 420px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.08);
-            bottom: -160px; right: -160px;
-            box-shadow: inset 0 0 0 30px rgba(255,255,255,0.03);
-        }
-        /* Extra inner ring top-left */
-        .bg-ring-sm {
-            position: absolute;
-            width: 280px; height: 280px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.07);
-            top: -80px; left: -80px;
-            z-index: 0; pointer-events: none;
-        }
-
         .student-card {
             background: rgba(255, 255, 255, 0.10);
             backdrop-filter: blur(24px);
@@ -134,18 +93,6 @@
         /* WCAG AA fix: placeholder raised to 0.85 opacity */
         .input-dark::placeholder { color: rgba(255,255,255,0.75); }
 
-        .glow-blob {
-            position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.15; z-index: 0;
-            animation: pulseGlow 10s ease-in-out infinite alternate; pointer-events: none;
-            will-change: transform, opacity;
-            transform: translateZ(0);
-        }
-        @keyframes pulseGlow {
-            0% { opacity: 0.1; transform: scale(0.9) translate(0,0) translateZ(0); }
-            100% { opacity: 0.2; transform: scale(1.1) translate(-20px, 20px) translateZ(0); }
-        }
-        
-        
         /* Gold gradient button */
         .submit-btn {
             background: linear-gradient(135deg, #cda434, #e6c55e);
@@ -203,8 +150,9 @@
     </style>
 <link rel="stylesheet" href="<?= base_url('css/unified-login.css?v=' . filemtime(FCPATH . 'css/unified-login.css')) ?>">
 <?= view('partials/ui_polish') ?>
+<link rel="stylesheet" href="<?= base_url('css/login-illustrated.css?v=' . filemtime(FCPATH . 'css/login-illustrated.css')) ?>">
 </head>
-<body class="student-login bg-student min-h-[100dvh] w-full flex flex-col items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-x-hidden overflow-y-auto" onmousemove="updateSpotlight(event)">
+<body class="student-login login-illustrated bg-student min-h-[100dvh] w-full flex flex-col items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-x-hidden overflow-y-auto" onmousemove="updateSpotlight(event)">
 
             <!-- Premium Fast-Load Splash Screen -->
     <div id="splashScreen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-student backdrop-blur-xl transition-all duration-700 ease-in-out">
@@ -231,21 +179,11 @@
     </div>
 
 
-    <!-- Background Effects Container (Fixed background prevents mobile scroll interference) -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <!-- Interactive Spotlight Overlay -->
+    <div class="login-scene" aria-hidden="true">
+        <img class="login-scene-art" src="<?= base_url('images/login-campus-quiet.webp') ?>"
+             srcset="<?= base_url('images/login-campus-quiet-small.webp') ?> 800w, <?= base_url('images/login-campus-quiet.webp') ?> 1600w"
+             sizes="100vw" width="1600" height="900" alt="" decoding="async" fetchpriority="high">
         <div id="spotlight-overlay" class="spotlight absolute inset-0 z-10"></div>
-
-        <!-- Visible cross-hatch grid -->
-        <div class="bg-grid absolute inset-0"></div>
-        <!-- Large corner ring arcs -->
-        <div class="bg-rings absolute inset-0"></div>
-        <!-- Small inner ring top-left -->
-        <div class="bg-ring-sm"></div>
-        <!-- Ambient gold glow top-right -->
-        <div class="glow-blob bg-gold w-[300px] h-[300px] sm:w-[450px] sm:h-[450px] top-[-5%] right-[-10%] mix-blend-screen" style="opacity:0.12;"></div>
-        <!-- Ambient light-green glow bottom-left -->
-        <div class="glow-blob bg-primary-light w-[350px] h-[350px] sm:w-[500px] sm:h-[500px] bottom-[-10%] left-[-15%] mix-blend-screen" style="animation-delay: -5s; animation-direction: alternate-reverse; opacity:0.1;"></div>
     </div>
 
     <div class="login-shell w-full max-w-[480px] z-20 relative my-auto">
