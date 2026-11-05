@@ -19,7 +19,7 @@ $description = ['profile' => 'Your identity and access within StudentShield.', '
 <?php foreach (['success', 'error'] as $key): if ($message = session()->getFlashdata($key)): ?><p class="role-notice" role="status"><?= esc($message) ?></p><?php endif; endforeach; ?>
 <?php if ($page === 'profile'): ?>
 <div class="account-page-grid">
-<section class="account-identity"><div class="account-monogram" aria-hidden="true"><?= esc($initial) ?></div><h2><?= esc($account['name']) ?></h2><span class="account-role-label"><?= esc($roleName) ?></span><div class="identity-rule"></div><p>School workspace</p><strong>StudentShield</strong><p>Saint Vincent Blessed School of Manila</p></section>
+<section class="account-identity"><div class="account-monogram" aria-hidden="true"><?= esc($initial) ?></div><h2><?= esc($account['name']) ?></h2><span class="account-role-label"><?= esc($roleName) ?></span><div class="identity-rule"></div><p>School workspace</p><strong>StudentShield</strong><p>St. Vincent Blessed School of Manila</p></section>
 <div class="account-page-content">
 <section class="account-surface"><div class="account-section-title"><h2>Personal details</h2><span>Account #<?= (int) $account['id'] ?></span></div>
 <form method="post" action="<?= base_url('staff/profile') ?>" class="profile-edit-form">

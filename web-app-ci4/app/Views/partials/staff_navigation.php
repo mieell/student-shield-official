@@ -75,7 +75,7 @@ if ((int) session()->get('role') === 1) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <div class="staff-mobile-brand"><img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM logo" width="28" height="28"><strong>StudentShield</strong></div>
-        <div class="staff-school-name">Saint Vincent Blessed School of Manila</div>
+        <div class="staff-school-name">St. Vincent Blessed School of Manila</div>
         <div class="staff-topbar-tools">
             <?php if ((int) session()->get('role') === 1): ?>
             <a id="registrationNotification" class="staff-registration-notice" hidden href="<?= base_url('admin/pending-registrations') ?>" data-count-url="<?= base_url('admin/api/pending-registrations') ?>" aria-label="Review student registrations">

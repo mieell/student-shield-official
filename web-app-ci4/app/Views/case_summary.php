@@ -169,7 +169,7 @@
             <div class="flex items-center gap-3">
                 <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="h-9 w-9 object-contain">
                 <div>
-                    <h1 class="font-heading font-extrabold text-sm tracking-wider uppercase leading-none">Saint Vincent Blessed School of Manila</h1>
+                    <h1 class="font-heading font-extrabold text-sm tracking-wider uppercase leading-none">St. Vincent Blessed School of Manila</h1>
                     <p class="text-[9px] text-[#EAB308] font-bold uppercase tracking-widest mt-0.5">StudentShield Portal</p>
                 </div>
             </div>
@@ -198,7 +198,7 @@
         <div class="flex items-center gap-4">
             <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="h-14 w-14 object-contain">
             <div class="text-left">
-                <h1 class="text-base font-bold font-heading uppercase text-emerald-950 tracking-wider">Saint Vincent Blessed School of Manila</h1>
+                <h1 class="text-base font-bold font-heading uppercase text-emerald-950 tracking-wider">St. Vincent Blessed School of Manila</h1>
                 <p class="text-[10px] text-emerald-800 font-bold font-heading tracking-wider mt-0.5">STUDENTSHIELD CASE MANAGEMENT PORTAL</p>
                 <p class="text-[8px] text-gray-500 font-mono mt-0.5">CONFIDENTIAL STUDENT WELLNESS & COUNSELING DOSSIER</p>
             </div>
