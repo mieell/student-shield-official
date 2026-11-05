@@ -140,7 +140,7 @@
         
         <!-- Header Section -->
         <div class="student-home-intro text-center mb-12 sm:mb-16">
-            <img class="student-home-artwork" src="<?= base_url('images/student-welcome-peers.webp') ?>" alt="" width="800" height="334" decoding="async" aria-hidden="true">
+            <img class="student-home-artwork" src="<?= base_url('images/student-welcome-counselor.webp') ?>" alt="" width="800" height="334" decoding="async" aria-hidden="true">
             <h1 class="text-4xl sm:text-5xl md:text-[3.5rem] font-heading font-extrabold text-white mb-6 tracking-tight leading-tight">
                 How can we help you today?
             </h1>
