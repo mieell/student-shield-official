@@ -19,6 +19,12 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
+    public static function smsGateway(bool $getShared = true): \App\Libraries\SmsGateway
+    {
+        if ($getShared) return static::getSharedInstance('smsGateway');
+        return new \App\Libraries\SmsGateway();
+    }
+
     /*
      * public static function example($getShared = true)
      * {

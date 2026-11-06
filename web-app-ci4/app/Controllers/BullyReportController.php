@@ -176,7 +176,9 @@ class BullyReportController extends BaseController
         $counselorPhone = env('COUNSELOR_PHONE', '');
         $counselorEmail = env('COUNSELOR_EMAIL', '');
         if (!empty($counselorPhone)) {
-            $this->sendLocalSms($counselorPhone, "StudentShield URGENT: A new Bullying Report was just filed and requires your verification. Please log into the admin dashboard immediately to investigate and verify the report before parent alerts are sent.");
+            $this->sendLocalSms($counselorPhone,
+                'StudentShield: A new bullying report needs verification. Open the counselor dashboard. Parent alerts await verification.',
+                "incident:{$insertId}:intake-counselor");
         }
         if (!empty($counselorEmail)) {
             $this->sendLocalEmail($counselorEmail, "StudentShield URGENT: A new Bullying Report was just filed and requires your verification. Please log into the admin dashboard immediately to investigate and verify the report before parent alerts are sent.");
@@ -188,30 +190,13 @@ class BullyReportController extends BaseController
         return redirect()->to('/report/bullying')->with('message', 'Your report has been received for counselor review. You can check its progress in My reports. If you need help while waiting, please approach the Guidance Office or a trusted school staff member.');
     }
 
-    private function sendLocalSms($phone, $message)
+    private function sendLocalSms($phone, $message, string $eventKey)
     {
         // Loophole 4 Mitigation: Graceful skip for missing phone numbers
         if (empty($phone)) return false;
 
-        $cleanPhone = ltrim($phone, '+');
-        if (str_starts_with($cleanPhone, '63') && strlen($cleanPhone) == 12) {
-            $cleanPhone = '0' . substr($cleanPhone, 2);
-        }
-
-        $payload = json_encode(['phone' => $cleanPhone, 'message' => $message]);
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => env('sms.GatewayUrl', ''),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 1, // Ultra-fast fail timeout mapping to prevent bottlenecking the main UI
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => ["Content-Type: application/json", "Connection: close"],
-        ]);
-        curl_exec($curl);
-        curl_close($curl);
-        
-        return true;
+        $result = \Config\Services::smsGateway()->send((string) $phone, (string) $message, $eventKey);
+        return $result['accepted'];
     }
     
     private function sendLocalEmail($emailAddress, $messageBody)

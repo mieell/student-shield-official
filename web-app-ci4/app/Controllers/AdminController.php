@@ -278,6 +278,8 @@ class AdminController extends BaseController
         }
 
         // --- Execute Automated Parent SMS & Email Blast (Stage 2) ---
+        $smsAccepted = 0;
+        $smsUnconfirmed = 0;
 
         // 1. Alert the Victim's Parent (SMS & Email)
         if (!empty($report->victim_student_id)) {
@@ -288,8 +290,12 @@ class AdminController extends BaseController
                 ->get()->getRow();
             if ($victim) {
                 $victimMsg = "SVBSM Guidance Alert: A verified report indicates your child may be involved in a bullying incident as a victim. Please offer a warm check-in with your child tonight. Our counselors have confirmed the report and are actively investigating.";
-                if (!empty($victim->parent_phone))
-                    $this->sendLocalSms($victim->parent_phone, $victimMsg);
+                if (!empty($victim->parent_phone)) {
+                    $accepted = $this->sendLocalSms($victim->parent_phone,
+                        'SVBSM Guidance: A verified incident involving your child needs follow-up. Please contact the Guidance Office.',
+                        "incident:{$id}:verified-victim-parent");
+                    $accepted ? $smsAccepted++ : $smsUnconfirmed++;
+                }
                 if (!empty($victim->parent_email))
                     $this->sendLocalEmail($victim->parent_email, $victimMsg);
             }
@@ -304,14 +310,18 @@ class AdminController extends BaseController
                 ->get()->getRow();
             if ($bully) {
                 $bullyMsg = "SVBSM Guidance Alert: A verified report involving your child regarding a disciplinary incident has been confirmed by our guidance team. Our administration is currently investigating. Please contact the school office tomorrow.";
-                if (!empty($bully->parent_phone))
-                    $this->sendLocalSms($bully->parent_phone, $bullyMsg);
+                if (!empty($bully->parent_phone)) {
+                    $accepted = $this->sendLocalSms($bully->parent_phone,
+                        'SVBSM Guidance: A verified incident involving your child needs follow-up. Please contact the Guidance Office.',
+                        "incident:{$id}:verified-bully-parent");
+                    $accepted ? $smsAccepted++ : $smsUnconfirmed++;
+                }
                 if (!empty($bully->parent_email))
                     $this->sendLocalEmail($bully->parent_email, $bullyMsg);
             }
         }
 
-        return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id VERIFIED. Automated SMS & Email alerts have been sent to parents.");
+        return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id VERIFIED. SMS gateway accepted {$smsAccepted} request(s); delivery is not yet confirmed. {$smsUnconfirmed} SMS request(s) were not confirmed. Email notifications were attempted for available contacts.");
     }
 
     /**
@@ -359,11 +369,13 @@ class AdminController extends BaseController
                 if ($student) {
                     $parentMsg = "SVBSM Guidance Notice: Your child ({$student->name}) has received a 2nd warning for filing false incident reports on the StudentShield system. One more violation will result in temporary suspension of their reporting privileges. Please discuss responsible use of the school's safety tools with your child.";
                     if (!empty($student->parent_phone))
-                        $this->sendLocalSms($student->parent_phone, $parentMsg);
+                        $this->sendLocalSms($student->parent_phone,
+                            'SVBSM Guidance: Please contact the Guidance Office about the second warning for false StudentShield reports involving your child.',
+                            "incident:{$id}:strike-2-parent");
                     if (!empty($student->parent_email))
                         $this->sendLocalEmail($student->parent_email, $parentMsg);
                 }
-                $strikeMsg = " [STRIKE 2/3 — Parent notified]";
+                $strikeMsg = " [STRIKE 2/3 — Parent notification attempted]";
 
             } elseif ($totalStrikes >= 3) {
                 // ── Strike 3: Auto-lock the student's reporting privileges ──
@@ -383,7 +395,9 @@ class AdminController extends BaseController
                 if ($student) {
                     $lockMsg = "SVBSM Guidance Alert: Your child ({$student->name}) has had their incident reporting privileges temporarily suspended due to 3 confirmed false reports. To restore access, please visit the Guidance Office for a disciplinary meeting.";
                     if (!empty($student->parent_phone))
-                        $this->sendLocalSms($student->parent_phone, $lockMsg);
+                        $this->sendLocalSms($student->parent_phone,
+                            'SVBSM Guidance: Reporting access for your child was suspended after confirmed false reports. Please contact the Guidance Office.',
+                            "incident:{$id}:account-lock-parent");
                     if (!empty($student->parent_email))
                         $this->sendLocalEmail($student->parent_email, $lockMsg);
                 }
@@ -413,30 +427,13 @@ class AdminController extends BaseController
         return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id has been reset to Pending Review.");
     }
 
-    private function sendLocalSms($phone, $message)
+    private function sendLocalSms($phone, $message, string $eventKey)
     {
         if (empty($phone))
             return false;
 
-        $cleanPhone = ltrim($phone, '+');
-        if (str_starts_with($cleanPhone, '63') && strlen($cleanPhone) == 12) {
-            $cleanPhone = '0' . substr($cleanPhone, 2);
-        }
-
-        $payload = json_encode(['phone' => $cleanPhone, 'message' => $message]);
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => env('sms.GatewayUrl', ''),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => ["Content-Type: application/json", "Connection: close"],
-        ]);
-        curl_exec($curl);
-        curl_close($curl);
-
-        return true;
+        $result = \Config\Services::smsGateway()->send((string) $phone, (string) $message, $eventKey);
+        return $result['accepted'];
     }
 
     private function sendLocalEmail($emailAddress, $messageBody)

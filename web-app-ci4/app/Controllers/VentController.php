@@ -198,18 +198,22 @@ class VentController extends BaseController
                         // ALWAYS alert the counselor immediately for any CRITICAL vent
                         $this->triggerCounselorEmergencyAlert(
                             "URGENT: {$studentName} ({$user->section}) submitted a CRITICAL risk vent. Please review the dashboard immediately.{$parentNote}",
-                            "CRITICAL Emergency Alert: {$studentName}"
+                            "CRITICAL Emergency Alert: {$studentName}",
+                            "vent:{$ventId}:critical-counselor",
+                            'StudentShield: CRITICAL alert. Review the counselor dashboard immediately.'
                         );
 
                         if ($hideFromParents) {
                             // Domestic precaution: student requested parents NOT be notified
                             $this->triggerCounselorEmergencyAlert(
                                 "RESTRICTED PROTOCOL: {$studentName} submitted a CRITICAL vent and explicitly requested parents NOT be contacted. Review dashboard immediately.",
-                                "RESTRICTED Counselor Safety Alert: {$studentName}"
+                                "RESTRICTED Counselor Safety Alert: {$studentName}",
+                                "vent:{$ventId}:restricted-counselor",
+                                'StudentShield: CRITICAL restricted alert. Review the counselor dashboard and follow parent-contact restrictions.'
                             );
                         } else {
                             if (!empty($user->parent_phone) && !$this->isAlertOnCooldown($user->parent_phone)) {
-                                $this->triggerSmsAlert($user->parent_phone, $firstName);
+                                $this->triggerSmsAlert($user->parent_phone, "vent:{$ventId}:parent");
                             }
                             if (!empty($user->parent_email) && !$this->isAlertOnCooldown($user->parent_email)) {
                                 $this->triggerEmailAlert($user->parent_email, $firstName);
@@ -220,7 +224,9 @@ class VentController extends BaseController
                         // (We do NOT alert parents on HIGH to prevent alarm fatigue and helicopter parenting)
                         $this->triggerCounselorEmergencyAlert(
                             "HIGH PRIORITY: {$studentName} ({$user->section}) submitted a HIGH risk vent ({$sentimentScore}%). Please schedule a counseling session or wellness check-in.{$parentNote}",
-                            "High Risk Counselor Notice: {$studentName}"
+                            "High Risk Counselor Notice: {$studentName}",
+                            "vent:{$ventId}:high-counselor",
+                            'StudentShield: HIGH-priority alert. Open the counselor dashboard to arrange a student check-in.'
                         );
                     }
                 }
@@ -253,7 +259,7 @@ class VentController extends BaseController
     }
 
     // --- 3. ALERT FATIGUE COOLDOWN (RATE LIMITING) ---
-    private function isAlertOnCooldown($recipient)
+    protected function isAlertOnCooldown($recipient)
     {
         $file = WRITEPATH . 'logs/alerts.json';
         if (!file_exists($file))
@@ -267,6 +273,7 @@ class VentController extends BaseController
         $oneHourAgo = strtotime('-1 minute');
 
         foreach ($alerts as $alert) {
+            if (isset($alert['accepted']) && !$alert['accepted']) continue;
             if ($alert['recipient'] === $recipient) {
                 if (strtotime($alert['timestamp']) > $oneHourAgo) {
                     return true;
@@ -276,43 +283,12 @@ class VentController extends BaseController
         return false;
     }
 
-    private function triggerSmsAlert($parentPhone, $studentName = 'your child')
+    private function triggerSmsAlert($parentPhone, string $eventKey)
     {
-        $message = "StudentShield: We noticed your child shared some heavy feelings on our portal today. Please offer a warm check-in tonight. SVBSM Counselors are always here.";
-        $this->logAlert('SMS (Local Phone)', $parentPhone, $message);
-
-        // Normalize phone number to 09XXXXXXXXX since that's what the local app expects
-        $cleanPhone = ltrim($parentPhone, '+');
-        if (str_starts_with($cleanPhone, '63') && strlen($cleanPhone) == 12) {
-            $cleanPhone = '0' . substr($cleanPhone, 2);
-        }
-
-        $payload = json_encode([
-            'phone' => $cleanPhone,
-            'message' => $message
-        ]);
-
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => env('sms.GatewayUrl', ''),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30, // Keep timeout reasonably long because sending via real SIM can take a few seconds
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => [
-                "Content-Type: application/json"
-            ],
-        ]);
-
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-
-        if ($err) {
-            log_message('error', "Local Gateway cURL Error #: " . $err);
-        }
-        else {
-            log_message('info', "Local Gateway Response for {$cleanPhone}: " . $response);
-        }
+        $message = 'StudentShield: Please check in with your child and contact the SVBSM Guidance Office for support.';
+        $result = \Config\Services::smsGateway()->send((string) $parentPhone, $message, $eventKey);
+        $this->logAlert('SMS (Gateway)', $parentPhone, $message, $result);
+        return $result['accepted'];
     }
 
     private function triggerEmailAlert($parentEmail, $studentName = 'your child')
@@ -420,25 +396,12 @@ class VentController extends BaseController
         }
     }
 
-    private function triggerCounselorEmergencyAlert($message, $subject)
+    private function triggerCounselorEmergencyAlert($message, $subject, string $eventKey, string $smsMessage)
     {
         // 1. Text the default Counselor Phone
         $counselorPhone = env('COUNSELOR_PHONE', '');
-        $this->logAlert('SMS (Counselor Override)', $counselorPhone, $message);
-        $payload = json_encode([
-            'phone' => $counselorPhone,
-            'message' => "StudentShield URGENT: " . $message
-        ]);
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => env('sms.GatewayUrl', ''),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 2,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => ["Content-Type: application/json", "Connection: close"],
-        ]);
-        curl_exec($curl);
+        $result = \Config\Services::smsGateway()->send((string) $counselorPhone, $smsMessage, $eventKey);
+        $this->logAlert('SMS (Counselor)', $counselorPhone, $smsMessage, $result);
 
         // 2. Email the Counselor Office
         try {
@@ -488,7 +451,7 @@ class VentController extends BaseController
         }
     }
 
-    private function logAlert($type, $recipient, $message)
+    protected function logAlert($type, $recipient, $message, array $smsStatus = [])
     {
         $file = WRITEPATH . 'logs/alerts.json';
         $alerts = [];
@@ -500,12 +463,12 @@ class VentController extends BaseController
         }
 
         // Add new alert at the top
-        array_unshift($alerts, [
+        array_unshift($alerts, array_merge([
             'type' => $type,
             'recipient' => $recipient,
             'message' => $message,
             'timestamp' => date('Y-m-d H:i:s')
-        ]);
+        ], $smsStatus));
 
         file_put_contents($file, json_encode($alerts, JSON_PRETTY_PRINT), LOCK_EX);
     }
