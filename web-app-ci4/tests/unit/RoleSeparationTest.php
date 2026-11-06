@@ -209,14 +209,14 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertSame(403, $this->controller(\App\Controllers\StaffAccountController::class, 'staff/profile')->updateProfile()->getStatusCode());
     }
 
-    public function testSuperAdminReceivesOnlyMaskedLrn(): void
+    public function testSuperAdminReceivesMaskedLrnAndGuardianContacts(): void
     {
         $this->rbacDb->table('students')->where('user_id', 10)->update(['lrn' => '123456789012']);
         $this->login(2);
         $html = $this->controller(UserController::class, 'admin/users')->index();
         $this->assertStringContainsString('9012', $html);
         $this->assertStringNotContainsString('123456789012', $html);
-        $this->assertStringNotContainsString('private@example.test', $html);
+        $this->assertStringContainsString('private@example.test', html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     public function testCreateAccountWorksWithoutOptionalUpdatedAtColumn(): void
@@ -229,10 +229,143 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertSame('staff@example.test', $this->rbacDb->table('counselors')->where('user_id', $user['id'])->get()->getRowArray()['counselor_email']);
     }
 
+    public function testSuperAdminCanCreateRoleSpecificSmsContacts(): void
+    {
+        $this->login(2);
+        foreach ([0, 1, 2, 3] as $role) {
+            $post = ['name' => 'Contact account ' . $role, 'role' => (string) $role, 'passcode' => 'ExamplePassword!9',
+                'parent_phone' => '0912 345 6789', 'parent_email' => 'guardian@example.test',
+                'phone' => '639987654321', 'email' => 'staff@example.test'];
+            $this->controller(UserController::class, 'admin/users/create', $post)->create();
+            $user = $this->rbacDb->table('users')->where('name', $post['name'])->get()->getRowArray();
+            $this->assertNotNull($user);
+            $table = $role === 0 ? 'students' : ($role === 1 ? 'counselors' : 'admins');
+            $profile = $this->rbacDb->table($table)->where('user_id', $user['id'])->get()->getRowArray();
+            $phoneField = $role === 0 ? 'parent_phone' : ($role === 1 ? 'counselor_phone' : 'phone');
+            $emailField = $role === 0 ? 'parent_email' : ($role === 1 ? 'counselor_email' : 'email');
+            $this->assertSame($role === 0 ? '+639123456789' : '+639987654321', $profile[$phoneField]);
+            $this->assertSame($role === 0 ? $post['parent_email'] : $post['email'], $profile[$emailField]);
+            $this->assertSame($role === 0 ? 'pending' : 'approved', $user['registration_status']);
+        }
+    }
+
+    public function testGuardianUpdatesKeepStudentHistoryAndPreserveOmittedContacts(): void
+    {
+        $this->login(2);
+        $post = ['role' => '0', 'name' => 'Unrequested rename', 'parent_phone' => '(+63) 912-345-6789', 'parent_email' => 'updated@example.test'];
+        $this->controller(UserController::class, 'admin/users/update/12', $post)->update(12);
+        $student = $this->rbacDb->table('students')->where('user_id', 12)->get()->getRowArray();
+        $user = $this->rbacDb->table('users')->where('id', 12)->get()->getRowArray();
+        $this->assertSame('+639123456789', $student['parent_phone']);
+        $this->assertSame('updated@example.test', $student['parent_email']);
+        $this->assertSame('PRIVATE_ID_12', $student['student_id']);
+        $this->assertSame('7', $student['grade_level']);
+        $this->assertSame('PRIVATE_STUDENT_12', $user['name']);
+        $this->assertSame('pending', $user['registration_status']);
+        $this->assertSame(0, (int) $user['is_active']);
+        foreach ([[], ['parent_phone' => '', 'parent_email' => '']] as $contacts) {
+            $this->controller(UserController::class, 'admin/users/update/12', ['role' => '0'] + $contacts)->update(12);
+            $this->assertSame($student, $this->rbacDb->table('students')->where('user_id', 12)->get()->getRowArray());
+        }
+        $audit = $this->rbacDb->table('audit_logs')->where('entity_id', 12)->get()->getRowArray();
+        $this->assertSame('UPDATE_USER', $audit['action']);
+        $this->assertStringNotContainsString('+639123456789', json_encode($audit));
+    }
+
+    public function testInvalidGuardianContactsCannotPartiallyUpdateAnAccount(): void
+    {
+        $this->login(2);
+        $before = $this->rbacDb->table('users')->where('id', 10)->get()->getRowArray();
+        $profile = $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray();
+        foreach ([['parent_phone' => '12345'], ['parent_phone' => 'not a phone'], ['parent_phone' => ['09123456789']],
+            ['parent_email' => 'invalid email'], ['parent_email' => ['guardian@example.test']],
+            ['remove_parent_phone' => ['1']], ['remove_parent_email' => 'invalid']] as $contacts) {
+            $this->controller(UserController::class, 'admin/users/update/10', ['role' => '0', 'passcode' => 'NewPassword!9'] + $contacts)->update(10);
+            $this->assertSame($before, $this->rbacDb->table('users')->where('id', 10)->get()->getRowArray());
+            $this->assertSame($profile, $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray());
+        }
+        $this->rbacDb->query("CREATE TRIGGER reject_contact_update BEFORE UPDATE ON students BEGIN SELECT RAISE(ABORT, 'contact update failed'); END");
+        $this->controller(UserController::class, 'admin/users/update/10', ['role' => '0', 'passcode' => 'NewPassword!9', 'parent_phone' => '09123456789'])->update(10);
+        $this->assertSame($before, $this->rbacDb->table('users')->where('id', 10)->get()->getRowArray());
+        $this->assertSame($profile, $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray());
+    }
+
+    public function testContactChangesAreRestrictedToSuperAdminAndTargetRole(): void
+    {
+        $post = ['role' => '0', 'parent_phone' => '09123456789', 'parent_email' => 'new@example.test'];
+        foreach ([0, 1, 3] as $role) {
+            $this->login($role);
+            $this->assertSame(403, $this->controller(UserController::class, 'admin/users/update/10', $post)->update(10)->getStatusCode());
+            $this->assertSame(403, $this->controller(UserController::class, 'admin/users')->index()->getStatusCode());
+        }
+        $this->login(2);
+        $original = $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray();
+        $this->controller(UserController::class, 'admin/users/update/10', ['role' => '1'] + $post)->update(10);
+        $this->assertSame($original, $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray());
+        $this->assertSame(0, $this->rbacDb->table('counselors')->where('user_id', 10)->countAllResults());
+        $this->assertSame(0, (int) $this->rbacDb->table('users')->where('id', 10)->get()->getRowArray()['role']);
+        $this->controller(UserController::class, 'admin/users/update/10', ['role' => '1', 'name' => 'Converted account', 'phone' => '09123456789', 'email' => 'counselor@example.test'])->update(10);
+        $staff = $this->rbacDb->table('counselors')->where('user_id', 10)->get()->getRowArray();
+        $this->assertSame('+639123456789', $staff['counselor_phone']);
+        $this->assertSame('counselor@example.test', $staff['counselor_email']);
+    }
+
+    public function testNewAccountsRequireGuardianContactOrStaffEmail(): void
+    {
+        $this->login(2);
+        $before = $this->rbacDb->table('users')->countAllResults();
+        foreach ([0, 1, 2, 3] as $role) {
+            $post = ['name' => 'Missing contact ' . $role, 'role' => (string) $role, 'passcode' => 'ExamplePassword!9'];
+            $this->controller(UserController::class, 'admin/users/create', $post)->create();
+            $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
+            if ($role !== 0) {
+                $this->controller(UserController::class, 'admin/users/create', $post + ['phone' => '09123456789'])->create();
+                $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
+            }
+        }
+        $this->controller(UserController::class, 'admin/users/create', ['name' => 'Phone only student', 'role' => '0', 'passcode' => 'ExamplePassword!9', 'parent_phone' => '09123456789'])->create();
+        $this->assertSame($before + 1, $this->rbacDb->table('users')->countAllResults());
+    }
+
+    public function testExplicitRemovalKeepsRequiredContactsAndRecordsAudit(): void
+    {
+        $this->login(2);
+        $this->rbacDb->table('students')->where('user_id', 10)->update(['parent_phone' => '+639123456789']);
+        $this->controller(UserController::class, 'admin/users/update/10', ['role' => '0', 'remove_parent_phone' => '1'])->update(10);
+        $profile = $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray();
+        $this->assertNull($profile['parent_phone']);
+        $this->assertSame('private@example.test', $profile['parent_email']);
+        $this->assertSame(1, $this->rbacDb->table('audit_logs')->where('action', 'CONTACTS_REMOVED')->where('entity_id', 10)->countAllResults());
+        $before = $this->rbacDb->table('users')->where('id', 10)->get()->getRowArray();
+        $this->controller(UserController::class, 'admin/users/update/10', ['role' => '0', 'remove_parent_email' => '1'])->update(10);
+        $this->assertSame($profile, $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray());
+        $this->assertSame($before, $this->rbacDb->table('users')->where('id', 10)->get()->getRowArray());
+        $this->rbacDb->table('students')->where('user_id', 10)->update(['parent_phone' => '12345']);
+        $this->controller(UserController::class, 'admin/users/update/10', ['role' => '0', 'remove_parent_email' => '1'])->update(10);
+        $this->assertSame('private@example.test', $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray()['parent_email']);
+        $this->assertSame($before, $this->rbacDb->table('users')->where('id', 10)->get()->getRowArray());
+        $this->controller(UserController::class, 'admin/users/update/10', ['role' => '0', 'remove_parent_email' => '1', 'parent_phone' => '09123456789'])->update(10);
+        $profile = $this->rbacDb->table('students')->where('user_id', 10)->get()->getRowArray();
+        $this->assertNull($profile['parent_email']);
+        $this->assertSame('+639123456789', $profile['parent_phone']);
+        $this->rbacDb->table('counselors')->insert(['user_id' => 1, 'counselor_email' => 'staff@example.test', 'counselor_phone' => '+639123456789']);
+        $post = ['name' => 'Staff 1', 'role' => '1', 'remove_phone' => '1'];
+        $this->controller(UserController::class, 'admin/users/update/1', $post)->update(1);
+        $staff = $this->rbacDb->table('counselors')->where('user_id', 1)->get()->getRowArray();
+        $this->assertNull($staff['counselor_phone']);
+        $this->assertSame('staff@example.test', $staff['counselor_email']);
+        $this->controller(UserController::class, 'admin/users/update/1', ['name' => 'Staff 1', 'role' => '1', 'remove_email' => '1'])->update(1);
+        $this->assertSame($staff, $this->rbacDb->table('counselors')->where('user_id', 1)->get()->getRowArray());
+    }
+
     public function testRegistrationRequiresUniqueTwelveDigitLrnAndKeepsLeadingZero(): void
     {
         $post = ['name' => 'Registration fixture', 'lrn' => '012345678901', 'grade_level' => '8', 'section' => 'A', 'parent_contact' => 'guardian@example.test', 'password' => 'Example!234A', 'password_confirm' => 'Example!234A', 'terms' => '1'];
         $before = $this->rbacDb->table('users')->countAllResults();
+        foreach (['', 'invalid contact', '123', ['guardian@example.test']] as $contact) {
+            $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['parent_contact' => $contact]))->processStudentRegistration();
+            $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
+        }
         foreach (['', '123', '12345678901x', '1234567890123'] as $invalid) {
             $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['lrn' => $invalid]))->processStudentRegistration();
             $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
@@ -325,11 +458,11 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertArrayNotHasKey('details', $log);
     }
 
-    public function testAccountScreenAndRoleMenusExcludeCounselingAndGuardianDetails(): void
+    public function testAccountScreenAndRoleMenusExcludeCounselingRecords(): void
     {
         $this->login(2);
         $html = $this->controller(UserController::class, 'admin/users')->index();
-        $this->assertStringNotContainsString('private@example', $html);
+        $this->assertStringContainsString('private@example', html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
         $this->assertStringContainsString('PRIVATE_ID_', $html);
         $this->assertStringContainsString('PRIVATE_STUDENT_', $html);
         $this->assertStringNotContainsString('PRIVATE_TEXT', $html);

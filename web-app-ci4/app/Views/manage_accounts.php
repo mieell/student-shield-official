@@ -17,8 +17,8 @@
 <label>Account name<input name="name" required maxlength="255" autocomplete="off" placeholder="e.g. Guidance Counselor 1"></label>
 <label>Role<select name="role"><?php foreach (\App\Libraries\RoleAccess::NAMES as $value => $label): ?><option value="<?= $value ?>"><?= esc($label) ?></option><?php endforeach; ?></select></label>
 <label>Password<input name="passcode" type="password" minlength="8" required autocomplete="new-password" placeholder="Minimum 8 characters"></label>
-<label>Staff email<input name="email" type="email" placeholder="staff@school.edu.ph (for OTP verification)"></label>
-<p>New Student accounts remain pending until a Counselor approves them. Student profile and guardian details are managed by the guidance office.</p>
+<?= view('partials/account_contacts', ['contactAccount' => []]) ?>
+<p>New Student accounts remain pending until a Counselor approves them.</p>
 <button type="submit">Create account</button>
 </form></details>
 <div class="accounts-master-detail">
@@ -57,13 +57,13 @@
 </div>
 <div role="cell" class="directory-actions">
 <button type="button" class="account-inspect-button secondary" hidden aria-controls="accountInspector" aria-expanded="false" aria-label="View details for <?= esc($user['name'], 'attr') ?>">View <span aria-hidden="true">→</span></button>
-<details class="account-access-editor"><summary>Edit access</summary>
-<form method="post" action="<?= base_url('admin/users/update/' . (int) $user['id']) ?>" class="account-fields">
+<details class="account-access-editor"><summary>Edit account</summary>
+<form method="post" action="<?= base_url('admin/users/update/' . (int) $user['id']) ?>" class="account-fields" data-account-name="<?= esc($user['name'], 'attr') ?>">
 <?= csrf_field() ?>
 <?php if ($role !== 0): ?><label>Account name<input name="name" value="<?= esc($user['name'], 'attr') ?>" maxlength="255" required></label><?php endif; ?>
 <label>Role<select name="role"><?php foreach (\App\Libraries\RoleAccess::NAMES as $value => $label): ?><option value="<?= $value ?>" <?= $role === $value ? 'selected' : '' ?>><?= esc($label) ?></option><?php endforeach; ?></select></label>
 <label>Reset password<input name="passcode" type="password" minlength="8" autocomplete="new-password" placeholder="Leave blank to keep current"></label>
-<label>Update staff email<input name="email" type="email" placeholder="Leave blank to keep current"></label>
+<?= view('partials/account_contacts', ['contactAccount' => $user]) ?>
 <button type="submit">Save account</button></form>
 <?php if ((int) $user['id'] !== (int) session()->get('user_id')): ?>
 <form method="post" action="<?= base_url('admin/users/access/' . (int) $user['id']) ?>" class="account-access"><?= csrf_field() ?><input type="hidden" name="disabled" value="<?= $user['access_disabled'] ? '0' : '1' ?>"><button type="submit" class="secondary"><?= $user['access_disabled'] ? 'Enable account' : 'Disable account' ?></button></form>
@@ -77,7 +77,7 @@
 <?php endforeach; ?>
 <div><dt>LRN</dt><dd><?= !empty($user['lrn_suffix']) ? '••••••••' . esc($user['lrn_suffix']) : 'Not set' ?></dd></div>
 </dl>
-<p>Basic identification only. Student entries, case records and guardian contacts are restricted to the guidance office.</p>
+<p>Update guardian contacts in Edit account. Student entries and case records are managed by the guidance office.</p>
 </details>
 <?php endif; ?>
 </div>

@@ -561,7 +561,11 @@ class AuthController extends BaseController
         }
         $gradeLevel = trim((string) $this->request->getPost('grade_level'));
         $section = trim((string) $this->request->getPost('section'));
-        $parentContact = trim((string) $this->request->getPost('parent_contact'));
+        $parentContact = $this->request->getPost('parent_contact');
+        if (!is_string($parentContact) || trim($parentContact) === '' || strlen($parentContact) > 255) {
+            return redirect()->back()->withInput()->with('error', 'Enter a parent or guardian mobile number or email.');
+        }
+        $parentContact = trim($parentContact);
         $password = (string) $this->request->getPost('password');
         $confirmPassword = (string) $this->request->getPost('password_confirm');
 
@@ -571,6 +575,14 @@ class AuthController extends BaseController
         // Detect if parentContact is email or phone
         $parentPhone = filter_var($parentContact, FILTER_VALIDATE_EMAIL) ? null : $parentContact;
         $parentEmail = filter_var($parentContact, FILTER_VALIDATE_EMAIL) ? $parentContact : null;
+        if ($parentPhone !== null) {
+            $parentPhone = preg_replace('/[\s()\-]/', '', $parentPhone);
+            if (!preg_match('/\A(?:09|\+?639)\d{9}\z/D', $parentPhone)) {
+                return redirect()->back()->withInput()->with('error', 'Enter a valid guardian email or Philippine mobile number such as 09123456789.');
+            }
+            if (str_starts_with($parentPhone, '09')) $parentPhone = '+63' . substr($parentPhone, 1);
+            if (str_starts_with($parentPhone, '639')) $parentPhone = '+' . $parentPhone;
+        }
 
         $terms = $this->request->getPost('terms');
 

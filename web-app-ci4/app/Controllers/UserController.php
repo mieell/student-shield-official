@@ -6,11 +6,14 @@ class UserController extends BaseController
     public function index()
     {
         if (!$this->hasRole(2)) return $this->forbidden();
-        // Explicit basic-profile allowlist. Never load guardian contacts or clinical records here.
+        // Account and guardian contacts are available only to Super Admins.
         $users = \Config\Database::connect()->table('users')
-            ->select('users.id, users.name, users.role, users.access_disabled, users.registration_status, users.created_at, students.student_id, students.grade_level, students.section, students.adviser_name')
+            ->select('users.id, users.name, users.role, users.access_disabled, users.registration_status, users.created_at, students.student_id, students.grade_level, students.section, students.adviser_name, students.parent_phone, students.parent_email')
             ->select('SUBSTR(students.lrn, -4) AS lrn_suffix', false)
+            ->select('CASE WHEN users.role = 1 THEN counselors.counselor_phone ELSE admins.phone END AS phone, CASE WHEN users.role = 1 THEN counselors.counselor_email ELSE admins.email END AS email', false)
             ->join('students', 'students.user_id = users.id AND users.role = 0', 'left')
+            ->join('counselors', 'counselors.user_id = users.id AND users.role = 1', 'left')
+            ->join('admins', 'admins.user_id = users.id AND users.role IN (2, 3)', 'left')
             ->orderBy('users.role', 'DESC')->orderBy('users.name')->get()->getResultArray();
         return view('manage_accounts', ['users' => $users]);
     }
@@ -36,15 +39,36 @@ class UserController extends BaseController
         if ($old && (int) $old['role'] === 0) $name = $old['name'];
         $rawRole = (string) $this->request->getPost('role');
         $password = (string) $this->request->getPost('passcode');
-        $email = trim((string) $this->request->getPost('email'));
-        if (!in_array($rawRole, ['0', '1', '2', '3'], true) || $name === '' || mb_strlen($name) > 255
-            || ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL))) {
-            return redirect()->to('/admin/users')->with('error', 'Enter a valid account name, role and staff email.');
+        if (!in_array($rawRole, ['0', '1', '2', '3'], true) || $name === '' || mb_strlen($name) > 255) {
+            return redirect()->to('/admin/users')->with('error', 'Enter a valid account name and role.');
         }
+        $role = (int) $rawRole;
+        $email = $this->request->getPost($role === 0 ? 'parent_email' : 'email');
+        $phone = $this->request->getPost($role === 0 ? 'parent_phone' : 'phone');
+        if (($email !== null && !is_string($email)) || ($phone !== null && !is_string($phone))) {
+            return redirect()->to('/admin/users')->with('error', 'Enter a valid email and mobile number.');
+        }
+        $email = trim($email ?? '');
+        $phone = preg_replace('/[\s()\-]/', '', trim($phone ?? ''));
+        if ($email !== '' && (strlen($email) > 255 || !filter_var($email, FILTER_VALIDATE_EMAIL))) {
+            return redirect()->to('/admin/users')->with('error', 'Enter a valid contact email or leave it blank.');
+        }
+        if ($phone !== '' && !preg_match('/\A(?:09|\+?639)\d{9}\z/D', $phone)) {
+            return redirect()->to('/admin/users')->with('error', 'Enter a Philippine mobile number such as 09123456789 or +639123456789, or leave it blank.');
+        }
+        if (str_starts_with($phone, '09')) $phone = '+63' . substr($phone, 1);
+        if (str_starts_with($phone, '639')) $phone = '+' . $phone;
+        $removeEmail = $this->request->getPost($role === 0 ? 'remove_parent_email' : 'remove_email');
+        $removePhone = $this->request->getPost($role === 0 ? 'remove_parent_phone' : 'remove_phone');
+        if (!in_array($removeEmail, [null, '0', '1'], true) || !in_array($removePhone, [null, '0', '1'], true)
+            || ($removeEmail === '1' && $email !== '') || ($removePhone === '1' && $phone !== '')) {
+            return redirect()->to('/admin/users')->with('error', 'Choose either a replacement contact or removal.');
+        }
+        $removeEmail = $removeEmail === '1';
+        $removePhone = $removePhone === '1';
         if (($id === null || $password !== '') && strlen($password) < 8) {
             return redirect()->to('/admin/users')->with('error', 'Use a password of at least 8 characters.');
         }
-        $role = (int) $rawRole;
         if ($id === (int) session()->get('user_id') && $role !== 2) return redirect()->to('/admin/users')->with('error', 'You cannot demote your own account.');
         $duplicate = $db->table('users')->where('name', $name);
         if ($id) $duplicate->where('id !=', $id);
@@ -58,31 +82,55 @@ class UserController extends BaseController
         }
         try {
             $db->transStart();
+            // Serialize contact edits so simultaneous removals cannot erase both guardian contacts.
+            if ($id && $db->DBDriver === 'MySQLi') {
+                $lockedUser = $db->query('SELECT auth_version FROM users WHERE id = ? FOR UPDATE', [$id])->getRowArray();
+                $data['auth_version'] = (int) $lockedUser['auth_version'] + 1;
+            }
+            $table = $role === 0 ? 'students' : ($role === 1 ? 'counselors' : 'admins');
+            $emailField = $role === 0 ? 'parent_email' : ($role === 1 ? 'counselor_email' : 'email');
+            $phoneField = $role === 0 ? 'parent_phone' : ($role === 1 ? 'counselor_phone' : 'phone');
+            $saved = $id ? $db->table($table)->where('user_id', $id)->get()->getRowArray() : null;
+            $finalEmail = $removeEmail ? '' : ($email !== '' ? $email : trim((string) ($saved[$emailField] ?? '')));
+            $finalPhone = $removePhone ? '' : ($phone !== '' ? $phone : trim((string) ($saved[$phoneField] ?? '')));
+            $validEmail = $finalEmail !== '' && filter_var($finalEmail, FILTER_VALIDATE_EMAIL) !== false;
+            $validPhone = preg_match('/\A(?:09|\+?639)\d{9}\z/D', preg_replace('/[\s()\-]/', '', $finalPhone)) === 1;
+            if (($role === 0 && !$validEmail && !$validPhone) || ($role !== 0 && !$validEmail)) {
+                $db->transRollback();
+                return redirect()->to('/admin/users')->with('error', $role === 0
+                    ? 'Keep at least one valid parent or guardian phone number or email.'
+                    : 'A valid staff email is required for OTP verification.');
+            }
+            $contactsChanged = $finalEmail !== (string) ($saved[$emailField] ?? '')
+                || $finalPhone !== (string) ($saved[$phoneField] ?? '');
             if ($id) $db->table('users')->where('id', $id)->update($data);
             else {
                 if (!$db->table('users')->insert($data)) throw new \RuntimeException('Account insert failed');
                 $id = (int) $db->insertID();
                 if ($id < 1) throw new \RuntimeException('Account ID not generated');
             }
-            if ($role === 0) {
-                if (!$db->table('students')->where('user_id', $id)->countAllResults()) $db->table('students')->insert(['user_id' => $id, 'student_id' => 'SS-' . $id]);
+            $contacts = [];
+            if ($removeEmail || $email !== '') $contacts[$emailField] = $removeEmail ? null : $email;
+            if ($removePhone || $phone !== '') $contacts[$phoneField] = $removePhone ? null : $phone;
+            if ($saved) {
+                if ($contacts) $db->table($table)->where('user_id', $id)->update($contacts);
             } else {
-                $table = $role === 1 ? 'counselors' : 'admins';
-                $contacts = $role === 1 ? ['counselor_email' => $email] : ['email' => $email];
-                if ($db->table($table)->where('user_id', $id)->countAllResults()) {
-                    if ($email !== '') $db->table($table)->where('user_id', $id)->update($contacts);
-                }
-                else $db->table($table)->insert(['user_id' => $id] + $contacts);
+                $profile = ['user_id' => $id] + $contacts;
+                if ($role === 0) $profile['student_id'] = 'SS-' . $id;
+                $db->table($table)->insert($profile);
             }
-            // Role changes retain existing student history; this screen never reads profile fields.
+            // Keep existing contacts when omitted, and retain student history on role changes.
             $db->transComplete();
             if (!$db->transStatus()) throw new \RuntimeException('Account transaction failed');
             $this->logAudit(!$old ? 'CREATE_USER' : ((int) $old['role'] !== $role ? 'ROLE_CHANGED' : ($password !== '' ? 'PASSWORD_RESET' : 'UPDATE_USER')), 'user', $id);
+            if ($old && $contactsChanged) {
+                $this->logAudit($removeEmail || $removePhone ? 'CONTACTS_REMOVED' : 'CONTACTS_UPDATED', 'user', $id);
+            }
             if ($id === (int) session()->get('user_id')) session()->set('auth_version', $data['auth_version']);
             return redirect()->to('/admin/users')->with('success', 'Account saved. Student accounts require counselor approval.');
         } catch (\Throwable $e) {
             $db->transRollback();
-            log_message('error', 'Account update failed: {message}', ['message' => $e->getMessage()]);
+            log_message('error', 'Account update failed for user {id}', ['id' => $id]);
             return redirect()->to('/admin/users')->with('error', 'Account could not be saved.');
         }
     }

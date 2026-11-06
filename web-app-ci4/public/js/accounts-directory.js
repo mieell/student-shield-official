@@ -13,6 +13,76 @@
     let matches = rows;
     const pageSize = 10;
 
+    workspace.querySelectorAll('.account-fields').forEach(form => {
+        const accountRole = form.querySelector('select[name="role"]');
+        if (!accountRole) return;
+        const contactFields = [...form.querySelectorAll('[data-account-contact]')];
+        function contactValue(label) {
+            const input = label.querySelector('[data-contact-value]');
+            if (label.querySelector('[data-contact-removal]')?.value === '1') return '';
+            return input.value.trim() || input.defaultValue.trim();
+        }
+        function updateContactFields() {
+            const contactType = accountRole.value === '0' ? 'student' : 'staff';
+            contactFields.forEach(label => {
+                label.hidden = label.dataset.accountContact !== contactType;
+                label.querySelectorAll('input, button').forEach(control => { control.disabled = label.hidden; });
+                const input = label.querySelector('[data-contact-value]');
+                input.setCustomValidity('');
+                input.required = !label.hidden && input.name === 'email' && input.defaultValue === '';
+                label.querySelector('[data-contact-status]').hidden = contactValue(label) === '';
+            });
+            const phone = form.querySelector('[name=parent_phone]');
+            const email = form.querySelector(contactType === 'student' ? '[name=parent_email]' : '[name=email]');
+            if (contactType === 'student' && !contactValue(phone.closest('[data-account-contact]')) && !contactValue(email.closest('[data-account-contact]'))) {
+                phone.setCustomValidity('Enter at least one parent or guardian phone number or email.');
+            }
+            if (contactType === 'staff' && !contactValue(email.closest('[data-account-contact]'))) {
+                email.setCustomValidity('Keep a staff email for OTP verification.');
+            }
+        }
+        contactFields.forEach(label => {
+            const input = label.querySelector('[data-contact-value]');
+            const removal = label.querySelector('[data-contact-removal]');
+            const button = label.querySelector('[data-remove-contact]');
+            const removeLabel = button?.textContent;
+            input.addEventListener('input', () => {
+                if (removal && input.value.trim()) {
+                    removal.value = '0';
+                    button.textContent = removeLabel;
+                }
+                updateContactFields();
+            });
+            button?.addEventListener('click', () => {
+                const removing = removal.value !== '1';
+                removal.value = removing ? '1' : '0';
+                input.value = removing ? '' : input.defaultValue;
+                button.textContent = removing ? 'Keep saved contact' : removeLabel;
+                updateContactFields();
+            });
+        });
+        form.addEventListener('submit', event => {
+            updateContactFields();
+            if (!form.reportValidity()) {
+                event.preventDefault();
+                return;
+            }
+            const changes = contactFields.filter(label => !label.hidden).flatMap(label => {
+                const input = label.querySelector('[data-contact-value]');
+                const value = contactValue(label);
+                if (value === input.defaultValue.trim()) return [];
+                const name = label.querySelector('[data-contact-label]').textContent;
+                return [value ? `${name}: ${value}` : `${name} will be removed`];
+            });
+            const name = form.querySelector('[name=name]')?.value || form.dataset.accountName || 'this account';
+            if (changes.length && !window.confirm(`Confirm contact details for ${name}\n\n${changes.join('\n')}\n\nSave these changes?`)) {
+                event.preventDefault();
+            }
+        });
+        accountRole.addEventListener('change', updateContactFields);
+        updateContactFields();
+    });
+
     function closeInspector(returnFocus = false) {
         if (!selected) return;
         const button = selected.querySelector('.account-inspect-button');
