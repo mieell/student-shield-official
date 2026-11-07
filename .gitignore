@@ -66,8 +66,5 @@ scratch/
 .vscode/
 backups/
 
-# Requested capstone PDF reference collection only
-!/docs/capstone-pdfs/
-!/docs/capstone-pdfs/**/
-!/docs/capstone-pdfs/**/*.pdf
-!/docs/capstone-pdfs/**/*.md
+# Capstone PDFs are stored in Google Drive
+/docs/capstone-pdfs/
