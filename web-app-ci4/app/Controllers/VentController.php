@@ -3,7 +3,6 @@
 namespace App\Controllers;
 
 use App\Libraries\ExplicitCrisisGuard;
-use App\Libraries\GeminiVentFallback;
 use App\Libraries\VentRiskAnalyzer;
 use App\Libraries\ViolentThreats;
 
@@ -112,12 +111,11 @@ class VentController extends BaseController
             ]);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-            // Leave time for a bounded backup request on shared PHP hosting.
-            $backupEnabled = filter_var(env('GEMINI_VENT_FALLBACK_ENABLED', false), FILTER_VALIDATE_BOOLEAN);
-            curl_setopt($ch, CURLOPT_TIMEOUT, $backupEnabled ? 15 : 60);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $backupEnabled ? 3 : 15);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Existing hosting compatibility setting; tracked separately.
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
@@ -130,7 +128,6 @@ class VentController extends BaseController
             log_message('warning', 'Primary vent analysis unavailable (HTTP {status}); checking configured fallback.', ['status' => $httpCode]);
         }
         $assessment = VentRiskAnalyzer::resolve($text, $mlResult, (int) $httpCode,
-            static fn (string $entry) => (new GeminiVentFallback())->analyze($entry),
             fn (string $entry) => $this->localKeywordFallback($entry));
         $riskLevel = $assessment['risk_level'];
         $sentimentScore = $assessment['risk_percent'];

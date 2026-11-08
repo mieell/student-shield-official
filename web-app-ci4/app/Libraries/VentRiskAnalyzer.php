@@ -1,7 +1,7 @@
 <?php
 namespace App\Libraries;
 
-/** Selects a usable vent assessment without letting backup AI weaken local rules. */
+/** Selects the model assessment or the local fallback. */
 final class VentRiskAnalyzer
 {
     public const BANDS = ['LOW' => [1, 30], 'MEDIUM' => [31, 60], 'HIGH' => [61, 85], 'CRITICAL' => [86, 100]];
@@ -15,7 +15,7 @@ final class VentRiskAnalyzer
             && $score >= $band[0] && $score <= $band[1];
     }
 
-    public static function resolve(string $text, $primary, int $httpCode, callable $backup, callable $local): array
+    public static function resolve(string $text, $primary, int $httpCode, callable $local): array
     {
         $trajectory = 'INSUFFICIENT_DATA';
         $probability = 0.0;
@@ -33,12 +33,6 @@ final class VentRiskAnalyzer
             // Always retain the full multilingual local fallback as the outage safety floor.
             $result = $local($text);
             $source = 'local';
-            try { $candidate = $backup($text); }
-            catch (\Throwable $e) { $candidate = null; }
-            if (self::valid($candidate)) {
-                $source = 'gemini';
-                if (($candidate['risk_score'] ?? $candidate['risk_percent']) >= $result['risk_percent']) $result = $candidate;
-            }
         }
         $classification = ExplicitCrisisGuard::enforce($text, [
             'risk_level' => $result['risk_level'],

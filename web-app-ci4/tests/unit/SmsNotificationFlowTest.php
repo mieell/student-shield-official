@@ -22,7 +22,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         parent::setUp();
         helper(['url', 'form']);
         foreach ([
-            'ML_API_KEY' => '', 'GEMINI_VENT_FALLBACK_ENABLED' => 'false',
+            'ML_API_KEY' => '',
             'email.SMTPUser' => '', 'email.SMTPPass' => '',
             'COUNSELOR_PHONE' => '09171234567', 'COUNSELOR_EMAIL' => '',
             'sms.GatewayUrl' => 'https://gateway.example.test/messages',
