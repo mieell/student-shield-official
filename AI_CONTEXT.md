@@ -13,7 +13,7 @@
 - **ML Service:** Python FastAPI — deployed on Hugging Face Spaces (Docker)
 - **Local Dev:** Laragon on Windows (`D:\laragon\www\student shield\`)
 - **Database:** MySQL (local: Laragon root/no-password; production: InfinityFree MySQL)
-- **SMS Alerts:** Local Android SMS Gateway app (LAN IP: `192.168.1.3:8080`)
+- **SMS Alerts:** iProg SMS API; configure `IPROG_SMS_API_TOKEN` privately.
 - **Email Alerts:** Gmail SMTP (configured via environment in .env)
 - **Repo:** `https://github.com/mieell/student-shield-official` (branch: `main`)
 
@@ -156,8 +156,8 @@ email.SMTPCrypto = tls
 COUNSELOR_PHONE = <counselor-phone>
 COUNSELOR_EMAIL = <counselor-email>
 
-# LOCAL SMS GATEWAY (Android phone on LAN — only works locally)
-sms.GatewayUrl = <sms-gateway-url>
+# IPROG SMS API
+IPROG_SMS_API_TOKEN = <private-iprog-token>
 
 ```
 

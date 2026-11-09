@@ -64,7 +64,7 @@ PHP retains local keyword screening when the ML service is unavailable and appli
 
 Parent hiding suppresses the Critical-vent parent alert while preserving counselor escalation. Bullying reports follow a separate process: counselor notification at intake, followed by eligible parent incident alerts only after counselor verification. Receipt and false-report notices follow their own rules.
 
-The application sends SMS requests to the configured gateway; the hosted PHP server must be able to reach it. An Android/SIM gateway also needs mobile signal and SMS service. The current notification paths do not provide verified handset delivery receipts or guaranteed automatic retries. Email is configured separately through SMTP.
+The application sends SMS requests through iProg SMS. Configure IPROG_SMS_API_TOKEN in the hosting environment and verify account credits, network coverage, and sender-name requirements. A queued message is not a delivery receipt; confirm delivery separately in iProg. Email is configured separately through SMTP.
 
 ## Repository layout
 

@@ -23,12 +23,10 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         helper(['url', 'form']);
         foreach ([
             'ML_API_KEY' => '',
+            'app.baseURL' => 'http://test-' . bin2hex(random_bytes(8)) . '.invalid/',
             'email.SMTPUser' => '', 'email.SMTPPass' => '',
             'COUNSELOR_PHONE' => '09171234567', 'COUNSELOR_EMAIL' => '',
-            'sms.GatewayUrl' => 'https://gateway.example.test/messages',
-            'sms.GatewayUsername' => 'synthetic-user', 'sms.GatewayPassword' => 'synthetic-secret',
-            'sms.GatewayDeviceId' => 'synthetic-device',
-            'sms.GatewaySimNumber' => '',
+            'IPROG_SMS_API_TOKEN' => 'synthetic-secret',
         ] as $key => $value) {
             $this->saved[$key] = [$_ENV[$key] ?? null, $_SERVER[$key] ?? null, getenv($key)];
             $_ENV[$key] = $_SERVER[$key] = $value;
@@ -53,10 +51,10 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         Services::injectMock('encrypter', $encrypter);
         $this->gateway = new class extends SmsGateway {
             public array $payloads = [];
-            protected function request(string $method, string $url, string $username, string $password, ?array $payload = null): array
+            protected function request(array $payload): array
             {
                 $this->payloads[] = $payload;
-                return ['status' => 202, 'body' => json_encode(['id' => $payload['id'], 'state' => 'Pending'])];
+                return ['status' => 200, 'body' => json_encode(['status' => 200, 'message_id' => 'iSms-test' . count($this->payloads)])];
             }
         };
         Services::injectMock('smsGateway', $this->gateway);
@@ -93,9 +91,9 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
 
     public static function ventPolicies(): iterable
     {
-        yield 'HIGH never contacts parents' => ['Sinampal ako sa school.', false, 'HIGH', ['+639171234567']];
-        yield 'CRITICAL includes eligible parent' => ['naglalaslas ako', false, 'CRITICAL', ['+639171234567', '+639181234567']];
-        yield 'restricted CRITICAL counselor notices only' => ['naglalaslas ako', true, 'CRITICAL', ['+639171234567', '+639171234567']];
+        yield 'HIGH never contacts parents' => ['Sinampal ako sa school.', false, 'HIGH', ['639171234567']];
+        yield 'CRITICAL includes eligible parent' => ['naglalaslas ako', false, 'CRITICAL', ['639171234567', '639181234567']];
+        yield 'restricted CRITICAL counselor notices only' => ['naglalaslas ako', true, 'CRITICAL', ['639171234567', '639171234567']];
     }
 
     #[DataProvider('ventPolicies')]
@@ -115,8 +113,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         $body = json_decode($response->getBody(), true);
         $this->assertSame('success', $body['status']);
         $this->assertSame($risk, $body['risk_level']);
-        $this->assertSame($recipients, array_map(static fn ($payload) => $payload['phoneNumbers'][0], $this->gateway->payloads));
-        $this->assertCount(count($recipients), array_unique(array_column($this->gateway->payloads, 'id')));
+        $this->assertSame($recipients, array_column($this->gateway->payloads, 'phone_number'));
         $this->assertNotContains(false, array_column($controller->alerts, 'accepted'));
         $encoded = json_encode($this->gateway->payloads);
         $this->assertStringNotContainsString('PRIVATE STUDENT', $encoded);
@@ -132,10 +129,10 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         };
         $this->init($controller, [])->verifyIncident(42);
         $first = $this->gateway->payloads;
-        $this->assertSame(['+639181234567', '+639191234567'], array_map(static fn ($payload) => $payload['phoneNumbers'][0], $first));
+        $this->assertSame(['639181234567', '639191234567'], array_column($first, 'phone_number'));
         $this->assertStringContainsString('delivery is not yet confirmed', session()->getFlashdata('message'));
         $this->init($controller, [])->verifyIncident(42);
-        $this->assertSame(array_column($first, 'id'), array_column(array_slice($this->gateway->payloads, 2), 'id'));
+        $this->assertCount(2, $this->gateway->payloads);
         $this->assertStringNotContainsString('PRIVATE STUDENT', json_encode($first));
     }
 }
