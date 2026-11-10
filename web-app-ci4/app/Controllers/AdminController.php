@@ -669,9 +669,7 @@ class AdminController extends BaseController
 
     public function pendingRegistrations()
     {
-        if (!session()->get('isLoggedIn') || (int) session()->get('role') !== 1) {
-            return redirect()->to('/admin/login');
-        }
+        if (!$this->hasRole(1) && !$this->hasRole(2)) return $this->forbidden();
 
         $db = \Config\Database::connect();
 
@@ -680,19 +678,22 @@ class AdminController extends BaseController
         $pendingUsers = [];
         try {
             $pendingUsers = $db->table('users')
-                ->select('users.id as user_id, users.name, users.created_at, students.student_id, students.lrn, students.grade_level, students.section, students.parent_phone, students.parent_email')
+                ->select('users.id as user_id, users.name, users.created_at, students.student_id, students.lrn, students.grade_level, students.section, students.parent_phone, students.parent_email,
+                    gc.phone as verified_phone, gc.verified_name, gc.guardian_name, gc.response, gc.responded_at, gc.sms_state, gc.requested_at, gc.expires_at')
                 ->join('students', 'students.user_id = users.id', 'left')
+                ->join('guardian_consents gc', 'gc.user_id = users.id', 'left')
                 ->where('users.role', 0)
                 ->where('users.registration_status', $registrationStatus)
                 ->orderBy('users.created_at', 'ASC')
                 ->get()->getResultArray();
         } catch (\Throwable $e) {
             log_message('error', 'AdminController::pendingRegistrations query failed: ' . $e->getMessage());
-            $pendingUsers = [];
+            return $this->response->setStatusCode(503)->setBody('Registrations are unavailable. Check that the guardian consent database update is installed.');
         }
 
         return view('admin_pending_registrations', [
-            'pendingUsers' => $pendingUsers, 'registrationStatus' => $registrationStatus
+            'pendingUsers' => $pendingUsers, 'registrationStatus' => $registrationStatus,
+            'canVerifyContact' => $this->hasRole(2),
         ]);
     }
 
@@ -714,10 +715,32 @@ class AdminController extends BaseController
         if (!$this->hasRole(1)) return $this->forbidden();
         if (strtoupper($this->request->getMethod()) !== 'POST') return $this->response->setStatusCode(405);
         $db = \Config\Database::connect();
+        if ($status === 'approved') {
+            $db->transBegin();
+            try {
+                $user = \App\Libraries\GuardianConsent::lockStudent($db, $id);
+                $consent = $db->table('guardian_consents')->where('user_id', $id)->where('response', 'accepted')->get()->getRowArray();
+                if (!$user || !$consent) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(409)->setJSON(['status' => 'error', 'message' => 'A pending registration needs accepted guardian consent before approval.']);
+                }
+                if (!$db->table('students')->where('user_id', $id)->countAllResults()) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(409)->setJSON(['status' => 'error', 'message' => 'The student profile is missing.']);
+                }
+                $db->table('students')->where('user_id', $id)->update(['parent_phone' => $consent['phone']]);
+            } catch (\Throwable $e) {
+                $db->transRollback();
+                return $this->response->setStatusCode(503)->setJSON(['status' => 'error', 'message' => 'Guardian consent could not be checked.']);
+            }
+        }
         $db->table('users')->where('id', $id)->where('role', 0)->where('registration_status', 'pending')
             ->update(['registration_status' => $status, 'is_active' => $status === 'approved' ? 1 : 0,
                 'remember_token' => null, 'updated_at' => date('Y-m-d H:i:s')]);
-        if ($db->affectedRows() !== 1) return $this->response->setStatusCode(409)->setJSON(['status' => 'error', 'message' => 'Registration is no longer pending.']);
+        if ($db->affectedRows() !== 1 || ($status === 'approved' && (!$db->transStatus() || !$db->transCommit()))) {
+            if ($status === 'approved') $db->transRollback();
+            return $this->response->setStatusCode(409)->setJSON(['status' => 'error', 'message' => 'Registration could not be updated.']);
+        }
         $this->logAudit($status === 'approved' ? 'STUDENT_APPROVED' : 'STUDENT_REGISTRATION_REJECTED', 'user', $id);
         if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'json')) {
             return $this->response->setJSON(['status' => 'success', 'message' => 'Registration ' . $status . '.']);

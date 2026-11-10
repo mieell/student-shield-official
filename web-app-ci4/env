@@ -70,3 +70,5 @@
 
 # iProg SMS: configure privately on the hosting server; never commit a real token.
 # IPROG_SMS_API_TOKEN =
+# School-approved guardian consent wording shown before the guardian responds.
+# GUARDIAN_CONSENT_NOTICE =

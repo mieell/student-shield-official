@@ -21,11 +21,13 @@ final class RoleAccess
         $path = trim($path, '/');
         if (in_array($path, ['staff/profile', 'staff/settings'], true)) return in_array($role, [1, 2, 3], true);
         if ($path === 'admin/dashboard') return in_array($role, [1, 2, 3], true); // Dispatches to the role's home.
+        if ($path === 'admin/pending-registrations') return in_array($role, [1, 2], true);
+        if (preg_match('#^admin/registrations/[0-9]+/send-consent$#', $path)) return $role === 2;
         if (preg_match('#^admin/(users(?:/(?:create|(?:update|delete|unlock|access)/[0-9]+))?|audit-logs)$#', $path)) return $role === 2;
         if (preg_match('#^principal/(dashboard|api/analytics|reports/export)$#', $path)) return $role === 3;
         if (str_starts_with($path, 'counselor/')) return $role === 1 && self::allows($role, 'admin/' . substr($path, 10));
         $counselor = [
-            '#^admin/(vents|incidents|sessions|alerts|analytics|pending-registrations)$#',
+            '#^admin/(vents|incidents|sessions|alerts|analytics)$#',
             '#^admin/api/(pending-meetings|pending-registrations|vents|incidents|alerts|student-profile/[0-9]+|case-summary/[0-9]+(?:/meeting/pending)?)$#',
             '#^admin/evidence/[^/]+$#',
             '#^admin/vent/((resolve|delete|restore)/[0-9]+|(delete|restore)-multiple)$#',

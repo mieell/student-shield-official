@@ -103,6 +103,11 @@ class UserController extends BaseController
             }
             $contactsChanged = $finalEmail !== (string) ($saved[$emailField] ?? '')
                 || $finalPhone !== (string) ($saved[$phoneField] ?? '');
+            if ($id && $role === 0 && $contactsChanged && $db->table('guardian_consents')
+                ->where('user_id', $id)->where('response', 'accepted')->countAllResults()) {
+                $db->transRollback();
+                return redirect()->to('/admin/users')->with('error', 'This student has a verified guardian contact. Refer any changes to the Guidance Office.');
+            }
             if ($id) $db->table('users')->where('id', $id)->update($data);
             else {
                 if (!$db->table('users')->insert($data)) throw new \RuntimeException('Account insert failed');

@@ -13,6 +13,8 @@ $routes->match(['GET', 'POST'], '/login/authenticate', 'AuthController::authenti
 
 $routes->get('/register', 'AuthController::studentRegisterView');
 $routes->post('/register/process', 'AuthController::processStudentRegistration');
+$routes->get('/guardian-consent/(:segment)', 'GuardianConsentController::form/$1');
+$routes->post('/guardian-consent/(:segment)', 'GuardianConsentController::respond/$1');
 
 // Counselor/Admin Portals
 $routes->get('/admin/login', 'AuthController::adminLoginView');
@@ -88,6 +90,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     // Registration Approval Routes
     $routes->get('/admin/api/pending-registrations', 'AdminController::pendingRegistrationCount');
     $routes->get('/admin/pending-registrations', 'AdminController::pendingRegistrations');
+    $routes->post('/admin/registrations/(:num)/send-consent', 'GuardianConsentController::send/$1');
     $routes->post('/admin/approve-student/(:num)', 'AdminController::approveStudent/$1');
     $routes->post('/admin/reject-student/(:num)', 'AdminController::rejectStudent/$1');
 

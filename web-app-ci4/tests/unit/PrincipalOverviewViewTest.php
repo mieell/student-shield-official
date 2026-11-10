@@ -6,6 +6,31 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class PrincipalOverviewViewTest extends CIUnitTestCase
 {
+    public function testWorkbookKeepsFilterTextLiteralAndCountsNumeric(): void
+    {
+        $filters = \App\Libraries\SchoolAnalytics::filters(['section' => '=1+2']);
+        $report = [
+            'filters' => $filters, 'metrics' => array_fill_keys(['registered', 'active', 'events', 'attention', 'today_count', 'week_count', 'month_count'], 0),
+            'change_percent' => -25.0, 'previous_events' => 4,
+            'groups' => ['trend' => [['label' => $filters['start'], 'total' => 3]], 'risk' => [], 'category' => [], 'grade' => [], 'section' => []],
+        ];
+        $path = WRITEPATH . 'cache/test-summary-' . bin2hex(random_bytes(8)) . '.zip';
+        try {
+            file_put_contents($path, \App\Libraries\SchoolSummaryWorkbook::build($report));
+            $zip = new \PharData($path);
+            $summary = simplexml_load_string($zip['xl/worksheets/sheet1.xml']->getContent());
+            $summary->registerXPathNamespace('s', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+            $this->assertSame('=1+2', (string) $summary->xpath('//s:c[@r="B6" and @t="inlineStr"]//s:t')[0]);
+            $this->assertSame('-0.25', (string) $summary->xpath('//s:c[@s="5"]/s:v')[0]);
+            $this->assertCount(0, $summary->xpath('//s:f'));
+            $this->assertStringContainsString('<v>3</v>', $zip['xl/worksheets/sheet2.xml']->getContent());
+            $this->assertStringContainsString('No matching events', $zip['xl/worksheets/sheet3.xml']->getContent());
+        } finally {
+            unset($zip);
+            if (is_file($path)) unlink($path);
+        }
+    }
+
     public function testCompleteFiltersAndEmptyRiskReportRemainUsable(): void
     {
         helper(['url', 'form']);

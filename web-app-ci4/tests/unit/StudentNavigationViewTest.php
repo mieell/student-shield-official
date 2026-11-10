@@ -64,9 +64,10 @@ final class StudentNavigationViewTest extends CIUnitTestCase
         $form = '//form[@method="post"][contains(@action,"register/process")]';
         $this->assertCount(1, $xpath->query($form));
         $this->assertCount(1, $xpath->query($form . '/input[@name="' . csrf_token() . '"]'));
-        foreach (['name', 'lrn', 'grade_level', 'section', 'parent_contact', 'password', 'password_confirm', 'terms'] as $name) {
+        foreach (['name', 'lrn', 'grade_level', 'section', 'password', 'password_confirm', 'terms'] as $name) {
             $this->assertCount(1, $xpath->query($form . '//input[@name="' . $name . '"][@required]'));
         }
+        $this->assertCount(1, $xpath->query($form . '//input[@name="parent_contact"][@type="tel"][not(@required)][@aria-describedby="guardian-contact-help"]'));
         $this->assertCount(1, $xpath->query($form . '//input[@name="lrn"][@pattern="[0-9]{12}"][@maxlength="12"]'));
         $this->assertCount(1, $xpath->query('//*[@id="termsModal"]'));
         $this->assertCount(1, $xpath->query('//*[@id="terms-section-privacy"]'));

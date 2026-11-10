@@ -130,7 +130,9 @@
                     </svg>
                     Student Registrations
                 </h2>
-                <p class="text-gray-500 text-sm mt-1">Review pending requests and retained registration decisions.</p>
+                <p class="text-gray-500 text-sm mt-1"><?= $canVerifyContact
+                    ? 'Check guardian contacts against school records and send the consent form.'
+                    : 'Review guardian responses and decide which registrations to approve.' ?></p>
             </div>
             <div class="flex items-center gap-3">
                 <?php
@@ -276,14 +278,50 @@
                                     </span>
                                 </td>
                                 <td data-label="Action" class="registration-actions px-6 py-4 text-center">
+                                    <?php if (!empty($student['verified_phone'])): ?>
+                                        <div class="text-xs mb-2 space-y-1">
+                                            <p>Verified number: <?= esc($student['verified_phone']) ?></p>
+                                            <p>Guardian on school record: <?= esc($student['verified_name']) ?></p>
+                                            <p class="font-semibold"><?= esc(match ($student['response']) {
+                                                'accepted' => 'Consent accepted',
+                                                'declined' => 'Consent declined',
+                                                default => strtotime($student['expires_at']) <= time() ? 'Link expired' : match ($student['sms_state']) {
+                                                    'Queued' => 'SMS queued · awaiting guardian',
+                                                    'Unknown' => 'SMS status uncertain',
+                                                    default => 'SMS was not queued',
+                                                },
+                                            }) ?></p>
+                                            <?php if ($student['guardian_name']): ?>
+                                                <p>Signed by <?= esc($student['guardian_name']) ?> · <?= esc($student['responded_at']) ?></p>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
                                     <?php if ($registrationStatus === 'pending'): ?>
+                                    <?php if ($canVerifyContact && \App\Libraries\GuardianConsent::canSend($student['requested_at'] ? $student : null, time())): ?>
+                                        <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="mb-3 text-left rounded-lg border border-green-100 bg-green-50 p-3 space-y-2">
+                                            <?= csrf_field() ?>
+                                            <label class="block text-xs font-semibold" for="verified-name-<?= $uid ?>">Guardian name from school records</label>
+                                            <input class="w-full border rounded-lg px-2 py-2 text-sm" type="text" id="verified-name-<?= $uid ?>" name="verified_name" maxlength="120" required>
+                                            <label class="block text-xs font-semibold" for="verified-phone-<?= $uid ?>">Guardian mobile from school records</label>
+                                            <input class="w-full border rounded-lg px-2 py-2 text-sm" type="tel" id="verified-phone-<?= $uid ?>" name="verified_phone" placeholder="09123456789" maxlength="32" required>
+                                            <label class="flex gap-2 items-start text-xs">
+                                                <input type="checkbox" name="checked_records" value="1" required>
+                                                <span>I confirmed the guardian and this number against current school records.</span>
+                                            </label>
+                                            <button type="submit" class="approve-btn rounded-lg px-3 py-2 text-xs font-semibold">Send consent link</button>
+                                        </form>
+                                    <?php endif; ?>
+                                    <?php if (!$canVerifyContact): ?>
+                                    <?php if (!$student['requested_at']): ?><p class="text-xs mb-2">Waiting for Super Admin to verify the guardian contact.</p><?php endif; ?>
                                     <div class="flex items-center justify-center gap-2">
+                                        <?php if ($student['response'] === 'accepted'): ?>
                                         <button type="button" onclick="handleAction('approve', <?= $uid ?>, '<?= esc(addslashes($student['name'])) ?>', this)" class="approve-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide shadow-sm cursor-pointer">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                             </svg>
                                             <span>Approve</span>
                                         </button>
+                                        <?php endif; ?>
                                         <button type="button" onclick="handleAction('reject', <?= $uid ?>, '<?= esc(addslashes($student['name'])) ?>', this)" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200 transition-colors cursor-pointer">
                                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -291,6 +329,9 @@
                                             <span>Reject</span>
                                         </button>
                                     </div>
+                                    <?php elseif ($student['response'] === 'accepted'): ?>
+                                        <p class="text-xs">Waiting for counselor approval.</p>
+                                    <?php endif; ?>
                                     <?php else: ?><span class="text-sm text-gray-500">Decision recorded</span><?php endif; ?>
                                 </td>
                             </tr>
@@ -313,7 +354,7 @@
             <div>
                 <p class="text-blue-800 text-sm font-semibold">Approval Policy</p>
                 <p class="text-blue-700 text-xs mt-0.5 leading-relaxed">
-                    Students registered through the portal cannot log in until approved. Approving an account activates it immediately and logs the action in the system audit trail. Only authorized Guidance Counselors may approve or reject registrations. Rejected registrations are retained without granting access.
+                    Only Guidance Counselors can approve registrations. Review the guardian name against school records before approval. Students with a missing or unsafe contact can reach the Guidance Office for help with verification.
                 </p>
             </div>
         </div>

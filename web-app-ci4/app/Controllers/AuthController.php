@@ -561,28 +561,16 @@ class AuthController extends BaseController
         }
         $gradeLevel = trim((string) $this->request->getPost('grade_level'));
         $section = trim((string) $this->request->getPost('section'));
-        $parentContact = $this->request->getPost('parent_contact');
-        if (!is_string($parentContact) || trim($parentContact) === '' || strlen($parentContact) > 255) {
-            return redirect()->back()->withInput()->with('error', 'Enter a parent or guardian mobile number or email.');
+        $parentContact = $this->request->getPost('parent_contact') ?? '';
+        $parentPhone = \App\Libraries\GuardianConsent::phone($parentContact);
+        if ($parentPhone === null && (!is_string($parentContact) || trim($parentContact) !== '')) {
+            return redirect()->back()->withInput()->with('error', 'Enter a valid Philippine guardian mobile number, or leave it blank for Guidance Office follow-up.');
         }
-        $parentContact = trim($parentContact);
         $password = (string) $this->request->getPost('password');
         $confirmPassword = (string) $this->request->getPost('password_confirm');
 
         // Auto-generate a unique system student ID: SS-YYYYMMDD-XXXX
         $studentId = 'SS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
-
-        // Detect if parentContact is email or phone
-        $parentPhone = filter_var($parentContact, FILTER_VALIDATE_EMAIL) ? null : $parentContact;
-        $parentEmail = filter_var($parentContact, FILTER_VALIDATE_EMAIL) ? $parentContact : null;
-        if ($parentPhone !== null) {
-            $parentPhone = preg_replace('/[\s()\-]/', '', $parentPhone);
-            if (!preg_match('/\A(?:09|\+?639)\d{9}\z/D', $parentPhone)) {
-                return redirect()->back()->withInput()->with('error', 'Enter a valid guardian email or Philippine mobile number such as 09123456789.');
-            }
-            if (str_starts_with($parentPhone, '09')) $parentPhone = '+63' . substr($parentPhone, 1);
-            if (str_starts_with($parentPhone, '639')) $parentPhone = '+' . $parentPhone;
-        }
 
         $terms = $this->request->getPost('terms');
 
@@ -643,7 +631,6 @@ class AuthController extends BaseController
             'grade_level' => $gradeLevel,
             'section' => $section,
             'parent_phone' => $parentPhone,
-            'parent_email' => $parentEmail,
         ]);
 
         $db->transComplete();
@@ -654,7 +641,7 @@ class AuthController extends BaseController
 
         \App\Libraries\AuditTrail::record('USER_REGISTERED', 'user', (int) $userId, (int) $userId);
 
-        return redirect()->to('/login')->with('success', 'Registration successful! Your account is pending approval by the guidance office.');
+        return redirect()->to('/login')->with('success', 'Registration submitted. School staff will verify your guardian contact and the Guidance Office will review consent before approving your account.');
     }
 
     private function shouldUseSecureCookie(): bool

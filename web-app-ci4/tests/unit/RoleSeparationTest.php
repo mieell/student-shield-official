@@ -30,6 +30,7 @@ final class RoleSeparationTest extends CIUnitTestCase
         foreach ([
             'users' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, password_hash TEXT, role INTEGER, is_active INTEGER DEFAULT 1, access_disabled INTEGER DEFAULT 0, registration_status TEXT DEFAULT "approved", auth_version INTEGER DEFAULT 1, remember_token TEXT, is_locked INTEGER DEFAULT 0, created_at TEXT, updated_at TEXT',
             'students' => 'user_id INTEGER PRIMARY KEY, student_id TEXT, lrn TEXT UNIQUE, grade_level TEXT, section TEXT, parent_email TEXT, parent_phone TEXT, adviser_name TEXT',
+            'guardian_consents' => 'user_id INTEGER PRIMARY KEY, verified_by INTEGER, phone TEXT, verified_name TEXT, token_hash TEXT UNIQUE, notice TEXT, requested_at TEXT, expires_at TEXT, sms_state TEXT, response TEXT, guardian_name TEXT, responded_at TEXT',
             'counselors' => 'user_id INTEGER PRIMARY KEY, counselor_email TEXT, counselor_phone TEXT',
             'admins' => 'user_id INTEGER PRIMARY KEY, email TEXT, phone TEXT',
             'vent_logs' => 'id INTEGER PRIMARY KEY, user_id INTEGER, risk_level TEXT, status TEXT, created_at TEXT, deleted_at TEXT, raw_text TEXT',
@@ -360,9 +361,9 @@ final class RoleSeparationTest extends CIUnitTestCase
 
     public function testRegistrationRequiresUniqueTwelveDigitLrnAndKeepsLeadingZero(): void
     {
-        $post = ['name' => 'Registration fixture', 'lrn' => '012345678901', 'grade_level' => '8', 'section' => 'A', 'parent_contact' => 'guardian@example.test', 'password' => 'Example!234A', 'password_confirm' => 'Example!234A', 'terms' => '1'];
+        $post = ['name' => 'Registration fixture', 'lrn' => '012345678901', 'grade_level' => '8', 'section' => 'A', 'parent_contact' => '09123456789', 'password' => 'Example!234A', 'password_confirm' => 'Example!234A', 'terms' => '1'];
         $before = $this->rbacDb->table('users')->countAllResults();
-        foreach (['', 'invalid contact', '123', ['guardian@example.test']] as $contact) {
+        foreach (['guardian@example.test', 'invalid contact', '123', ['guardian@example.test']] as $contact) {
             $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['parent_contact' => $contact]))->processStudentRegistration();
             $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
         }
@@ -374,6 +375,7 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertStringEndsWith('/login', $response->getHeaderLine('Location'));
         $student = $this->rbacDb->table('students')->where('lrn', $post['lrn'])->get()->getRowArray();
         $this->assertSame($post['lrn'], $student['lrn']);
+        $this->assertSame('+639123456789', $student['parent_phone']);
         $this->assertStringStartsWith('SS-', $student['student_id']);
         $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['name' => 'Duplicate LRN']))->processStudentRegistration();
         $this->assertSame($before + 1, $this->rbacDb->table('users')->countAllResults());
@@ -470,7 +472,8 @@ final class RoleSeparationTest extends CIUnitTestCase
         foreach ([2, 3] as $role) {
             $this->login($role);
             $nav = view('partials/staff_navigation');
-            foreach (['admin/vents', 'admin/incidents', 'admin/pending-registrations', 'admin/sessions'] as $path) $this->assertStringNotContainsString($path, $nav);
+            foreach (['admin/vents', 'admin/incidents', 'admin/sessions'] as $path) $this->assertStringNotContainsString($path, $nav);
+            $this->assertSame($role === 2, str_contains($nav, 'admin/pending-registrations'));
         }
         $this->login(2);
         $this->assertSame(403, $this->controller(PrincipalController::class, 'principal/api/analytics')->analytics()->getStatusCode());
@@ -524,15 +527,86 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertFalse(session()->has('otp'));
     }
 
-    public function testApproveRegistrationEnablesOnlyPendingStudents(): void
+    public function testVerifiedGuardianLinkCanBeUsedOnceAndOnlyCounselorCanApprove(): void
     {
+        $token = str_repeat('ab', 16);
+        $link = 'guardian-consent/' . $token;
+        $send = 'admin/registrations/12/send-consent';
+        $this->assertTrue(RoleAccess::allows(2, $send));
+        $this->assertFalse(RoleAccess::allows(1, $send));
+        $this->login(1);
+        $this->assertSame(403, $this->controller(\App\Controllers\GuardianConsentController::class, $send)->send(12)->getStatusCode());
+        $this->assertSame(409, $this->controller(AdminController::class, 'admin/approve-student/12')->approveStudent(12)->getStatusCode());
+        $this->rbacDb->table('guardian_consents')->insert([
+            'user_id' => 12, 'verified_by' => 2, 'phone' => '+639123456789', 'verified_name' => 'Test Guardian',
+            'token_hash' => hash('sha256', $token), 'notice' => 'Test consent wording.',
+            'expires_at' => date('Y-m-d H:i:s', time() - 10), 'sms_state' => 'Queued',
+        ]);
+        $public = \App\Controllers\GuardianConsentController::class;
+        session()->remove('isLoggedIn');
+        $this->assertSame(404, $this->controller($public, $link)->form($token)->getStatusCode());
+        $this->rbacDb->table('guardian_consents')->where('user_id', 12)->update(['expires_at' => date('Y-m-d H:i:s', time() + 60)]);
+        $form = $this->controller($public, $link)->form($token);
+        $this->assertStringContainsString('Test consent wording.', $form->getBody());
+        $this->assertStringNotContainsString('PRIVATE_STUDENT_12', $form->getBody());
+        $post = ['guardian_name' => 'Test Guardian', 'choice' => 'accepted'];
+        $this->assertSame(200, $this->controller($public, $link, $post)->respond($token)->getStatusCode());
+        $this->assertSame(404, $this->controller($public, $link, $post)->respond($token)->getStatusCode());
+        $this->login(2);
+        $this->assertSame(403, $this->controller(AdminController::class, 'admin/approve-student/12')->approveStudent(12)->getStatusCode());
         $this->login(1);
         $response = $this->controller(AdminController::class, 'admin/approve-student/12')->approveStudent(12);
         $this->assertSame(200, $response->getStatusCode());
         $student = $this->rbacDb->table('users')->where('id', 12)->get()->getRowArray();
         $this->assertTrue(RoleAccess::enabled($student));
+        $this->assertSame('+639123456789', $this->rbacDb->table('students')->where('user_id', 12)->get()->getRowArray()['parent_phone']);
         $this->assertSame(409, $this->controller(AdminController::class, 'admin/approve-student/2')->approveStudent(2)->getStatusCode());
         $this->assertSame('STUDENT_APPROVED', $this->rbacDb->table('audit_logs')->get()->getRowArray()['action']);
+    }
+
+    public function testSuperAdminSendsOnlyAfterConfirmingSchoolRecord(): void
+    {
+        $this->login(2);
+        $path = 'admin/registrations/12/send-consent';
+        $gateway = new class extends \App\Libraries\SmsGateway {
+            public array $messages = [];
+
+            public function send(string $phone, string $message, string $eventKey): array
+            {
+                $this->messages[] = [$phone, $message];
+                return ['state' => 'Queued'];
+            }
+        };
+        $controller = new class ($gateway) extends \App\Controllers\GuardianConsentController {
+            public function __construct(private \App\Libraries\SmsGateway $gateway) {}
+
+            protected function smsGateway(): \App\Libraries\SmsGateway
+            {
+                return $this->gateway;
+            }
+        };
+        $savedEnv = $_ENV;
+        $_ENV['GUARDIAN_CONSENT_NOTICE'] = 'Approved fixture notice.';
+        $_ENV['IPROG_SMS_API_TOKEN'] = 'fixture-token';
+        try {
+            $post = ['verified_phone' => '09123456789', 'verified_name' => 'Test Guardian'];
+            $confirmed = $post + ['checked_records' => '1'];
+            foreach ([$post, $confirmed, $confirmed] as $index => $fields) {
+                $controller->initController($this->request($path, 'POST', $fields), Services::response(), Services::logger());
+                $controller->send(12);
+                $this->assertCount($index === 0 ? 0 : 1, $gateway->messages);
+            }
+        } finally {
+            $_ENV = $savedEnv;
+        }
+        [$phone, $message] = $gateway->messages[0];
+        $this->assertSame('+639123456789', $phone);
+        $this->assertStringNotContainsString('PRIVATE_STUDENT_12', $message);
+        $this->assertMatchesRegularExpression('#/guardian-consent/[a-f0-9]{32}$#', $message);
+        $row = $this->rbacDb->table('guardian_consents')->where('user_id', 12)->get()->getRowArray();
+        $this->assertSame(hash('sha256', substr($message, -32)), $row['token_hash']);
+        $this->assertSame('Queued', $row['sms_state']);
+        $this->assertNull($row['response']);
     }
 
     public function testSensitiveRoutesKeepAuthAndRegistrationActionsRequirePost(): void
@@ -544,7 +618,7 @@ final class RoleSeparationTest extends CIUnitTestCase
             $this->assertArrayHasKey($path, $get);
             $this->assertContains('auth', $routes->getFiltersForRoute($path, 'GET'));
         }
-        foreach (['admin/approve-student/([0-9]+)', 'admin/reject-student/([0-9]+)'] as $path) {
+        foreach (['admin/approve-student/([0-9]+)', 'admin/reject-student/([0-9]+)', 'admin/registrations/([0-9]+)/send-consent'] as $path) {
             $this->assertArrayNotHasKey($path, $get);
             $this->assertArrayHasKey($path, $post);
             $this->assertContains('auth', $routes->getFiltersForRoute($path, 'POST'));

@@ -66,6 +66,10 @@ Parent hiding suppresses the Critical-vent parent alert while preserving counsel
 
 The application sends SMS requests through iProg SMS. Configure IPROG_SMS_API_TOKEN in the hosting environment and verify account credits, network coverage, and sender-name requirements. A queued message is not a delivery receipt; confirm delivery separately in iProg. Email is configured separately through SMTP.
 
+Before deploying guardian consent, apply `database/2026-11-11-guardian-consents.sql` in phpMyAdmin (or use the CI migration on local installations). Set `GUARDIAN_CONSENT_NOTICE` in the web app environment to the school's approved wording covering the purpose, handling of data, notification policy, and school contact. Super Admin verifies the guardian against school records and sends the single-use link. The counselor compares the response with the verified record and approves the registration. Existing approved accounts retain access. Pending accounts follow the consent workflow.
+
+Principal exports are native Excel workbooks generated with PHP's Phar extension. The application needs write access to its existing `writable/cache` directory.
+
 ## Repository layout
 
 ```text

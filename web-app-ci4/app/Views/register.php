@@ -233,15 +233,16 @@
                 </div>
 
                 <div class="space-y-1.5">
-                    <label for="parent_contact" class="block text-sm sm:text-base font-bold text-white/80 ml-1 uppercase tracking-wider">Parent/Guardian Contact (Phone/Email)</label>
+                    <label for="parent_contact" class="block text-sm sm:text-base font-bold text-white/80 ml-1 uppercase tracking-wider">Parent or guardian mobile</label>
                     <div class="relative group/input">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <i class="fas fa-phone-alt text-white/40 group-focus-within/input:text-gold transition-colors text-[16px]"></i>
                         </div>
-                        <input type="text" name="parent_contact" id="parent_contact" required value="<?= set_value('parent_contact') ?>"
+                        <input type="tel" name="parent_contact" id="parent_contact" maxlength="32" aria-describedby="guardian-contact-help" value="<?= set_value('parent_contact') ?>"
                                class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none"
-                               placeholder="09123456789 or parent@email.com">
+                               placeholder="09123456789">
                     </div>
+                    <p id="guardian-contact-help" class="text-xs text-white/90 ml-1">School staff verify the number before sending a consent link. If you lack a safe number, leave this blank and contact the Guidance Office.</p>
                 </div>
 
                 <div class="registration-password-fields grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 pt-1 sm:pt-2">
