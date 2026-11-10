@@ -93,7 +93,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
     {
         yield 'HIGH never contacts parents' => ['Sinampal ako sa school.', false, 'HIGH', ['639171234567']];
         yield 'CRITICAL includes eligible parent' => ['naglalaslas ako', false, 'CRITICAL', ['639171234567', '639181234567']];
-        yield 'restricted CRITICAL counselor notices only' => ['naglalaslas ako', true, 'CRITICAL', ['639171234567', '639171234567']];
+        yield 'legacy preference cannot suppress CRITICAL parent alert' => ['naglalaslas ako', true, 'CRITICAL', ['639171234567', '639181234567']];
     }
 
     #[DataProvider('ventPolicies')]

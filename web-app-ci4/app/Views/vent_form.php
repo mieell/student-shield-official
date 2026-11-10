@@ -146,14 +146,12 @@
                         <span id="moodSelectionStatus" class="sr-only" role="status"></span>
                     </div>
 
-                    <!-- Counselor notification preference -->
-                    <label for="hide_from_parents" class="confidentiality-option">
-                        <input type="checkbox" id="hide_from_parents" name="hide_from_parents" value="1" aria-labelledby="parentPreferenceLabel" aria-describedby="parentPreferenceHelp">
-                        <span class="confidentiality-copy">
-                            <span id="parentPreferenceLabel" class="confidentiality-title">Only alert my guidance counselor</span>
-                            <span id="parentPreferenceHelp" class="confidentiality-help">Turn off automated parent or guardian alerts for this entry.</span>
-                        </span>
-                    </label>
+                    <div class="confidentiality-option">
+                        <div class="confidentiality-copy">
+                            <span class="confidentiality-title">Your safety and privacy</span>
+                            <span class="confidentiality-help">Your counselor can review your entry. If the system flags an urgent safety concern, it will attempt to alert your counselor and registered parent or guardian. If contacting them could put you at risk, tell a trusted adult or your counselor directly.</span>
+                        </div>
+                    </div>
 
                     <div class="vent-submit-row">
                     <p id="ventStorageNote" class="vent-storage-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Stored securely for counselor review.</p>

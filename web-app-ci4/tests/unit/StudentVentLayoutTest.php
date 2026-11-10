@@ -24,7 +24,8 @@ final class StudentVentLayoutTest extends CIUnitTestCase
         }
         $this->assertSame(['Okay', 'Calm', 'Happy', 'Hopeful', 'Sad', 'Angry', 'Anxious', 'Lonely', 'Overwhelmed', 'Hurt', 'Numb', 'Scared'], $values);
         $this->assertSame(1, $xpath->query('//*[@id="moodSelections"][@hidden]')->length);
-        $this->assertSame(1, $xpath->query('//input[@name="hide_from_parents"][@value="1"][not(@checked)]')->length);
+        $this->assertSame(0, $xpath->query('//input[@name="hide_from_parents"]')->length);
+        $this->assertStringContainsString('registered parent or guardian', $dom->textContent);
         $this->assertSame(1, $xpath->query('//form[contains(@action,"/logout")]')->length);
         $this->assertSame(1, $xpath->query('//*[@data-request-url][contains(@data-request-url,"student/meeting/request")]')->length);
         $this->assertSame(1, $xpath->query('//*[@id="empathyModal"]')->length);

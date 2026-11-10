@@ -60,9 +60,9 @@ PHP retains local keyword screening when the ML service is unavailable and appli
 | Low | 1–30% | Available for authorized review. |
 | Medium | 31–60% | Available for authorized review. |
 | High | 61–85% | Counselor alert attempts; no automatic parent vent alert. |
-| Critical | 86–100% | Counselor alerts and eligible parent/guardian alert attempts, subject to available contacts, parent-alert cooldowns, and the student's parent-hiding selection. |
+| Critical | 86–100% | Counselor alerts and eligible parent/guardian alert attempts, subject to available contacts and parent-alert cooldowns. |
 
-Parent hiding suppresses the Critical-vent parent alert while preserving counselor escalation. Bullying reports follow a separate process: counselor notification at intake, followed by eligible parent incident alerts only after counselor verification. Receipt and false-report notices follow their own rules.
+Bullying reports follow a separate process: counselor notification at intake, followed by eligible parent incident alerts only after counselor verification. Receipt and false-report notices follow their own rules.
 
 The application sends SMS requests through iProg SMS. Configure IPROG_SMS_API_TOKEN in the hosting environment and verify account credits, network coverage, and sender-name requirements. A queued message is not a delivery receipt; confirm delivery separately in iProg. Email is configured separately through SMTP.
 

@@ -174,7 +174,6 @@ class VentController extends BaseController
         // Keep provenance separate from model-performance evaluation and student-facing responses.
         $this->logAudit('VENT_ANALYSIS_' . strtoupper($assessment['source']), 'vent', $ventId);
 
-        $hideFromParents = $this->request->getPost('hide_from_parents') === '1';
 
         // --- 4. TRIGGER ALERTS IF CRITICAL OR HIGH ---
         if ($riskLevel === 'CRITICAL' || $riskLevel === 'HIGH') {
@@ -200,21 +199,11 @@ class VentController extends BaseController
                             'StudentShield: CRITICAL alert. Review the counselor dashboard immediately.'
                         );
 
-                        if ($hideFromParents) {
-                            // Domestic precaution: student requested parents NOT be notified
-                            $this->triggerCounselorEmergencyAlert(
-                                "RESTRICTED PROTOCOL: {$studentName} submitted a CRITICAL vent and explicitly requested parents NOT be contacted. Review dashboard immediately.",
-                                "RESTRICTED Counselor Safety Alert: {$studentName}",
-                                "vent:{$ventId}:restricted-counselor",
-                                'StudentShield: CRITICAL restricted alert. Review the counselor dashboard and follow parent-contact restrictions.'
-                            );
-                        } else {
-                            if (!empty($user->parent_phone) && !$this->isAlertOnCooldown($user->parent_phone)) {
-                                $this->triggerSmsAlert($user->parent_phone, "vent:{$ventId}:parent");
-                            }
-                            if (!empty($user->parent_email) && !$this->isAlertOnCooldown($user->parent_email)) {
-                                $this->triggerEmailAlert($user->parent_email, $firstName);
-                            }
+                        if (!empty($user->parent_phone) && !$this->isAlertOnCooldown($user->parent_phone)) {
+                            $this->triggerSmsAlert($user->parent_phone, "vent:{$ventId}:parent");
+                        }
+                        if (!empty($user->parent_email) && !$this->isAlertOnCooldown($user->parent_email)) {
+                            $this->triggerEmailAlert($user->parent_email, $firstName);
                         }
                     } elseif ($riskLevel === 'HIGH') {
                         // HIGH RISK: Alert counselor exclusively to handle professionally at school
