@@ -2,9 +2,6 @@
 
 namespace App\Libraries;
 
-use Phar;
-use PharData;
-
 final class SchoolSummaryWorkbook
 {
     public static function build(array $report): string
@@ -45,26 +42,36 @@ final class SchoolSummaryWorkbook
             }
         }
 
-        $directory = WRITEPATH . 'cache';
-        $path = $directory . DIRECTORY_SEPARATOR . 'school-summary-' . bin2hex(random_bytes(12)) . '.zip';
-        try {
-            $zip = new PharData($path, 0, null, Phar::ZIP);
-            $zip['[Content_Types].xml'] = self::xml('<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' .
-                implode('', array_map(static fn ($n) => '<Override PartName="/xl/worksheets/sheet' . $n . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>', [1, 2, 3])) . '</Types>');
-            $zip['_rels/.rels'] = self::relationships(['officeDocument' => ['xl/workbook.xml']]);
-            $zip['xl/_rels/workbook.xml.rels'] = self::relationships(['worksheet' => ['worksheets/sheet1.xml', 'worksheets/sheet2.xml', 'worksheets/sheet3.xml'], 'styles' => ['styles.xml']]);
-            $zip['xl/workbook.xml'] = self::xml('<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="Summary" sheetId="1" r:id="rId1"/><sheet name="Daily events" sheetId="2" r:id="rId2"/><sheet name="Breakdowns" sheetId="3" r:id="rId3"/></sheets></workbook>');
-            $zip['xl/styles.xml'] = self::styles();
-            $zip['xl/worksheets/sheet1.xml'] = self::sheet($summary, [58, 32]);
-            $zip['xl/worksheets/sheet2.xml'] = self::sheet($daily, [34, 18]);
-            $zip['xl/worksheets/sheet3.xml'] = self::sheet($groups, [26, 48, 16]);
-            $contents = file_get_contents($path);
-            if ($contents === false) throw new \RuntimeException('Could not read workbook.');
-            return $contents;
-        } finally {
-            unset($zip);
-            if (is_file($path)) unlink($path);
+        return self::zip([
+            '[Content_Types].xml' => self::xml('<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' .
+                implode('', array_map(static fn ($n) => '<Override PartName="/xl/worksheets/sheet' . $n . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>', [1, 2, 3])) . '</Types>'),
+            '_rels/.rels' => self::relationships(['officeDocument' => ['xl/workbook.xml']]),
+            'xl/_rels/workbook.xml.rels' => self::relationships(['worksheet' => ['worksheets/sheet1.xml', 'worksheets/sheet2.xml', 'worksheets/sheet3.xml'], 'styles' => ['styles.xml']]),
+            'xl/workbook.xml' => self::xml('<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="Summary" sheetId="1" r:id="rId1"/><sheet name="Daily events" sheetId="2" r:id="rId2"/><sheet name="Breakdowns" sheetId="3" r:id="rId3"/></sheets></workbook>'),
+            'xl/styles.xml' => self::styles(),
+            'xl/worksheets/sheet1.xml' => self::sheet($summary, [58, 32]),
+            'xl/worksheets/sheet2.xml' => self::sheet($daily, [34, 18]),
+            'xl/worksheets/sheet3.xml' => self::sheet($groups, [26, 48, 16]),
+        ]);
+    }
+
+    private static function zip(array $files): string
+    {
+        // XLSX supports stored ZIP entries, so shared hosting needs no ZIP extension or temporary files.
+        $body = '';
+        $directory = '';
+        foreach ($files as $name => $content) {
+            $offset = strlen($body);
+            $size = strlen($content);
+            // Version, flags, method, DOS time/date, checksum, sizes, name length, extra length.
+            $metadata = pack('vvvvvVVVvv', 20, 0, 0, 0, 33, crc32($content), $size, $size, strlen($name), 0);
+            $body .= "PK\x03\x04" . $metadata . $name . $content;
+            $directory .= "PK\x01\x02" . pack('v', 20) . $metadata
+                . pack('vvvVV', 0, 0, 0, 0, $offset) . $name;
         }
+        $count = count($files);
+        return $body . $directory . "PK\x05\x06"
+            . pack('vvvvVVv', 0, 0, $count, $count, strlen($directory), strlen($body), 0);
     }
 
     private static function sheet(array $rows, array $widths): string

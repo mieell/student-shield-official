@@ -158,12 +158,10 @@
 .student-form-page .role-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .student-form-page .role-btn { justify-content: center; text-align: left; }
 .student-form-page .role-btn svg { flex-shrink: 0; }
-.student-form-page .confidentiality-option { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: 12px; padding: 16px; border: 1px solid var(--form-divider); border-radius: 12px; background: var(--form-mint); cursor: pointer; }
-.student-form-page .confidentiality-option:hover { border-color: var(--form-border); box-shadow: none; transform: none; }
+.student-form-page .confidentiality-option { display: block; padding: 16px; border: 1px solid var(--form-divider); border-radius: 12px; background: var(--form-mint); }
 .student-form-page .confidentiality-copy { display: block; min-width: 0; }
 .student-form-page .confidentiality-title { display: block; color: var(--form-primary); font-size: 16px; font-weight: 600; line-height: 1.5; }
 .student-form-page .confidentiality-help { display: block; margin-top: 4px; color: var(--form-muted); font-size: 14px; line-height: 1.65; }
-.student-form-page #hide_from_parents { appearance: auto; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--form-primary); cursor: pointer; }
 .student-form-page .submit-btn { position: relative; min-height: 52px; height: auto; padding: 14px 20px; border-radius: 12px; background: linear-gradient(160deg, #16A34A 0%, #0F8A3A 55%, #0A7530 100%); color: #FFFFFF; box-shadow: none; transition: background-color .15s; }
 .student-form-page .submit-btn:hover { background: var(--form-primary-hover); transform: none; box-shadow: none; }
 .student-form-page .submit-btn:disabled { opacity: .65; cursor: wait; }

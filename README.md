@@ -68,7 +68,7 @@ The application sends SMS requests through iProg SMS. Configure IPROG_SMS_API_TO
 
 Before deploying guardian consent, apply `database/2026-11-11-guardian-consents.sql` in phpMyAdmin (or use the CI migration on local installations). Set `GUARDIAN_CONSENT_NOTICE` in the web app environment to the school's approved wording covering the purpose, handling of data, notification policy, and school contact. Super Admin verifies the guardian against school records and sends the single-use link. The counselor compares the response with the verified record and approves the registration. Existing approved accounts retain access. Pending accounts follow the consent workflow.
 
-Principal exports are native Excel workbooks generated with PHP's Phar extension. The application needs write access to its existing `writable/cache` directory.
+Principal reports download as Excel workbooks with separate summary, daily events, and breakdown sheets.
 
 ## Repository layout
 
@@ -77,8 +77,6 @@ web-app-ci4/          CodeIgniter application, views, configuration, and PHP tes
 ml_service/           FastAPI service, screening rules, training scripts, and tests
 schema.sql            Database schema
 .github/workflows/    Web and ML deployment workflows
-AGENTS.md             Repository constraints and contribution guardrails
-AI_CONTEXT.md         Additional project notes; check current code for implementation details
 ```
 
 ## Local development
@@ -184,5 +182,5 @@ Keep real disclosures, student identities, LRN/contact records, credentials, mod
 
 Automated enrollment-based retention/deletion and verified guardian-consent recording are not established features. Deployment, access controls, and a privacy notice alone do not establish legal compliance. Model accuracy, service availability, and intervention outcomes require separate evaluation; no such results are claimed by this README.
 
-See [AGENTS.md](AGENTS.md) before contributing. Preserve API authentication, backward-compatible encryption, local screening safeguards, language coverage, and the role and notification boundaries described above.
+Preserve API authentication, backward-compatible encryption, local screening safeguards, language coverage, and the role and notification boundaries described above.
 
