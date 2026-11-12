@@ -32,6 +32,12 @@ final class ExplicitCrisisGuardTest extends CIUnitTestCase
             "SINASAKTAN KO\nANG SARILI KO lol",
             'kill myself',
             'magpakamatay',
+            'pakamatay na ako tangina',
+            'papakamatay na ako',
+            'nagpakamatay',
+            'magpapakamatay',
+            'nagbigti',
+            'magpatiwakal',
             'kayat kon matayen',
         ]);
     }

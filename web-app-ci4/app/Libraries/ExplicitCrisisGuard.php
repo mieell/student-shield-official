@@ -23,6 +23,10 @@ final class ExplicitCrisisGuard
     private const SELF_HARM_PATTERNS = [
         '/\b(?:laslas|naglaslas|naglalaslas|maglaslas|maglalaslas|nilaslas|nilalaslas|paglaslas|paglalaslas|lalaslas|laslasin|lilaslasin)\b/iu',
         '/\b(?:sinasaktan|sinaktan|sasaktan|saktan|sinasaksak|sinaksak|sasaksakin|saksakin)\s+(?:ko\s+(?:ang\s+)?sarili(?:\s+ko)?|(?:ang\s+)?sarili\s+ko)\b/iu',
+        '/\b(?:mag|nag|i)?pa(?:pa)?kamatay\b/iu',
+        '/\b(?:mag|nag)?bi(?:bi)?gti\b/iu',
+        '/\b(?:mag|nag)?bi(?:bi)?tay\b/iu',
+        '/\b(?:(?:pag)?(?:mag|nag)?pa(?:pa)?tiwakal|patiwakal)\b/iu',
     ];
 
     public static function enforce(string $text, array $classification): array

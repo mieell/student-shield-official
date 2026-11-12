@@ -72,7 +72,15 @@ class GuardianConsentController extends BaseController
             $this->logAudit('GUARDIAN_CONSENT_LINK_GENERATED', 'user', $id);
             return $back->with('manual_consent_link', $url);
         }
-        $state = $this->smsGateway()->send($phone, $message, 'guardian-consent:' . $hash)['state'];
+        $smsResult = $this->smsGateway()->send($phone, $message, 'guardian-consent:' . $hash);
+        $state = $smsResult['state'];
+        // Redact the bearer link so counselor-visible alert logs cannot expose consent tokens.
+        \App\Libraries\AlertLog::record(
+            'SMS (Guardian Consent)',
+            $phone,
+            'StudentShield: Guardian registration consent SMS dispatched (verification link redacted).',
+            $smsResult
+        );
         $db->table('guardian_consents')->where('user_id', $id)->where('token_hash', $hash)->update(['sms_state' => $state]);
         return $back->with($state === 'Queued' ? 'success' : 'error', match ($state) {
             'Queued' => 'The provider queued the consent SMS. Approval is available once the guardian accepts.',

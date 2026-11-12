@@ -373,6 +373,7 @@ class AdminController extends BaseController
             return false;
 
         $result = \Config\Services::smsGateway()->send((string) $phone, (string) $message, $eventKey);
+        \App\Libraries\AlertLog::record('SMS (Gateway)', (string) $phone, (string) $message, $result);
         return $result['accepted'];
     }
 
@@ -385,6 +386,10 @@ class AdminController extends BaseController
 
             $smtpUser = env('email.SMTPUser', '');
             $smtpPass = env('email.SMTPPass', '');
+            if (empty($smtpUser) || empty($smtpPass)) {
+                \App\Libraries\AlertLog::record('Email', (string) $emailAddress, (string) $messageBody, ['accepted' => false, 'state' => 'NotConfigured']);
+                return false;
+            }
 
             $email->initialize([
                 'protocol' => 'smtp',
@@ -402,8 +407,12 @@ class AdminController extends BaseController
             $email->setTo($emailAddress);
             $email->setSubject('StudentShield: Protective Services Notification');
             $email->setMessage("<div style='font-family: Arial; padding: 20px; background: #f9f9f9; border: 1px solid #ddd;'><h3>Counseling Alert</h3><p>" . esc($messageBody, 'html') . "</p></div>");
-            $email->send(false);
+            $sent = (bool) $email->send(false);
+            \App\Libraries\AlertLog::record('Email', (string) $emailAddress, (string) $messageBody, ['accepted' => $sent, 'state' => $sent ? 'Sent' : 'Failed']);
+            return $sent;
         } catch (\Exception $e) {
+            \App\Libraries\AlertLog::record('Email', (string) $emailAddress, (string) $messageBody, ['accepted' => false, 'state' => 'Failed']);
+            return false;
         }
     }
 
@@ -433,8 +442,12 @@ class AdminController extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $this->response
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setHeader('Pragma', 'no-cache');
+
         // Ensure alerts log file exists, otherwise return empty array
-        $logFile = WRITEPATH . 'logs/alerts.json';
+        $logFile = \App\Libraries\AlertLog::path();
         if (!file_exists($logFile)) {
             return $this->response->setJSON([]);
         }

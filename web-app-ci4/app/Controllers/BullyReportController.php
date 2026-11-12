@@ -196,18 +196,23 @@ class BullyReportController extends BaseController
         if (empty($phone)) return false;
 
         $result = \Config\Services::smsGateway()->send((string) $phone, (string) $message, $eventKey);
+        \App\Libraries\AlertLog::record('SMS (Counselor)', (string) $phone, (string) $message, $result);
         return $result['accepted'];
     }
     
     private function sendLocalEmail($emailAddress, $messageBody)
     {
-        if(empty($emailAddress)) return false;
+        if (empty($emailAddress)) return false;
         try {
             $email = \Config\Services::email();
             
             // Safe fallback configuration using environment variables
             $smtpUser = env('email.SMTPUser', '');
             $smtpPass = env('email.SMTPPass', '');
+            if (empty($smtpUser) || empty($smtpPass)) {
+                \App\Libraries\AlertLog::record('Email', (string) $emailAddress, (string) $messageBody, ['accepted' => false, 'state' => 'NotConfigured']);
+                return false;
+            }
             
             $email->initialize([
                 'protocol' => 'smtp',
@@ -225,8 +230,13 @@ class BullyReportController extends BaseController
             $email->setTo($emailAddress);
             $email->setSubject('StudentShield: Protective Services Notification');
             $email->setMessage("<div style='font-family: Arial; padding: 20px; background: #f9f9f9; border: 1px solid #ddd;'><h3>Counseling Alert</h3><p>" . esc($messageBody, 'html') . "</p></div>");
-            $email->send(false);
-        } catch (\Exception $e) {}
+            $sent = (bool) $email->send(false);
+            \App\Libraries\AlertLog::record('Email', (string) $emailAddress, (string) $messageBody, ['accepted' => $sent, 'state' => $sent ? 'Sent' : 'Failed']);
+            return $sent;
+        } catch (\Exception $e) {
+            \App\Libraries\AlertLog::record('Email', (string) $emailAddress, (string) $messageBody, ['accepted' => false, 'state' => 'Failed']);
+            return false;
+        }
     }
 
 }

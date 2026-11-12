@@ -3,7 +3,10 @@
 namespace Tests\Unit;
 
 use App\Controllers\AdminController;
+use App\Controllers\BullyReportController;
+use App\Controllers\GuardianConsentController;
 use App\Controllers\VentController;
+use App\Libraries\AlertLog;
 use App\Libraries\SmsGateway;
 use CodeIgniter\Test\CIUnitTestCase;
 use Config\Database;
@@ -16,10 +19,14 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
     private array $connections;
     private array $saved = [];
     private SmsGateway $gateway;
+    private ?string $priorAlertsBackup = null;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $alertFile = AlertLog::path();
+        $this->priorAlertsBackup = is_file($alertFile) ? (string) file_get_contents($alertFile) : null;
+        @unlink($alertFile);
         helper(['url', 'form']);
         foreach ([
             'ML_API_KEY' => '',
@@ -27,6 +34,8 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
             'email.SMTPUser' => '', 'email.SMTPPass' => '',
             'COUNSELOR_PHONE' => '09171234567', 'COUNSELOR_EMAIL' => '',
             'IPROG_SMS_API_TOKEN' => 'synthetic-secret',
+            'GUARDIAN_CONSENT_NOTICE' => 'School guardian consent notice.',
+            'encryption.key' => str_repeat('k', 32),
         ] as $key => $value) {
             $this->saved[$key] = [$_ENV[$key] ?? null, $_SERVER[$key] ?? null, getenv($key)];
             $_ENV[$key] = $_SERVER[$key] = $value;
@@ -37,10 +46,13 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         $this->connections = $property->getValue();
         $property->setValue(null, ['tests' => $this->smsDb]);
         foreach ([
-            'users' => 'id INTEGER PRIMARY KEY, name TEXT',
+            'users' => 'id INTEGER PRIMARY KEY, name TEXT, role INTEGER DEFAULT 0, registration_status TEXT DEFAULT \'approved\', is_locked INTEGER DEFAULT 0',
             'students' => 'user_id INTEGER PRIMARY KEY, parent_phone TEXT, parent_email TEXT, section TEXT, grade_level TEXT',
+            'counselors' => 'user_id INTEGER PRIMARY KEY, counselor_email TEXT',
+            'admins' => 'user_id INTEGER PRIMARY KEY, email TEXT',
             'vent_logs' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, raw_text TEXT, emotions TEXT, risk_percent REAL, risk_level TEXT, status TEXT, created_at TEXT, deleted_at TEXT',
-            'bully_reports' => 'id INTEGER PRIMARY KEY, victim_student_id INTEGER, bully_student_id INTEGER, status TEXT, updated_at TEXT',
+            'bully_reports' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, reporter_student_id INTEGER, reporter_type TEXT, victim_student_id INTEGER, bully_student_id INTEGER, incident_details TEXT, status TEXT, created_at TEXT, updated_at TEXT',
+            'guardian_consents' => 'user_id INTEGER PRIMARY KEY, verified_by INTEGER, phone TEXT, verified_name TEXT, token_hash TEXT, notice TEXT, requested_at TEXT, expires_at TEXT, sms_state TEXT, response TEXT, guardian_name TEXT, responded_at TEXT',
         ] as $table => $fields) $this->smsDb->query("CREATE TABLE $table ($fields)");
         foreach ([10 => '09181234567', 11 => '09191234567'] as $id => $phone) {
             $this->smsDb->table('users')->insert(['id' => $id, 'name' => 'PRIVATE STUDENT ' . $id]);
@@ -49,6 +61,9 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         $encrypter = $this->createMock(\CodeIgniter\Encryption\EncrypterInterface::class);
         $encrypter->method('encrypt')->willReturn('encrypted-test-data');
         Services::injectMock('encrypter', $encrypter);
+        $encConfig = new \Config\Encryption();
+        $encConfig->key = str_repeat('k', 32);
+        \CodeIgniter\Config\Factories::injectMock('config', 'Encryption', $encConfig);
         $this->gateway = new class extends SmsGateway {
             public array $payloads = [];
             protected function request(array $payload): array
@@ -70,6 +85,13 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         }
         $property = new \ReflectionProperty(Database::class, 'instances');
         $property->setValue(null, $this->connections);
+        \CodeIgniter\Config\Factories::reset('config');
+        $alertFile = AlertLog::path();
+        if ($this->priorAlertsBackup !== null) {
+            file_put_contents($alertFile, $this->priorAlertsBackup);
+        } else {
+            @unlink($alertFile);
+        }
         session()->destroy();
         parent::tearDown();
     }
@@ -134,5 +156,52 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         $this->init($controller, [])->verifyIncident(42);
         $this->assertCount(2, $this->gateway->payloads);
         $this->assertStringNotContainsString('PRIVATE STUDENT', json_encode($first));
+
+        $alertsResponse = $this->init($controller, [])->fetchAlertLogs();
+        $this->assertStringContainsString('no-store', (string) $alertsResponse->getHeaderLine('Cache-Control'));
+        $recorded = json_decode((string) $alertsResponse->getBody(), true);
+        $this->assertCount(2, $recorded);
+        $this->assertSame(['09191234567', '09181234567'], array_column($recorded, 'recipient'));
+        $this->assertSame(['SMS (Gateway)', 'SMS (Gateway)'], array_column($recorded, 'type'));
+        $this->assertSame(['Queued', 'Queued'], array_column($recorded, 'state'));
+    }
+
+    public function testBullyReportIntakeAndGuardianConsentRecordRedactedSmsAlerts(): void
+    {
+        session()->set(['isLoggedIn' => true, 'role' => 0, 'user_id' => 10]);
+        $bullyController = new class extends BullyReportController {
+            protected function logAudit(string $action, string $entityType, int $entityId): void {}
+        };
+        $this->init($bullyController, [
+            'reporter_type' => 'self',
+            'bully_name' => '',
+            'incident_details' => 'Sinuntok ako sa hallway.',
+        ])->submit();
+
+        $this->smsDb->table('users')->insert(['id' => 99, 'name' => 'Pending Student', 'role' => 0, 'registration_status' => 'pending']);
+        session()->set(['isLoggedIn' => true, 'role' => 2, 'user_id' => 2]);
+        $gateway = $this->gateway;
+        $consentController = new class($gateway) extends GuardianConsentController {
+            public function __construct(private SmsGateway $mockGateway) {}
+            protected function logAudit(string $action, string $entityType, int $entityId): void {}
+            protected function smsGateway(): SmsGateway { return $this->mockGateway; }
+        };
+        $this->init($consentController, [
+            'verified_phone' => '09179998888',
+            'verified_name' => 'Parent Name',
+            'checked_records' => '1',
+        ])->send(99);
+
+        session()->set(['isLoggedIn' => true, 'role' => 1, 'user_id' => 1]);
+        $admin = new class extends AdminController {
+            protected function logAudit(string $action, string $entityType, int $entityId): void {}
+        };
+        $logs = json_decode((string) $this->init($admin, [])->fetchAlertLogs()->getBody(), true);
+        $this->assertCount(2, $logs);
+        $this->assertSame('SMS (Guardian Consent)', $logs[0]['type']);
+        $this->assertSame('+639179998888', $logs[0]['recipient']);
+        $this->assertStringNotContainsString('guardian-consent/', $logs[0]['message']);
+        $this->assertSame('SMS (Counselor)', $logs[1]['type']);
+        $this->assertSame('09171234567', $logs[1]['recipient']);
     }
 }

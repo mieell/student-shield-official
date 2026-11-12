@@ -57,6 +57,12 @@ def analyzer(monkeypatch):
     "SINASAKTAN KO\nANG SARILI KO lol",
     "kill myself",
     "magpakamatay",
+    "pakamatay na ako tangina",
+    "papakamatay na ako",
+    "magpapakamatay na ako",
+    "nagpakamatay",
+    "nagbigti",
+    "magpatiwakal",
 ])
 def test_explicit_self_harm_is_critical_despite_low_scores(analyzer, text):
     result = analyzer(text)
@@ -126,6 +132,63 @@ def test_ordinary_sadness_stays_medium_with_high_neural_scores(analyzer, monkeyp
 @pytest.mark.parametrize("text", [
     "Every single day feels like I am carrying an unbearable weight, and I have no strength left to keep fighting. I am completely exhausted from pretending to be okay when it feels like my life has no direction or purpose anymore.",
     "Sobrang drained na ako mentally at emotionally, to the point na hindi ko na makita ang sarili ko sa future. Parang araw-araw na lang akong nalulunod sa lungkot at gusto ko nang sumuko dahil wala namang nagbabago.",
+    "I am so mentally and emotionally drained that I can no longer picture myself having a future. It feels like I am drowning in sadness every single day, and I just want to give up because nothing ever gets better.",
+    "Sobrang pagod na ako kakaisip kung kaya ko pa bang tapusin lahat ng requirements na ito, parang kahit anong effort ang ibigay ko ay kulang pa rin. Honestly, drained na drained na ako mentally at pakiramdam ko ay napag-iiwanan na ako ng lahat.",
+    "would even notice if I wasn't here anymore",
 ])
 def test_severe_hopelessness_and_futurelessness_classify_as_high(analyzer, text):
     assert analyzer(text)["risk_level"] == "HIGH"
+
+
+def test_normalize_slang_preserves_english_possessive_my(analyzer):
+    normalize = analyzer.__globals__["normalize_slang"]
+    assert normalize("Passed all my exams today!") == "passed all my exams today!"
+
+
+def test_low_band_scales_subthreshold_scores_without_pinning_at_one(analyzer, monkeypatch):
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.24, 0.20))
+    res = analyzer("Had a long week at school.")
+    assert res["risk_level"] == "LOW"
+    assert 5 <= res["risk_score"] <= 30
+
+
+def test_get_risk_components_uses_top_k_none_and_caches_positive_confidence(monkeypatch):
+    service_dir = Path(__file__).resolve().parents[1]
+    monkeypatch.syspath_prepend(str(service_dir))
+    emo_calls = []
+
+    def fake_emo(text, **kwargs):
+        emo_calls.append(kwargs)
+        return [[
+            {"label": "neutral", "score": 0.60},
+            {"label": "joy", "score": 0.70},
+            {"label": "gratitude", "score": 0.40},
+            {"label": "sadness", "score": 0.25},
+        ]]
+
+    def fake_dist(text, **kwargs):
+        return [[
+            {"label": "LABEL_0", "score": 0.72},
+            {"label": "LABEL_1", "score": 0.28},
+        ]]
+
+    classifier = SimpleNamespace(
+        tokenizer=lambda *args, **kwargs: {"attention_mask": torch.ones((1, 1))},
+        model=SimpleNamespace(base_model=lambda **kwargs: SimpleNamespace(last_hidden_state=torch.zeros((1, 1, 768)))),
+    )
+    monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(pipeline=lambda *args, **kwargs: classifier))
+    spec = importlib.util.spec_from_file_location("risk_rules_single_pass", service_dir / "main.py")
+    module = importlib.util.module_from_spec(spec)
+    with monkeypatch.context() as load_patch:
+        load_patch.setattr("nltk.data.find", lambda *args, **kwargs: True)
+        spec.loader.exec_module(module)
+    monkeypatch.setattr(module.nltk, "sent_tokenize", lambda text: [text])
+    monkeypatch.setattr(module, "emotion_classifier", fake_emo)
+    monkeypatch.setattr(module, "distress_classifier", fake_dist)
+    monkeypatch.setattr(module.translation_gate, "translate", lambda text, _fn: text)
+
+    res = module.analyze_text_sync("Had a long day at school but grateful for my friends.")
+    assert len(emo_calls) == 1
+    assert emo_calls[0].get("top_k") is None
+    assert res["risk_level"] == "LOW"
+    assert res["risk_score"] > 1.0

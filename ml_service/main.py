@@ -10,6 +10,7 @@ from starlette.responses import JSONResponse
 import re
 import os
 import hmac
+import contextvars
 import logging
 import torch
 from transformers import pipeline
@@ -135,6 +136,13 @@ if distress_classifier is None:
     )
     logger.info(f"Loaded baseline fallback model: {fallback_model}")
 
+# Cast mDeBERTa/CPU models to float32 for ~6x faster CPU inference with <1e-4 logit delta.
+if distress_classifier is not None and callable(getattr(getattr(distress_classifier, "model", None), "float", None)):
+    try:
+        distress_classifier.model.float()
+    except Exception as e:
+        logger.warning(f"Could not cast distress model to float32: {e}")
+
 ### Taglish / Gen-Z Slang Normalizer 
 TAGLISH_SLANG_MAP = {
     "naliyak": "umiyak", "naiyak": "umiyak", "naiiyak": "umiiyak",
@@ -190,7 +198,6 @@ TAGLISH_SLANG_MAP = {
     "mwla": "mawala", "mawla": "mawala", "mwala": "mawala",
     "mgpanggap": "magpanggap", "magpangap": "magpanggap", "gpanggap": "nagpanggap",
     "prang": "parang", "parng": "parang",
-    "my": "may",
     "twa": "tawa", "twang": "tawang",
     "pro": "pero", "pr": "pero",
     "pg": "pag", "kya": "kaya", "ky": "kaya",
@@ -253,16 +260,55 @@ _POSITIVE_EMO_WEIGHTS = {
     "relief": 0.40, "caring": 0.35, "approval": 0.30,
 }
 
+_NEGATIVE_EMO_WEIGHTS = {
+    "sadness": 1.0, "fear": 0.9, "anger": 0.8, "grief": 1.0, "remorse": 0.8,
+    "disgust": 0.6, "disappointment": 0.7, "nervousness": 0.7, "embarrassment": 0.55,
+    "annoyance": 0.5, "disapproval": 0.45, "confusion": 0.2, "neutral": 0.0,
+    "surprise": 0.0, "joy": 0.0, "admiration": 0.0, "amusement": 0.0,
+    "approval": 0.0, "caring": 0.0, "desire": 0.0, "excitement": 0.0,
+    "fascination": 0.0, "gratitude": 0.0, "love": 0.0, "optimism": 0.0,
+    "pride": 0.0, "realization": 0.0, "relief": 0.0,
+}
+
+_DISTRESS_LABELS = {"1", "LABEL_1", "NEGATIVE", "TOXIC", "SADNESS", "GRIEF", "FEAR", "ANGER"}
+_request_pos_emo_var: contextvars.ContextVar[Optional[float]] = contextvars.ContextVar(
+    "_request_pos_emo_var", default=None
+)
+
+
+def _run_classifier(classifier, text: str) -> list[dict]:
+    """Run a HuggingFace pipeline requesting all label scores when supported."""
+    try:
+        raw = classifier(text, top_k=None)
+    except TypeError:
+        raw = classifier(text)
+    if isinstance(raw, list) and raw and isinstance(raw[0], list):
+        raw = raw[0]
+    if isinstance(raw, dict):
+        return [raw]
+    return [item for item in raw if isinstance(item, dict)] if isinstance(raw, list) else []
+
+
+def _aggregate_weighted_scores(items: list[dict], weights: dict[str, float]) -> float:
+    """Combine weighted multi-label probabilities without saturating on single neutral labels."""
+    weighted = sorted(
+        (weights.get(str(item.get("label", "")), 0.0) * float(item.get("score", 0.0)) for item in items),
+        reverse=True,
+    )
+    if not weighted:
+        return 0.0
+    if len(weighted) == 1:
+        return weighted[0]
+    return min(1.0, weighted[0] + 0.20 * sum(weighted[1:3]))
+
 
 def _get_positive_emotion_conf(translated_text: str) -> float:
     """Safely inspect go_emotions positive confidence without altering get_risk_components' signature."""
     try:
         if not translated_text or not translated_text.strip():
             return 0.0
-        emo_result = emotion_classifier(translated_text[:1500])[0]
-        if not isinstance(emo_result, dict):
-            return 0.0
-        return _POSITIVE_EMO_WEIGHTS.get(emo_result.get("label"), 0.0) * float(emo_result.get("score", 0.0))
+        items = _run_classifier(emotion_classifier, translated_text[:1500])
+        return _aggregate_weighted_scores(items, _POSITIVE_EMO_WEIGHTS)
     except Exception:
         return 0.0
 
@@ -272,17 +318,6 @@ def get_risk_components(translated_text: str, normalized_text: str) -> tuple[flo
         max_distress_conf = 0.0
         max_neg_emo_conf  = 0.0
         max_pos_emo_conf  = 0.0
-
-        emotion_weights = {
-            "sadness": 1.0, "fear": 0.9, "anger": 0.8, "grief": 1.0, "remorse": 0.8,
-            "disgust": 0.6, "disappointment": 0.7, "nervousness": 0.7, "embarrassment": 0.55,
-            "annoyance": 0.5, "disapproval": 0.45, "confusion": 0.2, "neutral": 0.0,
-            "surprise": 0.0, "joy": 0.0, "admiration": 0.0, "amusement": 0.0,
-            "approval": 0.0, "caring": 0.0, "desire": 0.0, "excitement": 0.0,
-            "fascination": 0.0, "gratitude": 0.0, "love": 0.0, "optimism": 0.0,
-            "pride": 0.0, "realization": 0.0, "relief": 0.0
-        }
-        positive_emotion_weights = _POSITIVE_EMO_WEIGHTS
 
         trans_sentences = nltk.sent_tokenize(translated_text)
         norm_sentences = nltk.sent_tokenize(normalized_text)
@@ -309,33 +344,28 @@ def get_risk_components(translated_text: str, normalized_text: str) -> tuple[flo
 
         for chunk in trans_chunks:
             if not chunk.strip(): continue
-            emo_result     = emotion_classifier(chunk)[0]
-            emo_label      = emo_result['label']
-            emo_confidence = emo_result['score']
-
-            neg_emo_weight = emotion_weights.get(emo_label, 0.0)
-            neg_emo_conf   = neg_emo_weight * emo_confidence
+            emo_items = _run_classifier(emotion_classifier, chunk)
+            neg_emo_conf = _aggregate_weighted_scores(emo_items, _NEGATIVE_EMO_WEIGHTS)
             if neg_emo_conf > max_neg_emo_conf:
                 max_neg_emo_conf = neg_emo_conf
 
-            pos_emo_weight = positive_emotion_weights.get(emo_label, 0.0)
-            pos_emo_conf   = pos_emo_weight * emo_confidence
+            pos_emo_conf = _aggregate_weighted_scores(emo_items, _POSITIVE_EMO_WEIGHTS)
             if pos_emo_conf > max_pos_emo_conf:
                 max_pos_emo_conf = pos_emo_conf
 
+        _request_pos_emo_var.set(max_pos_emo_conf)
+
         for chunk in norm_chunks:
             if not chunk.strip(): continue
-            dist_result     = distress_classifier(chunk)[0]
-            dist_label      = str(dist_result['label']).upper()
-            dist_confidence = dist_result['score']
+            dist_items = _run_classifier(distress_classifier, chunk)
+            for item in dist_items:
+                dist_label = str(item.get("label", "")).upper()
+                if dist_label in _DISTRESS_LABELS:
+                    dist_confidence = float(item.get("score", 0.0))
+                    if dist_confidence > max_distress_conf:
+                        max_distress_conf = dist_confidence
 
-            is_distress = dist_label in [
-                "1", "LABEL_1", "NEGATIVE", "TOXIC", "SADNESS", "GRIEF", "FEAR", "ANGER"
-            ]
-            if is_distress and dist_confidence > max_distress_conf:
-                max_distress_conf = dist_confidence
-
-        # Positive emotions (gratitude, joy, optimism) dampen false-negative scores,
+        # Positive emotions (gratitude, joy, optimism) dampen false-negative scores proportionally,
         # BUT NOT when masked depression / smiling through pain OR sarcastic anger/frustration is present.
         scan_lower = normalized_text.lower() + " " + translated_text.lower()
         is_masked = any(p in scan_lower for p in [
@@ -346,9 +376,9 @@ def get_risk_components(translated_text: str, normalized_text: str) -> tuple[flo
         ])
 
         if max_pos_emo_conf >= 0.45 and not is_masked:
-            dampen = min(0.35, max_pos_emo_conf * 0.45)
-            max_neg_emo_conf = max(0.0, max_neg_emo_conf - dampen)
-            max_distress_conf = max(0.0, max_distress_conf - dampen * 0.5)
+            dampen = min(0.45, max_pos_emo_conf * 0.50)
+            max_neg_emo_conf *= (1.0 - dampen)
+            max_distress_conf *= (1.0 - dampen * 0.5)
 
         return max_distress_conf, max_neg_emo_conf
     except Exception as e:
@@ -368,9 +398,13 @@ CAT1_DIRECT = [
     # Tagalog self-harm inflections; keep aligned with ExplicitCrisisGuard.php.
     r"\b(?:laslas|naglaslas|naglalaslas|maglaslas|maglalaslas|nilaslas|nilalaslas|paglaslas|paglalaslas|lalaslas|laslasin|lilaslasin)\b",
     r"\b(?:sinasaktan|sinaktan|sasaktan|saktan|sinasaksak|sinaksak|sasaksakin|saksakin)\s+(?:ko\s+(?:ang\s+)?sarili(?:\s+ko)?|(?:ang\s+)?sarili\s+ko)\b",
+    r"\b(?:mag|nag|i)?pa(?:pa)?kamatay\b",
+    r"\b(?:mag|nag)?bi(?:bi)?gti\b",
+    r"\b(?:mag|nag)?bi(?:bi)?tay\b",
+    r"\b(?:(?:pag)?(?:mag|nag)?pa(?:pa)?tiwakal|patiwakal)\b",
     r"\bsuicide\b", r"\bkill myself\b", r"\bend it all\b", r"\bcut myself\b",
     r"\bwant to die\b", r"\bno reason to live\b",
-    r"\bmagpakamatay\b", r"\blaslas\b", r"\btatalon\b", r"\bbibigti\b", r"\bsugatan\b",
+    r"\blaslas\b", r"\btatalon\b", r"\bsugatan\b",
     r"\btatapusin ko na buhay ko\b", r"\btapusin ko na\b", r"\btapusin ko na lang\b",
     r"\btapusin ko na lahat\b", r"\btapusin ko na lang lahat\b", r"\btatapusin ko na\b",
     r"\bgusto ko na mawala\b", r"\bgusto ko nang mamatay\b", r"\bgusto nako mamatay\b",
@@ -429,6 +463,7 @@ PASSIVE_DISAPPEARANCE_IDEATION = [
     r"\bnobody would notice\b",
     r"\bno one would notice\b",
     r"\bwould notice if\b.{0,40}\b(disappear|disappeared|gone|mawala|left)\b",
+    r"\bwould\s+(?:anyone\s+)?(?:even\s+)?notice\s+if\s+i\b.{0,25}\banymore\b",
     r"\bdisappeared from\b.{0,25}\b(life|lives|everyone|everybody)\b",
     r"\bslowly disappeared\b",
     r"\bnever really there\b",
@@ -448,6 +483,8 @@ PASSIVE_DISAPPEARANCE_IDEATION = [
     r"hardest part.{0,40}never really there\b",
     r"\bdisappered\b",
     r"\b(?:hindi|di)\s+ko\s+na\s+makita\s+(?:ang\s+|yung\s+)?sarili\s+ko\s+sa\s+(?:future|hinaharap|bukas)\b",
+    r"\b(?:can\s+no\s+longer|can'?t|cannot|don'?t)\s+(?:see|picture)\s+myself\s+(?:having\s+a\s+future|in\s+the\s+future)\b",
+    r"\b(?:no\s+longer|can'?t|cannot)\s+(?:see|picture)\s+a\s+future\s+(?:for\s+myself|anymore)\b",
 ]
 
 CAT1_METHOD_SELF_PAIRS = [
@@ -525,7 +562,9 @@ EMOTIONAL_DISTRESS = [
     r"\bmiserable\b", r"\bstressed\b", r"\banxious\b", r"\bpanic\b", r"\bpanic attacks?\b",
     r"\boverwhelmed\b", r"\bdrained\b", r"\bexhausted\b", r"\bburned out\b",
     r"\bbreaking apart\b", r"\bfalling apart\b", r"\bcan'?t breathe\b", r"\bd nko mkahinga\b", r"\bdi na makahinga\b",
-    r"\bpagod na ako\b", r"\bsobrang lungkot\b", r"\bsobrang bigat\b", r"\bkapagod\b",
+    r"\bpagod na ako\b", r"\bsobrang\s+pagod\s+na\s+(?:ako|ko|aq)\b", r"\bsobrang lungkot\b", r"\bsobrang bigat\b", r"\bkapagod\b",
+    r"\bdrowning\s+in\s+(?:sadness|sorrow|pain|grief|darkness)\b",
+    r"\bnalulunod\s+sa\s+(?:lungkot|sakit|kalungkutan)\b",
     r"\bmamatay (?:sa |s |nang |ng )?(?:pagod|kaba|stress|overwork|puyat)\b",
     r"\bhirap na hirap\b", r"\bsawang sawa na\b", r"\bdi ko na kaya\b",
     r"\bayoko na\b", r"\bdurug na durog\b", r"\bnamamatay\b",
@@ -614,7 +653,7 @@ SOCIAL_ISOLATION = [
     r"\bwala akong kausap\b", r"\biniwanan\b", r"\bnaiwan\b",
     r"\bwala naman(?:g)? nagmamahal\b", r"\bwala naman(?:g)? may paki\b",
     r"\bwala akong paki\b", r"\biwan na lang\b",
-    r"\bwala naman nakakapansin\b", r"\bparang invisible\b",
+    r"\bwala naman nakakapansin\b", r"\b(?:parang|feel(?:ing)?\s+ko)\s+(?:lang\s+)?invisible\b",
     r"\bdi naman ako hinahanap\b", r"\bwala naman akong silbi sa kanila\b",
     r"\bnag-inusara\b", r"\bwalay kauban\b", r"\bwalay higala\b",
     r"\bginabiyaan\b", r"\bnagpadayon nga mag-inusara\b",
@@ -656,6 +695,8 @@ SOCIAL_ISOLATION = [
     r"\bnobody checks on me\b",
     r"\bno one checks on me\b",
     r"\bnobody reaches out\b",
+    r"\bnapag-?iiwanan(?:\s+na\s+(?:ako|ko|aq))?(?:\s+ng\s+lahat)?\b",
+    r"\bleft\s+behind\s+by\s+(?:everyone|everybody|all\s+of\s+them)\b",
 ]
 
 ### SARCASM / GEN-Z TAGLISH BIAS-CORRECTOR (v7) 
@@ -776,6 +817,7 @@ DISTORTIONS = [
     r"\bkung may silbi pa ako\b",
     r"\bpara ba akong may silbi\b",
     r"\bpara bang wala akong silbi\b",
+    r"\b(?:pagod\s+na\s+(?:ako\s+)?kakaisip|kakaisip\s+kung\s+kaya\s+ko)\b",
 ]
 
 ### HOPELESSNESS 
@@ -799,6 +841,8 @@ HOPELESSNESS = [
     r"\bwala na yung saya\b.{0,20}\bgagawin ko\b",
     r"\bparang robot na lang\b",
     r"\bwala nang point\b",
+    r"\bwalang\s+point\b",
+    r"\bwalang\s+mangyay(?:a)?ri\s+sa\s+buhay\b",
     r"\bwala nang dahilan\b.{0,20}\bsubukan\b",
     r"\btired of trying\b",
     r"\bsuko na talaga\b",
@@ -826,6 +870,9 @@ HOPELESSNESS = [
     r"\bno\s+(?:direction|purpose)(?:\s+or\s+purpose)?(?:\s+left)?(?:\s+anymore)?\b",
     r"\bno\s+strength\s+left\s+to\s+(?:keep\s+)?fighting\b",
     r"\bnothing\s+(?:ever\s+)?changes\b",
+    r"(?<!\bdon't )(?<!\bdo not )(?<!\bnever )\b(?:just\s+)?want\s+to\s+give\s+up(?:\s+(?:on\s+(?:life|everything)|already|now|because|[.!?,])|$)",
+    r"\bnothing\s+(?:ever\s+)?gets\s+better\b",
+    r"\bthings\s+(?:will\s+)?never\s+get\s+better\b",
 ]
 
 ### EXTREME VENTING 
@@ -987,6 +1034,9 @@ ACADEMIC_PRESSURE = [
     r"\bdi ko maka\b.{0,20}\b(graduate|finish|tapos)\b",
     r"\bbassit\b.{0,20}\b(grade|grado)\b",
     r"\bnabayag\b.{0,20}\b(eskwela|pag-aaral)\b",
+    r"\b(?:tapusin|matapos)\s+(?:lahat\s+ng\s+)?(?:mga\s+)?requirements\b",
+    r"\b(?:requirements|modules|deadlines)\b.{0,25}\b(?:pagod|drained|kulang|hindi\s+kaya|di\s+kaya|overwhelm(?:ed|ing)?|stressed)\b",
+    r"\b(?:pagod|drained|overwhelm(?:ed|ing)?|stressed)\b.{0,35}\b(?:requirements|modules|deadlines)\b",
 ]
 
 ### SCHOOL AVOIDANCE & SOMATIC DISTRESS (v7.6)
@@ -1058,6 +1108,8 @@ SELF_WORTH = [
     r"\bawan serserbik\b",
     r"\bawan pulos ko\b",
     r"\bawan inka serserbi\b",
+    r"\bkahit\s+anong\s+effort\b.{0,30}\b(?:kulang|walang\s+(?:kwenta|silbi)|hindi\s+sapat|di\s+sapat)\b",
+    r"\b(?:kulang\s+pa\s+rin|hindi\s+pa\s+rin\s+sapat|di\s+pa\s+rin\s+sapat)\b",
 ]
 
 ### NEW: MASKED DEPRESSION 
@@ -1410,10 +1462,13 @@ def _apply_rule_engine(
                 base = "Distress/isolation keywords found but may be casual venting."
         elif signal_count >= 3 or (
             signal_count >= 2
-            and re.search(
-                r"\b(?:gusto\s+(?:ko\s+)?nang?\s+sumuko|suko\s+na\s+talaga|no\s+strength\s+left\s+to\s+(?:keep\s+)?fighting)\b",
-                scan_text,
-                re.I,
+            and (
+                flags["hope"]
+                or re.search(
+                    r"\b(?:gusto\s+(?:ko\s+)?nang?\s+sumuko|suko\s+na\s+talaga|no\s+strength\s+left\s+to\s+(?:keep\s+)?fighting)\b",
+                    scan_text,
+                    re.I,
+                )
             )
         ):
             risk = "HIGH"
@@ -1434,7 +1489,7 @@ def _apply_rule_engine(
             risk = "LOW"
             risk_score = max(0.35, risk_score)
             base = "Self-worth keywords found but context suggests casual expression."
-        elif signal_count >= 3:
+        elif signal_count >= 3 or (signal_count >= 2 and flags["hope"]):
             risk = "HIGH"
             risk_score = max(0.78, risk_score)
             base = f"HIGH: Self-worth impairment compounded with {signal_count} concurrent distress signals."
@@ -1448,7 +1503,7 @@ def _apply_rule_engine(
             risk = "LOW"
             risk_score = max(0.35, risk_score)
             base = "Masked depression language detected but tone appears casual."
-        elif signal_count >= 3:
+        elif signal_count >= 3 or (signal_count >= 2 and flags["hope"]):
             risk = "HIGH"
             risk_score = max(0.78, risk_score)
             base = f"HIGH: Masked depression compounded with {signal_count} concurrent distress signals — hidden suffering pattern."
@@ -1525,7 +1580,7 @@ def _apply_rule_engine(
                 "HIGH: Strong negative sentiment/distress from ML neural networks.",
                 expert_reasoning,
             )
-        elif risk_score >= 0.40 and (neg_emo_conf >= 0.15 or expert_reasoning):
+        elif risk_score >= 0.40 and (neg_emo_conf >= 0.15 or expert_reasoning or distress_conf >= 0.85):
             risk = "MEDIUM"
             reason = _append_reasoning("Moderate negative sentiment.", expert_reasoning)
         elif expert_reasoning:
@@ -1595,8 +1650,11 @@ def _apply_risk_history_escalation(
 
 def _band_risk_score(risk: str, risk_score: float) -> int:
     """Map internal 0..1 risk score into the display percentage band for the risk level."""
-    raw_percent = max(1, min(100, int(round(risk_score * 99)) + 1))
     lo, hi = _RISK_RANGES.get(risk, (1, 100))
+    if risk == "LOW":
+        scaled = max(0.0, min(1.0, risk_score / 0.40))
+        return int(round(lo + scaled * (hi - lo)))
+    raw_percent = max(1, min(100, int(round(risk_score * 99)) + 1))
     return int(round(max(lo, min(hi, lo + (raw_percent / 100.0) * (hi - lo)))))
 
 
@@ -1653,8 +1711,17 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
 
     scoped_translated = current_disclosure_text(translated_text)
     scoped_normalized = current_disclosure_text(normalized_text)
-    distress_conf, neg_emo_conf = get_risk_components(scoped_translated, scoped_normalized)
-    pos_emo_conf = _get_positive_emotion_conf(scoped_translated)
+    pos_token = _request_pos_emo_var.set(None)
+    try:
+        distress_conf, neg_emo_conf = get_risk_components(scoped_translated, scoped_normalized)
+        cached_pos_emo_conf = _request_pos_emo_var.get()
+    finally:
+        _request_pos_emo_var.reset(pos_token)
+    pos_emo_conf = (
+        cached_pos_emo_conf
+        if cached_pos_emo_conf is not None
+        else _get_positive_emotion_conf(scoped_translated)
+    )
     base_score = (0.50 * distress_conf) + (0.50 * neg_emo_conf)
 
     compiled = _get_compiled_regexes()

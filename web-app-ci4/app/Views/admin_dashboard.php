@@ -1614,6 +1614,7 @@ $pageDescriptions = [
             if (!document.getElementById('alertsTableBody')) return;
             $.ajax({
                 url: ALERTS_API_URL,
+                cache: false,
                 dataType: 'json',
                 success: function (data) {
                     let currentDataString = JSON.stringify(data);
@@ -1630,6 +1631,14 @@ $pageDescriptions = [
                             window.alertsDataMap[index] = alert;
                             let badgeClass = alert.type.includes('SMS') ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-purple-100 text-purple-700 border-purple-200';
                             let icon = alert.type.includes('SMS') ? '📱' : '✉️';
+                            let stateHtml = '';
+                            if (alert.state) {
+                                const isOk = alert.state === 'Queued' || alert.state === 'Sent';
+                                const stateCls = isOk
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : 'bg-amber-50 text-amber-700 border-amber-200';
+                                stateHtml = `<span class="ml-1.5 px-2 py-0.5 inline-flex text-[11px] leading-4 font-semibold rounded border ${stateCls}">${escapeHtml(alert.state)}</span>`;
+                            }
 
                             const dateObj = parsePHDate(alert.timestamp);
                             const dayName = dateObj.toLocaleDateString('en-PH', { weekday: 'short' });
@@ -1640,7 +1649,7 @@ $pageDescriptions = [
                                 <td data-label="Method" class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-md border ${badgeClass}">
                                         ${icon} ${escapeHtml(alert.type)}
-                                    </span>
+                                    </span>${stateHtml}
                                 </td>
                                 <td data-label="Recipient" class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">${escapeHtml(alert.recipient)}</td>
                                 <td data-label="Payload / Message" class="px-6 py-4 cursor-pointer group" onclick="openAlertModal(${index})">

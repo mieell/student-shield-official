@@ -439,24 +439,7 @@ class VentController extends BaseController
 
     protected function logAlert($type, $recipient, $message, array $smsStatus = [])
     {
-        $file = WRITEPATH . 'logs/alerts.json';
-        $alerts = [];
-        if (file_exists($file) && filesize($file) > 0) {
-            $decoded = json_decode(file_get_contents($file), true);
-            if (is_array($decoded)) {
-                $alerts = $decoded;
-            }
-        }
-
-        // Add new alert at the top
-        array_unshift($alerts, array_merge([
-            'type' => $type,
-            'recipient' => $recipient,
-            'message' => $message,
-            'timestamp' => date('Y-m-d H:i:s')
-        ], $smsStatus));
-
-        file_put_contents($file, json_encode($alerts, JSON_PRETTY_PRINT), LOCK_EX);
+        \App\Libraries\AlertLog::record((string) $type, (string) $recipient, (string) $message, $smsStatus);
     }
 
     /**
@@ -517,8 +500,11 @@ class VentController extends BaseController
 
         // CRITICAL EXTREME — Explicit Suicide Intent & Farewell Cues (NEVER DOWNGRADED BY SARCASM)
         $critical_extreme = [
-            'suicide', 'kill myself', 'cut myself', 'magpakamatay', 'laslas',
-            'tatalon', 'bibigti', 'patayin sarili ko', 'magbibigti',
+            'suicide', 'kill myself', 'cut myself', 'magpakamatay', 'pakamatay',
+            'papakamatay', 'magpapakamatay', 'nagpakamatay', 'nagpapakamatay', 'ipakamatay',
+            'laslas', 'naglaslas', 'naglalaslas', 'maglaslas',
+            'tatalon', 'bibigti', 'nagbigti', 'nagbibigti', 'patayin sarili ko', 'magbibigti',
+            'patiwakal', 'magpatiwakal', 'magpapatiwakal',
             'slit my wrist', 'self-harm', 'self harm', 'bigti', 'bitay',
             'i wanna end this shit', 'i wanna end this na', 'sana kunin na ko ni lord', 'tapusin ko na buhay ko', 'sana matulog at di na magising',
             'tatapusin ko na', 'bibitay', 'magbigti', 'lulunukin ko na lang',
@@ -659,6 +645,13 @@ class VentController extends BaseController
             'blanko lang lahat',
             'hindi ko na makita yung sarili ko',
             'di ko na makita sarili ko',
+            'picture myself having a future',
+            'see myself in the future',
+            'drowning in sadness',
+            'nothing ever gets better',
+            'things will never get better',
+            'drained na drained na ako',
+            'napag-iiwanan na ako ng lahat',
             'pagod na pagod na yung utak ko',
             'pagod na utak ko',
         ];
