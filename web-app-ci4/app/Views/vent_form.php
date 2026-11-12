@@ -149,7 +149,7 @@
                     <div class="confidentiality-option">
                         <div class="confidentiality-copy">
                             <span class="confidentiality-title">Your safety and privacy</span>
-                            <span class="confidentiality-help">Your counselor can review your entry. If the system flags an urgent safety concern, it will attempt to alert your counselor and registered parent or guardian. If contacting them could put you at risk, tell a trusted adult or your counselor directly.</span>
+                            <span class="confidentiality-help">Your school counselor can review what you share. For most entries, your parent or guardian won’t get an automatic alert. If the system detects a serious and urgent safety concern, it will try to alert your counselor and your registered parent or guardian. If contacting home could put you at risk, please speak directly with your counselor or a trusted adult.</span>
                         </div>
                     </div>
 
