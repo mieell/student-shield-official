@@ -13,7 +13,7 @@ import hmac
 import logging
 import torch
 from transformers import pipeline
-from deep_translator import GoogleTranslator
+from deep_translator import GoogleTranslator, MyMemoryTranslator
 import nltk
 from risk_history import evaluate_risk_history
 from violent_threats import detect_violent_threat
@@ -1583,13 +1583,56 @@ def _band_risk_score(risk: str, risk_score: float) -> int:
     return int(round(max(lo, min(hi, lo + (raw_percent / 100.0) * (hi - lo)))))
 
 
+def _translate_to_english(value: str) -> str:
+    """Translate text to English via GoogleTranslator, falling back to MyMemory when rate-limited."""
+    try:
+        translated = GoogleTranslator(source="auto", target="en").translate(value)
+        if isinstance(translated, str) and translated.strip():
+            return translated
+    except Exception:
+        pass
+
+    # MyMemory enforces a 500-char limit per request; chunk long vents by sentence/word.
+    translator = MyMemoryTranslator(source="tl-PH", target="en-US")
+    chunks: list[str] = []
+    current = ""
+    for sentence in nltk.sent_tokenize(value):
+        if len(sentence) > 450:
+            words = sentence.split()
+            part = ""
+            for word in words:
+                candidate = f"{part} {word}".strip()
+                if len(candidate) > 450 and part:
+                    chunks.append(part)
+                    part = word
+                else:
+                    part = candidate
+            if part:
+                if current:
+                    chunks.append(current)
+                    current = ""
+                chunks.append(part)
+        elif len(f"{current} {sentence}".strip()) > 450 and current:
+            chunks.append(current)
+            current = sentence
+        else:
+            current = f"{current} {sentence}".strip()
+    if current:
+        chunks.append(current)
+
+    translated_parts: list[str] = []
+    for chunk in chunks or [value[:450]]:
+        part = translator.translate(chunk)
+        if not isinstance(part, str) or not part.strip() or "mymemory warning" in part.lower():
+            raise ValueError("Backup translation unavailable")
+        translated_parts.append(part.strip())
+    return " ".join(translated_parts)
+
+
 def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict] | None = None) -> dict:
     """Run the multi-stage NLP classification, rule engine, and history escalation pipeline."""
     normalized_text = normalize_slang(text)
-    translated_text = translation_gate.translate(
-        normalized_text,
-        lambda value: GoogleTranslator(source="auto", target="en").translate(value),
-    )
+    translated_text = translation_gate.translate(normalized_text, _translate_to_english)
 
     scoped_translated = current_disclosure_text(translated_text)
     scoped_normalized = current_disclosure_text(normalized_text)
