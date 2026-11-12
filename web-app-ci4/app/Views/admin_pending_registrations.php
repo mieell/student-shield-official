@@ -84,6 +84,13 @@
         .registration-contact > div { max-width: 16rem; overflow-wrap: anywhere; }
         .registration-contact svg { flex-shrink: 0; }
         .guardian-verification { min-width: 18rem; max-width: 28rem; margin: 0 auto; padding: 1rem; background: #f7fbf8; border: 1px solid #cfe2d4; border-radius: 12px; text-align: left; }
+        .registration-manage { min-width: 200px; text-align: left; }
+        .registration-manage > summary { display: flex; align-items: center; justify-content: space-between; gap: .75rem; list-style: none; border: 1px solid #d4e1d8; border-radius: 8px; background: #fff; }
+        .registration-manage > summary::-webkit-details-marker { display: none; }
+        .registration-manage > summary strong::after { content: " +"; }
+        .registration-manage[open] > summary strong::after { content: " −"; }
+        .registration-manage > summary:focus-visible { outline: 2px solid #096328; outline-offset: 2px; }
+        .registration-panel { margin-top: .5rem; padding: .85rem; border: 1px solid #d4e1d8; border-radius: 8px; background: #f6faf7; }
         .registration-actions .consent-action { display: inline-flex; align-items: center; min-height: 40px; padding: .5rem .85rem; border-radius: 8px; font-size: .8rem; }
         .registration-actions .archive-action { margin-top: .65rem; color: #41584b; border: 1px solid #becfc3; background: #fff; }
         .registration-actions .archive-action:hover { background: #edf4ef; }
@@ -300,11 +307,7 @@
                                     </span>
                                 </td>
                                 <td data-label="Action" class="registration-actions px-6 py-4 text-center">
-                                    <?php if (!empty($student['verified_phone'])): ?>
-                                        <div class="text-xs mb-3 space-y-1 leading-relaxed">
-                                            <p>Verified number: <?= esc($student['verified_phone']) ?></p>
-                                            <p>Guardian on school record: <?= esc($student['verified_name']) ?></p>
-                                            <p class="font-semibold"><?= esc(match ($student['response']) {
+                                    <?php $consentStatus = empty($student['verified_phone']) ? 'Contact needs verification' : match ($student['response']) {
                                                 'accepted' => 'Consent accepted',
                                                 'declined' => 'Consent declined',
                                                 default => strtotime($student['expires_at']) <= time() ? 'Link expired' : match ($student['sms_state']) {
@@ -313,7 +316,17 @@
                                                     'Manual' => 'Manual link generated; awaiting guardian',
                                                     default => 'SMS was not queued',
                                                 },
-                                            }) ?></p>
+                                            }; ?>
+                                    <?php if ($registrationStatus === 'pending'): ?>
+                                    <details class="registration-manage">
+                                        <summary><span><?= esc($consentStatus) ?></span><strong>Manage</strong></summary>
+                                        <div class="registration-panel">
+                                    <?php endif; ?>
+                                    <?php if (!empty($student['verified_phone'])): ?>
+                                        <div class="text-xs mb-3 space-y-1 leading-relaxed">
+                                            <p>Verified number: <?= esc($student['verified_phone']) ?></p>
+                                            <p>Guardian on school record: <?= esc($student['verified_name']) ?></p>
+                                            <p class="font-semibold"><?= esc($consentStatus) ?></p>
                                             <?php if ($student['guardian_name']): ?>
                                                 <p>Signed by <?= esc($student['guardian_name']) ?> · <?= esc($student['responded_at']) ?></p>
                                             <?php endif; ?>
@@ -382,6 +395,10 @@
                                         </form>
                                     <?php endif; ?>
                                     <?php else: ?><span class="text-sm text-gray-500">Decision recorded</span><?php endif; ?>
+                                    <?php if ($registrationStatus === 'pending'): ?>
+                                        </div>
+                                    </details>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
