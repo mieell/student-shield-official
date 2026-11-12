@@ -92,7 +92,6 @@
         }
         /* WCAG AA fix: placeholder raised to 0.85 opacity */
         .input-dark::placeholder { color: rgba(255,255,255,0.75); }
-        #password::placeholder { color: #ffffff; opacity: 1; }
 
         /* Gold gradient button */
         .submit-btn {
@@ -246,8 +245,7 @@
                             <i class="fas fa-lock text-white/40 group-focus-within/input:text-gold transition-colors text-[16px] sm:text-[18px]"></i>
                         </div>
                         <input type="password" name="password" id="password" required autocomplete="current-password"
-                               class="w-full pl-11 sm:pl-14 pr-4 sm:pr-12 py-3.5 sm:py-4 input-dark rounded-xl sm:rounded-[1.25rem] text-[16px] font-bold outline-none tracking-[0.1em]"
-                               placeholder="••••••••">
+                               class="w-full pl-11 sm:pl-14 pr-4 sm:pr-12 py-3.5 sm:py-4 input-dark rounded-xl sm:rounded-[1.25rem] text-[16px] font-bold outline-none tracking-[0.1em]">
                         <button type="button" id="togglePassword" class="password-toggle" aria-controls="password" aria-pressed="false" aria-label="Show password">Show</button>
                     </div>
                 </div>
