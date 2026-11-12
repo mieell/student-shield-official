@@ -1259,8 +1259,16 @@ $pageDescriptions = [
                                         s = Math.round(s_float);
                                     }
 
-                                    // High percentage = High Threat
-                                    let c = s >= 50 ? 'text-[#E04B3F] bg-[#E04B3F]/10' : 'text-[#235D3A] bg-[#235D3A]/10';
+                                    // Align score pill styling with clinical risk bands (CRITICAL red, HIGH amber, MEDIUM blue, LOW green)
+                                    const level = (vent.risk_level || '').toUpperCase();
+                                    let c = 'text-[#235D3A] bg-[#235D3A]/10';
+                                    if (level === 'CRITICAL' || (!level && s >= 86)) {
+                                        c = 'text-[#E04B3F] bg-[#E04B3F]/10';
+                                    } else if (level === 'HIGH' || (!level && s >= 61)) {
+                                        c = 'text-[#D97706] bg-[#F59E0B]/15';
+                                    } else if (level === 'MEDIUM' || (!level && s >= 31)) {
+                                        c = 'text-[#2A5DB0] bg-[#2A5DB0]/10';
+                                    }
                                     return `<span class="text-sm font-mono font-medium ${c} px-2 py-1 rounded min-w-[3rem] inline-block">${s}%</span>`;
                                 })()}
                             </td>
@@ -1642,7 +1650,13 @@ $pageDescriptions = [
             if (vent.section) senderInfo += `\nSection: ${vent.section}`;
             if (vent.adviser_name) senderInfo += `\nAdviser: ${vent.adviser_name}`;
 
-            const badgeClass = vent.risk_level === 'CRITICAL' ? 'bg-[#E04B3F] text-white border-transparent' : (vent.risk_level === 'HIGH' ? 'bg-[#F59E0B] text-white border-transparent' : 'bg-[#235D3A]/10 text-[#235D3A] border-[#235D3A]/20');
+            const badgeClass = vent.risk_level === 'CRITICAL'
+                ? 'bg-[#E04B3F] text-white border-transparent'
+                : (vent.risk_level === 'HIGH'
+                    ? 'bg-[#F59E0B] text-white border-transparent'
+                    : (vent.risk_level === 'MEDIUM'
+                        ? 'bg-[#2A5DB0]/10 text-[#2A5DB0] border-[#2A5DB0]/20'
+                        : 'bg-[#235D3A]/10 text-[#235D3A] border-[#235D3A]/20'));
             openDetailModal('Safe Space Vent Entry', senderInfo, `${dateStr} ${timeStr}`, vent.raw_text, `Threat Level: ${vent.risk_level}`, badgeClass);
         }
 

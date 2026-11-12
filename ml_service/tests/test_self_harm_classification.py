@@ -111,3 +111,21 @@ def test_positive_words_do_not_override_strong_neural_distress(analyzer, monkeyp
     monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.90, 0.90))
     result = analyzer("I'm grateful for the people in my life.")
     assert result["risk_level"] == "HIGH"
+
+
+@pytest.mark.parametrize("text", [
+    "I just wanna talk to someone because I really feel down and sad",
+    "Can I talk to someone? I'm sad and lonely",
+    "nalulungkot ako",
+])
+def test_ordinary_sadness_stays_medium_with_high_neural_scores(analyzer, monkeypatch, text):
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.90, 0.95))
+    assert analyzer(text)["risk_level"] == "MEDIUM"
+
+
+@pytest.mark.parametrize("text", [
+    "Every single day feels like I am carrying an unbearable weight, and I have no strength left to keep fighting. I am completely exhausted from pretending to be okay when it feels like my life has no direction or purpose anymore.",
+    "Sobrang drained na ako mentally at emotionally, to the point na hindi ko na makita ang sarili ko sa future. Parang araw-araw na lang akong nalulunod sa lungkot at gusto ko nang sumuko dahil wala namang nagbabago.",
+])
+def test_severe_hopelessness_and_futurelessness_classify_as_high(analyzer, text):
+    assert analyzer(text)["risk_level"] == "HIGH"

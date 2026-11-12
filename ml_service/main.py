@@ -447,6 +447,7 @@ PASSIVE_DISAPPEARANCE_IDEATION = [
     r"feel like i was never really there\b",
     r"hardest part.{0,40}never really there\b",
     r"\bdisappered\b",
+    r"\b(?:hindi|di)\s+ko\s+na\s+makita\s+(?:ang\s+|yung\s+)?sarili\s+ko\s+sa\s+(?:future|hinaharap|bukas)\b",
 ]
 
 CAT1_METHOD_SELF_PAIRS = [
@@ -514,6 +515,10 @@ EMOTIONAL_DISTRESS = [
     r"\bcan't do this anymore\b", r"so mentally draining", r"literally mentally exhausted",
     r"\bi am sad\b", r"\bim sad\b", r"\bi'?m\s+so\s+sad\b", r"\bso\s+sad\b",
     r"\breally sad\b", r"\bsuper sad\b", r"\bfeeling sad\b", r"\bstill sad\b",
+    r"(?<!\bnot )(?<!\bnever )\bi['’]?(?:m| am)\s+(?:feeling\s+)?(?:just\s+|really\s+|very\s+|so\s+)?(?:sad|down|lonely)\b",
+    r"(?<!\bnot )(?<!\bnever )\b(?:feel(?:ing)?\s+(?:really\s+|very\s+|so\s+)?(?:down|sad)|(?:really\s+|very\s+|so\s+)?down\s+and\s+sad)\b",
+    r"(?<!\bnot )(?<!\bnever )\bsad\s+and\s+(?:lonely|down|tired)\b",
+    r"\bunbearable\s+weight\b", r"\bno\s+strength\s+left\b",
     r"\bcrying\b", r"\bcried\b", r"\bcan'?t stop crying\b", r"\bbeen crying\b",
     r"\btears\b", r"\bsobbing\b", r"\bbreaking down\b", r"\bbroke down\b",
     r"\bhurting\b", r"\bhurts so much\b", r"\bin pain\b", r"\bheartbroken\b",
@@ -527,7 +532,7 @@ EMOTIONAL_DISTRESS = [
     r"\bwasak na wasak\b", r"\bsukong suko na\b", r"\bparang sasabog utak ko\b",
     r"\bwalang silbi\b", r"\bwala akong kwenta\b", r"\bpabigat ako\b",
     r"\bnaliyak\b", r"\bnaiyak\b", r"\bnaiiyak\b", r"\bumiyak\b", r"\biyak\b",
-    r"iyak nang iyak", r"\bumiiyak s[a]? cr\b", r"\bnassad\b", r"\bnasad\b", r"\bmalungkot\b",
+    r"iyak nang iyak", r"\bumiiyak s[a]? cr\b", r"\bnassad\b", r"\bnasad\b", r"\bmalungkot\b", r"\bnalulungkot\b", r"\bnalungkot\b",
     r"\blungkot\b", r"\bsobrang sad\b", r"\bna-depress\b", r"\bnadedepress\b",
     r"\bnastress\b", r"\bna-stress\b", r"\bna-overwhelm\b",
     r"\bsakit ng dibdib\b", r"\bmasakit\b", r"\bnasasaktan\b",
@@ -816,6 +821,11 @@ HOPELESSNESS = [
     r"\bit won'?t get better\b",
     r"\bbakit pa ba magpapagal\b",
     r"\bbakit pa ba magsisikap\b",
+    r"\bgusto\s+(?:ko\s+)?nang?\s+sumuko\b",
+    r"\bwala\s+(?:na|naman)ng?\s+nagbabago\b",
+    r"\bno\s+(?:direction|purpose)(?:\s+or\s+purpose)?(?:\s+left)?(?:\s+anymore)?\b",
+    r"\bno\s+strength\s+left\s+to\s+(?:keep\s+)?fighting\b",
+    r"\bnothing\s+(?:ever\s+)?changes\b",
 ]
 
 ### EXTREME VENTING 
@@ -1398,7 +1408,14 @@ def _apply_rule_engine(
                 risk = "MEDIUM"
                 risk_score = max(0.4, risk_score)
                 base = "Distress/isolation keywords found but may be casual venting."
-        elif signal_count >= 3:
+        elif signal_count >= 3 or (
+            signal_count >= 2
+            and re.search(
+                r"\b(?:gusto\s+(?:ko\s+)?nang?\s+sumuko|suko\s+na\s+talaga|no\s+strength\s+left\s+to\s+(?:keep\s+)?fighting)\b",
+                scan_text,
+                re.I,
+            )
+        ):
             risk = "HIGH"
             risk_score = max(0.78, risk_score)
             base = f"HIGH: Compound emotional signal — {signal_count} concurrent distress indicators detected."
@@ -1560,7 +1577,7 @@ def _apply_risk_history_escalation(
         reason = f"[Predictive Recurrence Risk: {int(escalation_prob * 100)}%] " + reason
 
     if b_escalate:
-        if risk == "HIGH" and (trajectory == "ESCALATING" or escalation_prob > 0.6):
+        if risk == "HIGH" and trajectory == "ESCALATING":
             risk = "CRITICAL"
             risk_score = max(0.92, risk_score)
             reason = "CRITICAL ESCALATION: Repeated HIGH distress with escalating trajectory. " + reason
