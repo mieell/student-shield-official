@@ -1167,7 +1167,7 @@ async def root_health_check():
         "service": "StudentShield AI Engine",
         "version": "7.3.0",
         "api_docs": "/docs",
-        "translation_policy": "english-skip-cache-cooldown-v1",
+        "translation_policy": "english-skip-cache-retry-v2",
         "message": "Send POST requests to /analyze-text to classify vents.",
     }
 

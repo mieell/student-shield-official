@@ -47,15 +47,12 @@ def test_success_is_reused_then_expires_and_cache_is_bounded():
 
 
 @pytest.mark.parametrize('response', [RuntimeError('rate limited'), '', '<html>Error</html>', 'Server Error', None])
-def test_failure_cools_down_without_caching_fallback_then_recovers(response):
+def test_failure_retries_next_request_without_caching_fallback(response):
     time = [0]
     gate = TranslationGate(clock=lambda: time[0], english=lambda _: False)
     translator = Mock(side_effect=response) if isinstance(response, Exception) else Mock(return_value=response)
     assert gate.translate('original', translator) == 'original'
-    assert gate.translate('another', translator) == 'another'
-    assert translator.call_count == 1
     assert not gate.cache
-    time[0] = 61
     recovered = Mock(return_value='Recovered translation')
     assert gate.translate('original', recovered) == 'Recovered translation'
     recovered.assert_called_once()

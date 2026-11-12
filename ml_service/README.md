@@ -26,7 +26,7 @@ The **StudentShield ML Service** is a Python FastAPI service for multilingual Sa
 | `evaluate_val.py` | Validation script to evaluate classification accuracy, precision, recall, and F1 score. |
 | `StudentShield_Colab_Trainer.ipynb` | Google Colab Notebook for training models on cloud GPUs. |
 | `risk_history.py` | Trajectory over prior risk labels/timestamps supplied from the web database. |
-| `translation_gate.py` | English detection, short-lived translation reuse and outage cooldown. |
+| `translation_gate.py` | English detection and short-lived translation reuse, with retry on the next request after a failure. |
 | `data/crisis_reference_phrases.json` | Preserved reference phrases from an unused semantic-similarity prototype; not loaded or embedded during inference. |
 | `models/` | Saved model checkpoints and tokenizer files. |
 | `Dockerfile` | Container configuration for cloud deployment (Hugging Face Spaces, Docker, Cloud Run). |

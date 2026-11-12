@@ -1,4 +1,4 @@
-"""Bounded, short-lived translation reuse and an outage cooldown. No disk storage."""
+"""Bounded, short-lived translation reuse. No disk storage."""
 
 from collections import OrderedDict
 from hashlib import sha256
@@ -39,11 +39,10 @@ def confidently_english(text):
 
 class TranslationGate:
     def __init__(self, clock=monotonic, english=confidently_english,
-                 ttl=300, capacity=128, cooldown=60):
+                 ttl=300, capacity=128):
         self.clock, self.english = clock, english
-        self.ttl, self.capacity, self.cooldown = ttl, capacity, cooldown
+        self.ttl, self.capacity = ttl, capacity
         self.cache = OrderedDict()
-        self.blocked_until = 0
         self.busy = False
         self.lock = Lock()
 
@@ -62,7 +61,7 @@ class TranslationGate:
             if key in self.cache:
                 self.cache.move_to_end(key)
                 return self.cache[key][1]
-            if now < self.blocked_until or self.busy:
+            if self.busy:
                 return text
             self.busy = True
         try:
@@ -81,9 +80,7 @@ class TranslationGate:
                     self.cache.popitem(last=False)
             return result
         except Exception:
-            with self.lock:
-                self.blocked_until = self.clock() + self.cooldown
-            logger.warning('Translation unavailable; using normalized text with a %ss cooldown', self.cooldown)
+            logger.warning('Translation unavailable; using normalized text')
             return text
         finally:
             with self.lock:
