@@ -204,7 +204,7 @@
                             <option value="<?= $statusVal ?>" <?= $registrationStatus === $statusVal ? 'selected' : '' ?>><?= esc($statusLabel) ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <button type="submit" class="text-xs font-semibold text-white bg-[#096328] hover:bg-[#075826] active:bg-[#05441d] px-3.5 py-1.5 min-h-[36px] rounded-lg border border-[#096328] transition-colors cursor-pointer shadow-sm">View</button>
+                    <noscript><button type="submit" class="text-xs font-semibold text-white bg-[#096328] px-3.5 py-1.5 min-h-[36px] rounded-lg">View</button></noscript>
                 </form>
                 <div class="flex items-center gap-2 flex-1 min-w-[200px] max-w-xs relative ml-auto">
                     <svg class="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -435,6 +435,8 @@
     </footer>
 
     <script>
+        const registrationStatus = document.getElementById('registrationStatus');
+        registrationStatus?.addEventListener('change', () => registrationStatus.form.requestSubmit());
         function showToast(message, isSuccess = true) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
