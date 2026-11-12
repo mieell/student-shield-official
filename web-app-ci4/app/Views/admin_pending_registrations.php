@@ -83,6 +83,17 @@
         .registration-table { min-width: 64rem; }
         .registration-contact > div { max-width: 16rem; overflow-wrap: anywhere; }
         .registration-contact svg { flex-shrink: 0; }
+        .guardian-verification { min-width: 18rem; max-width: 28rem; margin: 0 auto; padding: 1rem; background: #f7fbf8; border: 1px solid #cfe2d4; border-radius: 12px; text-align: left; }
+        .guardian-verification h3 { color: #174d30; font-size: .9rem; font-weight: 700; }
+        .guardian-verification p { margin-top: .2rem; color: #526b5b; font-size: .75rem; line-height: 1.45; }
+        .guardian-verification .guardian-field { margin-top: .75rem; }
+        .guardian-verification label { display: block; color: #284b35; font-size: .75rem; font-weight: 600; }
+        .guardian-verification input[type='text'], .guardian-verification input[type='tel'] { display: block; width: 100%; min-height: 42px; margin-top: .3rem; padding: .55rem .7rem; border: 1px solid #becfc3; border-radius: 8px; background: #fff; color: #173a2a; }
+        .guardian-verification input:focus-visible { outline: 3px solid #b5dec0; outline-offset: 1px; }
+        .guardian-verification .guardian-check { display: flex; align-items: flex-start; gap: .55rem; margin: .85rem 0; font-weight: 400; line-height: 1.45; }
+        .guardian-verification .guardian-check input { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; accent-color: #096328; }
+        .guardian-verification button { min-height: 42px; padding: .55rem .9rem; border-radius: 8px; font-size: .8rem; }
+        @media (max-width: 767px) { .guardian-verification { min-width: 0; max-width: none; } .guardian-verification button { width: 100%; } }
         .registration-nav > *, .registration-nav svg { flex-shrink: 0; }
         .registration-nav > a, .registration-nav > span, .registration-nav button { white-space: nowrap; }
         @media (max-width: 1023px) {
@@ -298,17 +309,21 @@
                                     <?php endif; ?>
                                     <?php if ($registrationStatus === 'pending'): ?>
                                     <?php if ($canVerifyContact && \App\Libraries\GuardianConsent::canSend($student['requested_at'] ? $student : null, time())): ?>
-                                        <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="mb-3 text-left rounded-lg border border-green-100 bg-green-50 p-3 space-y-2">
+                                        <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="guardian-verification">
                                             <?= csrf_field() ?>
-                                            <label class="block text-xs font-semibold" for="verified-name-<?= $uid ?>">Guardian name from school records</label>
+                                            <h3>Verify guardian contact</h3>
+                                            <p>Check the details against school records before sending the consent link.</p>
+                                            <div class="guardian-field"><label for="verified-name-<?= $uid ?>">Guardian name from school records</label>
                                             <input class="w-full border rounded-lg px-2 py-2 text-sm" type="text" id="verified-name-<?= $uid ?>" name="verified_name" maxlength="120" required>
-                                            <label class="block text-xs font-semibold" for="verified-phone-<?= $uid ?>">Guardian mobile from school records</label>
+                                            </div>
+                                            <div class="guardian-field"><label for="verified-phone-<?= $uid ?>">Guardian mobile from school records</label>
                                             <input class="w-full border rounded-lg px-2 py-2 text-sm" type="tel" id="verified-phone-<?= $uid ?>" name="verified_phone" placeholder="09123456789" maxlength="32" required>
-                                            <label class="flex gap-2 items-start text-xs">
+                                            </div>
+                                            <label class="guardian-check">
                                                 <input type="checkbox" name="checked_records" value="1" required>
                                                 <span>I confirmed the guardian and this number against current school records.</span>
                                             </label>
-                                            <button type="submit" class="approve-btn rounded-lg px-3 py-2 text-xs font-semibold">Send consent link</button>
+                                            <button type="submit" class="approve-btn font-semibold">Send consent link</button>
                                         </form>
                                     <?php endif; ?>
                                     <?php if (!$canVerifyContact): ?>
