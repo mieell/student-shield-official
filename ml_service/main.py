@@ -18,6 +18,7 @@ import nltk
 from risk_history import evaluate_risk_history
 from violent_threats import detect_violent_threat
 from translation_gate import TranslationGate
+from crisis_context import current_disclosure_text
 
 translation_gate = TranslationGate()
 
@@ -366,7 +367,7 @@ CAT1_DIRECT = [
     r"i\s*wanna\s*die", r"i\s*want\s*to\s*die", r"kill\s*myself",
     r"end\s+(my|this)\s+life", r"don't\s+want\s+to\s+exist",
     r"don'?t\s+want\s+to\s+live", r"can'?t\s+do\s+this\s+anymore",
-    r"wish\s+i\s+was\s+never\s+born", r"wish\s+i\s+could\s+disappear",
+    r"wish\s+i\s+was\s+never\s+born",
     r"world\s+would\s+be\s+better\s+without\s+me", r"no\s+point\s+in\s+living",
     r"\bself.?harm\b", r"\bself.?destruct\b",
     r"i'?m\s+done\s+living", r"done\s+with\s+life", r"tired\s+of\s+living",
@@ -396,6 +397,7 @@ CAT1_DIRECT = [
 
 ### CATEGORY 1.5: HIGH — Passive Disappearance & Invisibility Ideation (C-SSRS Level 2)
 PASSIVE_DISAPPEARANCE_IDEATION = [
+    r"wish\s+i\s+could\s+disappear",
     r"\bmay magbabago\b.{0,30}\bkung wala ako\b",
     r"\bmas maayos\b.{0,20}\bkung wala ako\b",
     r"\bmas maganda\b.{0,20}\bkung wala ako\b",
@@ -725,6 +727,7 @@ POSITIVE_SENTIMENT = [
     r"\bpahalagahan\b", r"\bmasaya ako\b", r"\bmasaya naman\b", r"\bblessed\b",
     r"\bnagpapasalamat\b", r"\bmemorable\b", r"\btawanan\b", r"\brandom moments\b",
     r"\bpeaceful\b", r"\bokay na muna\b", r"\blittle things\b", r"\bso much more lately\b",
+    r"\bsobrang happy\b", r"\bhappy ko\b", r"\bnag-?pay off\b", r"\bfeeling blessed\b", r"\bgood vibes\b",
 ]
 
 ### COGNITIVE DISTORTIONS 
@@ -1227,7 +1230,7 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
     ## ┐
     ### STAGE 4: SARCASM / JOKE DETECTION (v7)                 
     ## ┘
-    scan_text = text + " " + normalized_text
+    scan_text = current_disclosure_text(text) + " " + current_disclosure_text(normalized_text)
     is_joke = any(pat.search(scan_text) for pat in COMPILED_REGEXES['joke'])
 
     ## ┐
@@ -1328,7 +1331,7 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
     risk   = "LOW"
     reason = "NLP: No severe negativity detected."
 
-    if risk_score > 0.4:
+    if risk_score > 0.4 and (neg_emo_conf >= 0.15 or expert_reasoning):
         risk   = "MEDIUM"
         reason = "NLP: Negative sentiment detected."
 
@@ -1546,7 +1549,7 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
             risk_score = max(0.75, risk_score)
             reason     = "HIGH: Strong negative sentiment/distress from ML neural networks."
             if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-        elif risk_score >= 0.40:
+        elif risk_score >= 0.40 and (neg_emo_conf >= 0.15 or expert_reasoning):
             risk   = "MEDIUM"
             reason = "Moderate negative sentiment."
             if expert_reasoning: reason += " " + " ".join(expert_reasoning)
@@ -1554,13 +1557,20 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
             risk       = "MEDIUM"
             risk_score = max(0.5, risk_score)
             reason     = "Atypical sentiment pattern flagged by heuristics."
+        elif risk_score > 0.35:
+            # Prevent uncorroborated binary distress alone from forcing MEDIUM when emotion & rules are clean.
+            risk_score = min(risk_score, 0.35)
 
     ## ┐
     ### STAGE 7.5: POSITIVE VENT GUARD (suppress false MEDIUM on grateful posts)
     ## ┘
     severe_flags = violent_threat or has_cat1 or has_cat2 or has_sexual or has_finality
-    # Positive wording may explain an already LOW result, never erase a raised assessment.
-    if risk == "LOW" and has_positive and not severe_flags and not (has_emotional or has_isolation or has_anhedonia or has_self_worth or has_masked_dep):
+    distress_flags = (
+        has_emotional or has_isolation or has_anhedonia or has_self_worth
+        or has_masked_dep or has_cat3 or has_academic or has_relationship
+        or has_school_avoid or has_hopeless or has_distortion
+    )
+    if risk in ("LOW", "MEDIUM") and has_positive and not severe_flags and not distress_flags and neg_emo_conf < 0.25:
         risk       = "LOW"
         risk_score = min(risk_score, 0.28)
         reason     = "NLP: Positive/grateful vent — no active distress indicators."

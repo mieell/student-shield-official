@@ -274,7 +274,7 @@ class AdminController extends BaseController
         // Fetch the full report record
         $report = $db->table('bully_reports')->where('id', $id)->get()->getRow();
         if (!$report) {
-            return redirect()->to('/admin/dashboard')->with('error', "Report #$id not found.");
+            return redirect()->to('/admin/incidents')->with('error', "Report #$id not found.");
         }
 
         // --- Execute Automated Parent SMS & Email Blast (Stage 2) ---
@@ -321,7 +321,7 @@ class AdminController extends BaseController
             }
         }
 
-        return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id VERIFIED. SMS gateway accepted {$smsAccepted} request(s); delivery is not yet confirmed. {$smsUnconfirmed} SMS request(s) were not confirmed. Email notifications were attempted for available contacts.");
+        return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id VERIFIED. SMS gateway accepted {$smsAccepted} request(s); delivery is not yet confirmed. {$smsUnconfirmed} SMS request(s) were not confirmed. Email notifications were attempted for available contacts.");
     }
 
     /**
@@ -408,7 +408,7 @@ class AdminController extends BaseController
             }
         }
 
-        return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id marked as unverified/fake. No parent alerts were sent.{$strikeMsg}");
+        return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id marked as unverified/fake. No parent alerts were sent.{$strikeMsg}");
     }
 
     /**
@@ -424,7 +424,7 @@ class AdminController extends BaseController
             'updated_at' => date('Y-m-d H:i:s')
         ]);
         $this->logAudit('UNDO_TO_PENDING', 'incident', (int) $id);
-        return redirect()->to('/admin/dashboard')->with('message', "Incident Report #$id has been reset to Pending Review.");
+        return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id has been reset to Pending Review.");
     }
 
     private function sendLocalSms($phone, $message, string $eventKey)
@@ -706,8 +706,12 @@ class AdminController extends BaseController
         if (!$this->hasRole(2)) return $this->forbidden();
         $back = redirect()->to(site_url('admin/pending-registrations'));
         $db = \Config\Database::connect();
+        $userUpdate = ['registration_status' => 'archived', 'is_active' => 0, 'remember_token' => null];
+        if ($this->tableHasColumn($db, 'users', 'updated_at')) {
+            $userUpdate['updated_at'] = date('Y-m-d H:i:s');
+        }
         $db->table('users')->where('id', $id)->where('role', 0)->where('registration_status', 'pending')
-            ->update(['registration_status' => 'archived', 'is_active' => 0, 'remember_token' => null, 'updated_at' => date('Y-m-d H:i:s')]);
+            ->update($userUpdate);
         if ($db->affectedRows() !== 1) {
             return $back->with('error', 'Only pending student registrations can be archived.');
         }
@@ -749,9 +753,16 @@ class AdminController extends BaseController
                 return $this->response->setStatusCode(503)->setJSON(['status' => 'error', 'message' => 'Guardian consent could not be checked.']);
             }
         }
+        $userUpdate = [
+            'registration_status' => $status,
+            'is_active' => $status === 'approved' ? 1 : 0,
+            'remember_token' => null,
+        ];
+        if ($this->tableHasColumn($db, 'users', 'updated_at')) {
+            $userUpdate['updated_at'] = date('Y-m-d H:i:s');
+        }
         $db->table('users')->where('id', $id)->where('role', 0)->where('registration_status', 'pending')
-            ->update(['registration_status' => $status, 'is_active' => $status === 'approved' ? 1 : 0,
-                'remember_token' => null, 'updated_at' => date('Y-m-d H:i:s')]);
+            ->update($userUpdate);
         if ($db->affectedRows() !== 1 || ($status === 'approved' && (!$db->transStatus() || !$db->transCommit()))) {
             if ($status === 'approved') $db->transRollback();
             return $this->response->setStatusCode(409)->setJSON(['status' => 'error', 'message' => 'Registration could not be updated.']);
@@ -761,5 +772,14 @@ class AdminController extends BaseController
             return $this->response->setJSON(['status' => 'success', 'message' => 'Registration ' . $status . '.']);
         }
         return redirect()->to('/admin/pending-registrations')->with('success', 'Registration ' . $status . '.');
+    }
+
+    private function tableHasColumn($db, string $table, string $column): bool
+    {
+        try {
+            return in_array($column, $db->getFieldNames($table), true);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }
