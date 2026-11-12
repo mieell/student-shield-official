@@ -488,12 +488,48 @@ $pageDescriptions = [
         @media (min-width: 640px) {
             .school-staff-page #meetingDropdown { position: absolute; left: auto; right: 0; top: calc(100% + 12px); width: 384px; }
         }
+        /* Stretch Alert Delivery Monitor to fill desktop height while scrolling rows inside its container. */
+        @media (min-width: 769px) {
+            body.staff-layout.staff-alerts-page {
+                height: 100vh;
+                height: 100dvh;
+                min-height: 560px;
+            }
+            body.staff-layout.staff-alerts-page > header#dashboardHeader,
+            body.staff-layout.staff-alerts-page > footer.footer-bar {
+                flex-shrink: 0;
+            }
+            body.staff-layout.staff-alerts-page #staffMain {
+                flex: 1 1 0%;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            body.staff-layout.staff-alerts-page #staffMain > .staff-page-intro {
+                flex-shrink: 0;
+            }
+            body.staff-layout.staff-alerts-page #section-alerts {
+                flex: 1 1 0%;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            body.staff-layout.staff-alerts-page #section-alerts > .section-header {
+                flex-shrink: 0;
+            }
+            body.staff-layout.staff-alerts-page #section-alerts > .alerts-table-scroll {
+                flex: 1 1 0%;
+                min-height: 0;
+                overflow-x: auto;
+                overflow-y: auto;
+            }
+        }
     </style>
     <link rel="stylesheet" href="<?= base_url('css/staff-layout.css?v=' . filemtime(FCPATH . 'css/staff-layout.css')) ?>">
 <?= view('partials/ui_polish') ?>
 </head>
 
-<body class="school-staff-page staff-layout font-sans antialiased text-gray-800 min-h-screen flex flex-col relative">
+<body class="school-staff-page staff-layout<?= $dashboardPage === 'alerts' ? ' staff-alerts-page' : '' ?> font-sans antialiased text-gray-800 min-h-screen flex flex-col relative">
 
     <?= view('partials/staff_navigation', [
         'staffPage' => $dashboardPage,
@@ -503,7 +539,7 @@ $pageDescriptions = [
     ]) ?>
 
     <!-- Main Content -->
-    <main id="staffMain" class="staff-main container mx-auto px-3 sm:px-6 max-w-full flex-1 animate-fade-in pt-4 sm:pt-6<?= $dashboardPage === 'alerts' ? ' md:flex md:flex-col pb-4 sm:pb-6' : '' ?>">
+    <main id="staffMain" class="staff-main container mx-auto px-3 sm:px-6 max-w-full flex-1 animate-fade-in pt-4 sm:pt-6">
 
         <!-- Welcome Metric Row -->
         <div class="staff-page-intro mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up"
@@ -765,7 +801,7 @@ $pageDescriptions = [
         <?php endif; ?>
 
         <?php if ($dashboardPage === 'alerts'): ?>
-        <div id="section-alerts" class="dashboard-card overflow-hidden animate-slide-up flex flex-col md:flex-1 md:min-h-0"
+        <div id="section-alerts" class="dashboard-card overflow-hidden animate-slide-up flex flex-col"
             style="animation-delay: 0.4s">
             <div class="section-header flex justify-between items-center sm:flex-row flex-col gap-4">
                 <h2 class="text-lg font-bold flex items-center gap-3">
@@ -781,7 +817,7 @@ $pageDescriptions = [
                 </div>
             </div>
 
-            <div class="overflow-x-auto overflow-y-auto custom-scrollbar md:flex-1 md:min-h-0 bg-white">
+            <div class="alerts-table-scroll overflow-x-auto overflow-y-auto custom-scrollbar bg-white">
                 <table class="w-full text-left border-collapse relative mobile-card-table">
                     <thead class="sticky top-0 thead-green z-10">
                         <tr class="text-xs uppercase tracking-wider">
@@ -801,7 +837,7 @@ $pageDescriptions = [
                 </table>
             </div>
 
-            <div class="mt-auto px-6 py-3 bg-[#f8faf9] border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+            <div class="mt-auto shrink-0 px-6 py-3 bg-[#f8faf9] border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
                 <span id="alertsCountText">Loading delivery logs...</span>
                 <span>Latest 50 recorded logs</span>
             </div>
@@ -1616,6 +1652,10 @@ $pageDescriptions = [
                 },
                 error: function (xhr) {
                     console.error("Alerts API Error:", xhr.responseText);
+                    const countEl = document.getElementById('alertsCountText');
+                    if (countEl) {
+                        countEl.textContent = 'Unable to load delivery logs';
+                    }
                 }
             });
         }
