@@ -728,6 +728,8 @@ POSITIVE_SENTIMENT = [
     r"\bnagpapasalamat\b", r"\bmemorable\b", r"\btawanan\b", r"\brandom moments\b",
     r"\bpeaceful\b", r"\bokay na muna\b", r"\blittle things\b", r"\bso much more lately\b",
     r"\bsobrang happy\b", r"\bhappy ko\b", r"\bnag-?pay off\b", r"\bfeeling blessed\b", r"\bgood vibes\b",
+    r"\bnapakasaya\b", r"\bsobrang saya\b", r"\bnakaka-?proud\b", r"\bnakaka-?inspire\b",
+    r"\bnaiiyak(?: ako)? sa tuwa\b", r"\btears of joy\b", r"\bhappy tears\b",
 ]
 
 ### COGNITIVE DISTORTIONS 
@@ -1264,6 +1266,17 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
     has_relationship = any(pat.search(scan_text) for pat in COMPILED_REGEXES['relationship']) # NEW v7.1
     has_positive     = any(pat.search(scan_text) for pat in COMPILED_REGEXES['positive'])
 
+    # Suppress standalone crying keywords when context is explicitly tears of joy/pride.
+    if has_emotional and not (
+        has_cat1 or has_passive_ideation or has_hopeless or has_isolation
+        or has_anhedonia or has_self_worth or has_masked_dep or has_distortion
+    ):
+        crying_only_pats = {r"\bnaliyak\b", r"\bnaiyak\b", r"\bnaiiyak\b", r"\bumiyak\b", r"\bumiiyak\b", r"\biyak\b"}
+        matched_emo_pats = [pat.pattern for pat in COMPILED_REGEXES['emotional'] if pat.search(scan_text)]
+        if matched_emo_pats and all(p in crying_only_pats for p in matched_emo_pats):
+            if re.search(r"\b(sa tuwa|tears of joy|happy tears|sobrang saya|napakasaya|nakaka-?proud)\b", scan_text, re.I):
+                has_emotional = False
+
     ## ┐
     ### STAGE 6: PSYCHOLOGICAL HEURISTICS                      
     ## ┘
@@ -1570,7 +1583,8 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
         or has_masked_dep or has_cat3 or has_academic or has_relationship
         or has_school_avoid or has_hopeless or has_distortion
     )
-    if risk in ("LOW", "MEDIUM") and has_positive and not severe_flags and not distress_flags and neg_emo_conf < 0.25:
+    is_positive_vent = bool(has_positive and not severe_flags and not distress_flags and neg_emo_conf < 0.25)
+    if risk in ("LOW", "MEDIUM") and is_positive_vent:
         risk       = "LOW"
         risk_score = min(risk_score, 0.28)
         reason     = "NLP: Positive/grateful vent — no active distress indicators."
@@ -1597,12 +1611,12 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
                 risk       = "HIGH"
                 risk_score = max(0.78, risk_score)
                 reason     = "HIGH ESCALATION: Persistent MEDIUM distress with repeated high-risk history. " + reason
-            elif risk == "LOW":
+            elif risk == "LOW" and not is_positive_vent:
                 risk       = "MEDIUM"
                 risk_score = max(0.45, risk_score)
                 reason     = "MEDIUM ESCALATION: Repeated high-risk history, monitoring mild vent. " + reason
         elif trajectory == "ESCALATING":
-            if risk == "LOW":
+            if risk == "LOW" and not is_positive_vent:
                 risk       = "MEDIUM"
                 risk_score = max(0.45, risk_score)
                 reason     = "MEDIUM ESCALATION: Repeated worsening emotional distress over 14 days. " + reason
