@@ -91,6 +91,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/admin/api/pending-registrations', 'AdminController::pendingRegistrationCount');
     $routes->get('/admin/pending-registrations', 'AdminController::pendingRegistrations');
     $routes->post('/admin/registrations/(:num)/send-consent', 'GuardianConsentController::send/$1');
+    $routes->post('/admin/registrations/(:num)/archive', 'AdminController::archiveRegistration/$1');
     $routes->post('/admin/approve-student/(:num)', 'AdminController::approveStudent/$1');
     $routes->post('/admin/reject-student/(:num)', 'AdminController::rejectStudent/$1');
 

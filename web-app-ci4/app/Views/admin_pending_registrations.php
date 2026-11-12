@@ -84,6 +84,10 @@
         .registration-contact > div { max-width: 16rem; overflow-wrap: anywhere; }
         .registration-contact svg { flex-shrink: 0; }
         .guardian-verification { min-width: 18rem; max-width: 28rem; margin: 0 auto; padding: 1rem; background: #f7fbf8; border: 1px solid #cfe2d4; border-radius: 12px; text-align: left; }
+        .registration-actions .consent-action { display: inline-flex; align-items: center; min-height: 40px; padding: .5rem .85rem; border-radius: 8px; font-size: .8rem; }
+        .registration-actions .archive-action { margin-top: .65rem; color: #41584b; border: 1px solid #becfc3; background: #fff; }
+        .registration-actions .archive-action:hover { background: #edf4ef; }
+        .registration-actions summary { cursor: pointer; font-size: .8rem; color: #174d30; padding: .55rem; }
         .guardian-verification h3 { color: #174d30; font-size: .9rem; font-weight: 700; }
         .guardian-verification p { margin-top: .2rem; color: #526b5b; font-size: .75rem; line-height: 1.45; }
         .guardian-verification .guardian-field { margin-top: .75rem; }
@@ -189,7 +193,7 @@
                 <form method="get" class="flex gap-2.5 items-center flex-wrap">
                     <label for="registrationStatus" class="text-xs font-semibold text-gray-600">Status:</label>
                     <select id="registrationStatus" name="status" class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 bg-white font-medium cursor-pointer transition-all">
-                        <?php foreach (['pending' => 'Pending Review', 'approved' => 'Approved Accounts', 'rejected' => 'Rejected Requests'] as $statusVal => $statusLabel): ?>
+                        <?php foreach (['pending' => 'Pending Review', 'approved' => 'Approved Accounts', 'rejected' => 'Rejected Requests', 'archived' => 'Archived Requests'] as $statusVal => $statusLabel): ?>
                             <option value="<?= $statusVal ?>" <?= $registrationStatus === $statusVal ? 'selected' : '' ?>><?= esc($statusLabel) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -297,7 +301,7 @@
                                 </td>
                                 <td data-label="Action" class="registration-actions px-6 py-4 text-center">
                                     <?php if (!empty($student['verified_phone'])): ?>
-                                        <div class="text-xs mb-2 space-y-1">
+                                        <div class="text-xs mb-3 space-y-1 leading-relaxed">
                                             <p>Verified number: <?= esc($student['verified_phone']) ?></p>
                                             <p>Guardian on school record: <?= esc($student['verified_name']) ?></p>
                                             <p class="font-semibold"><?= esc(match ($student['response']) {
@@ -320,11 +324,15 @@
                                         <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="use_verified" value="1">
-                                            <button type="submit" name="delivery" value="manual" class="approve-btn font-semibold" onclick="return confirm('Generate a new consent link? Any previous link will stop working.')">Generate new consent link</button>
+                                            <button type="submit" name="delivery" value="manual" class="approve-btn consent-action font-semibold" onclick="return confirm('Generate a new consent link? Any previous link will stop working.')">Generate replacement link</button>
+                                            <p class="text-xs mt-1">Share privately if SMS delivery is uncertain.</p>
                                         </form>
                                     <?php endif; ?>
 
-                                    <?php if ($canVerifyContact && \App\Libraries\GuardianConsent::canSend($student['requested_at'] ? $student : null, time())): ?>
+                                    <?php if ($canVerifyContact && empty($student['response'])):
+                                        $canSendSms = \App\Libraries\GuardianConsent::canSend($student['requested_at'] ? $student : null, time()); ?>
+                                        <details <?= empty($student['verified_phone']) ? 'open' : '' ?>>
+                                        <summary>Verify or update guardian contact</summary>
                                         <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="guardian-verification">
                                             <?= csrf_field() ?>
                                             <h3>Verify guardian contact</h3>
@@ -339,11 +347,12 @@
                                                 <input type="checkbox" name="checked_records" value="1" required>
                                                 <span>I confirmed the guardian and this number against current school records.</span>
                                             </label>
-                                            <button type="submit" class="approve-btn font-semibold">Send consent link by SMS</button>
-                                            <?php if (empty($student['verified_phone'])): ?>
-                                            <button type="submit" name="delivery" value="manual" class="approve-btn font-semibold">Generate link for private sharing</button>
+                                            <?php if ($canSendSms): ?>
+                                            <button type="submit" name="delivery" value="sms" class="approve-btn font-semibold">Send consent link by SMS</button>
                                             <?php endif; ?>
+                                            <button type="submit" name="delivery" value="manual" class="approve-btn font-semibold">Generate link for private sharing</button>
                                         </form>
+                                        </details>
                                     <?php endif; ?>
                                     <?php if (!$canVerifyContact): ?>
                                     <?php if (!$student['requested_at']): ?><p class="text-xs mb-2">Waiting for Super Admin to verify the guardian contact.</p><?php endif; ?>
@@ -365,6 +374,12 @@
                                     </div>
                                     <?php elseif ($student['response'] === 'accepted'): ?>
                                         <p class="text-xs">Waiting for counselor approval.</p>
+                                    <?php endif; ?>
+                                    <?php if ($canVerifyContact): ?>
+                                        <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/archive'), 'attr') ?>" onsubmit="return confirm('Archive this registration? Any outstanding consent link will close.')">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="consent-action archive-action">Archive registration</button>
+                                        </form>
                                     <?php endif; ?>
                                     <?php else: ?><span class="text-sm text-gray-500">Decision recorded</span><?php endif; ?>
                                 </td>

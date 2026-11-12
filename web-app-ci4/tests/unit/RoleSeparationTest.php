@@ -138,6 +138,21 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertNull($this->rbacDb->table('bully_reports')->where('id', 1)->get()->getRowArray()['deleted_at']);
     }
 
+    public function testSuperAdminCanArchiveOnlyPendingStudentRegistrations(): void
+    {
+        $path = 'admin/registrations/12/archive';
+        $this->login(1);
+        $this->assertFalse(RoleAccess::allows(1, $path));
+        $this->assertSame(403, $this->controller(AdminController::class, $path)->archiveRegistration(12)->getStatusCode());
+        $this->login(2);
+        $this->assertTrue(RoleAccess::allows(2, $path));
+        $controller = $this->controller(AdminController::class, $path);
+        $controller->archiveRegistration(12);
+        $controller->archiveRegistration(10);
+        $this->assertSame('archived', $this->rbacDb->table('users')->where('id', 12)->get()->getRowArray()['registration_status']);
+        $this->assertSame('approved', $this->rbacDb->table('users')->where('id', 10)->get()->getRowArray()['registration_status']);
+    }
+
     public function testRegistrationNotificationTracksOnlyPendingStudents(): void
     {
         $this->login(1);

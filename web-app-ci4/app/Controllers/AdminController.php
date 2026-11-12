@@ -674,7 +674,7 @@ class AdminController extends BaseController
         $db = \Config\Database::connect();
 
         $registrationStatus = (string) ($this->request->getGet('status') ?? 'pending');
-        if (!in_array($registrationStatus, ['pending', 'approved', 'rejected'], true)) return $this->response->setStatusCode(422);
+        if (!in_array($registrationStatus, ['pending', 'approved', 'rejected', 'archived'], true)) return $this->response->setStatusCode(422);
         $pendingUsers = [];
         try {
             $pendingUsers = $db->table('users')
@@ -701,6 +701,20 @@ class AdminController extends BaseController
     /**
      * Approve a pending student account.
      */
+    public function archiveRegistration(int $id)
+    {
+        if (!$this->hasRole(2)) return $this->forbidden();
+        $back = redirect()->to(site_url('admin/pending-registrations'));
+        $db = \Config\Database::connect();
+        $db->table('users')->where('id', $id)->where('role', 0)->where('registration_status', 'pending')
+            ->update(['registration_status' => 'archived', 'is_active' => 0, 'remember_token' => null, 'updated_at' => date('Y-m-d H:i:s')]);
+        if ($db->affectedRows() !== 1) {
+            return $back->with('error', 'Only pending student registrations can be archived.');
+        }
+        $this->logAudit('STUDENT_REGISTRATION_ARCHIVED', 'user', $id);
+        return $back->with('success', 'Registration archived. Any outstanding consent link is closed.');
+    }
+
     public function approveStudent($userId)
     {
         return $this->decideRegistration((int) $userId, 'approved');
