@@ -92,6 +92,7 @@
         }
         /* WCAG AA fix: placeholder raised to 0.85 opacity */
         .input-dark::placeholder { color: rgba(255,255,255,0.75); }
+        #password::placeholder { color: #ffffff; opacity: 1; }
 
         /* Gold gradient button */
         .submit-btn {
