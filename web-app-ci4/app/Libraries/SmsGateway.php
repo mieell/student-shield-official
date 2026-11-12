@@ -46,6 +46,9 @@ class SmsGateway
                 $response = $this->request(['api_token' => $token, 'phone_number' => $phone, 'message' => $message]);
                 $result = $unknown;
                 $result['http_status'] = (int) ($response['status'] ?? 0);
+                if ($result['http_status'] === 0 && !empty($response['curl_errno'])) {
+                    log_message('warning', 'iProg SMS connection failed: cURL error {number}.', ['number' => (int) $response['curl_errno']]);
+                }
                 $body = json_decode((string) ($response['body'] ?? ''), true);
                 if ($result['http_status'] >= 200 && $result['http_status'] < 300 && is_array($body)
                     && (int) ($body['status'] ?? 0) === 200 && is_string($body['message_id'] ?? null)
@@ -55,9 +58,17 @@ class SmsGateway
                     $result['state'] = 'Queued';
                 } elseif ($result['http_status'] >= 400 && $result['http_status'] < 500 && $result['http_status'] !== 408 && $result['http_status'] !== 429) {
                     $result['state'] = 'Rejected';
+                } elseif ($result['http_status'] >= 200 && $result['http_status'] < 300) {
+                    log_message('warning', 'iProg SMS response could not be confirmed (HTTP {status}; JSON {json}; status field {statusField}; message ID {messageId}).', [
+                        'status' => $result['http_status'],
+                        'json' => is_array($body) ? 'yes' : 'no',
+                        'statusField' => is_array($body) && isset($body['status']) ? (string) (int) $body['status'] : 'missing',
+                        'messageId' => is_array($body) && isset($body['message_id']) ? gettype($body['message_id']) : 'missing',
+                    ]);
                 }
             } catch (\Throwable $e) {
                 $result = $unknown;
+                log_message('warning', 'iProg SMS request raised an exception ({type}).', ['type' => get_class($e)]);
             }
             rewind($file);
             if (!ftruncate($file, 0) || fwrite($file, json_encode($result, JSON_THROW_ON_ERROR)) === false || !fflush($file)) return $unknown;
@@ -87,7 +98,7 @@ class SmsGateway
                 },
             ]);
             $ok = curl_exec($curl);
-            return ['status' => $ok === false ? 0 : (int) curl_getinfo($curl, CURLINFO_HTTP_CODE), 'body' => $body];
+            return ['status' => $ok === false ? 0 : (int) curl_getinfo($curl, CURLINFO_HTTP_CODE), 'body' => $body, 'curl_errno' => $ok === false ? curl_errno($curl) : 0];
         } finally {
             curl_close($curl);
         }
