@@ -503,7 +503,7 @@ $pageDescriptions = [
     ]) ?>
 
     <!-- Main Content -->
-    <main id="staffMain" class="staff-main container mx-auto px-3 sm:px-6 max-w-full flex-1 animate-fade-in pt-4 sm:pt-6">
+    <main id="staffMain" class="staff-main container mx-auto px-3 sm:px-6 max-w-full flex-1 animate-fade-in pt-4 sm:pt-6<?= $dashboardPage === 'alerts' ? ' md:flex md:flex-col pb-4 sm:pb-6' : '' ?>">
 
         <!-- Welcome Metric Row -->
         <div class="staff-page-intro mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up"
@@ -765,7 +765,7 @@ $pageDescriptions = [
         <?php endif; ?>
 
         <?php if ($dashboardPage === 'alerts'): ?>
-        <div id="section-alerts" class="dashboard-card overflow-hidden animate-slide-up flex flex-col"
+        <div id="section-alerts" class="dashboard-card overflow-hidden animate-slide-up flex flex-col md:flex-1 md:min-h-0"
             style="animation-delay: 0.4s">
             <div class="section-header flex justify-between items-center sm:flex-row flex-col gap-4">
                 <h2 class="text-lg font-bold flex items-center gap-3">
@@ -781,7 +781,7 @@ $pageDescriptions = [
                 </div>
             </div>
 
-            <div class="overflow-x-auto custom-scrollbar flex flex-col max-h-[340px]">
+            <div class="overflow-x-auto overflow-y-auto custom-scrollbar md:flex-1 md:min-h-0 bg-white">
                 <table class="w-full text-left border-collapse relative mobile-card-table">
                     <thead class="sticky top-0 thead-green z-10">
                         <tr class="text-xs uppercase tracking-wider">
@@ -799,6 +799,11 @@ $pageDescriptions = [
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="mt-auto px-6 py-3 bg-[#f8faf9] border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+                <span id="alertsCountText">Loading delivery logs...</span>
+                <span>Latest 50 recorded logs</span>
             </div>
         </div>
 
@@ -1602,6 +1607,12 @@ $pageDescriptions = [
                         });
                     }
                     document.getElementById('alertsTableBody').innerHTML = html;
+                    const countEl = document.getElementById('alertsCountText');
+                    if (countEl) {
+                        countEl.textContent = data.length === 0
+                            ? 'No recorded notification attempts yet'
+                            : `Showing ${data.length} recorded alert log${data.length === 1 ? '' : 's'}`;
+                    }
                 },
                 error: function (xhr) {
                     console.error("Alerts API Error:", xhr.responseText);
