@@ -769,9 +769,9 @@ $pageDescriptions = [
                     <p class="text-xs text-gray-500 mt-0.5">Students requesting 1-on-1 counselor meetings or virtual
                         sessions</p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 shrink-0">
                     <span id="sessionSectionCountBadge"
-                        class="px-3 py-1 rounded-full text-xs font-bold bg-[#dcfce7] text-[#235D3A] border border-[#bbf7d0]">
+                        class="px-3 py-1 rounded-full text-xs font-bold bg-[#dcfce7] text-[#235D3A] border border-[#bbf7d0] shrink-0 whitespace-nowrap">
                         <?= esc($pending_meetings_count ?? 0) ?> Pending
                     </span>
                 </div>
@@ -811,7 +811,7 @@ $pageDescriptions = [
                     </svg>
                     Alert Delivery Monitor
                 </h2>
-                <div class="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200">
+                <div class="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 shrink-0 whitespace-nowrap">
                     <span class="w-2 h-2 rounded-full bg-blue-500 live-dot"></span>
                     <span class="text-[10px] font-bold text-blue-700 uppercase tracking-widest">System Log</span>
                 </div>
@@ -837,7 +837,7 @@ $pageDescriptions = [
                 </table>
             </div>
 
-            <div class="mt-auto shrink-0 px-6 py-3 bg-[#f8faf9] border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+            <div class="mt-auto shrink-0 px-4 sm:px-6 py-3 bg-[#f8faf9] border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
                 <span id="alertsCountText">Loading delivery logs...</span>
                 <span>Latest 50 recorded logs</span>
             </div>
@@ -847,10 +847,10 @@ $pageDescriptions = [
         <?php endif; ?>
 
         <?php if ($dashboardPage === 'analytics'): ?>
-        <div id="section-charts" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-2 animate-slide-up"
+        <div id="section-charts" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-2 animate-slide-up"
             style="animation-delay: 0.5s">
-            <div class="dashboard-card p-6">
-                <div class="flex justify-between items-center mb-6">
+            <div class="dashboard-card p-4 sm:p-6">
+                <div class="flex justify-between items-center mb-4 sm:mb-6">
                     <h2 class="text-base font-semibold text-[#235D3A] flex items-center gap-2">
                         <svg class="h-5 w-5 text-[#F2C300]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -865,8 +865,8 @@ $pageDescriptions = [
                     <canvas id="riskPieChart"></canvas>
                 </div>
             </div>
-            <div class="dashboard-card p-6">
-                <div class="flex justify-between items-center mb-6">
+            <div class="dashboard-card p-4 sm:p-6">
+                <div class="flex justify-between items-center mb-4 sm:mb-6">
                     <h2 class="text-base font-semibold text-[#235D3A] flex items-center gap-2">
                         <svg class="h-5 w-5 text-[#F2C300]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -875,7 +875,7 @@ $pageDescriptions = [
                         Last 7 Days Volume
                     </h2>
                 </div>
-                <div class="relative h-64 w-full">
+                <div class="relative min-h-[245px] sm:min-h-[256px] w-full">
                     <div id="ventsBarChart"></div>
                 </div>
             </div>
@@ -897,11 +897,11 @@ $pageDescriptions = [
                     <div id="modalBadge"
                         class="inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-2 border">
                     </div>
-                    <h2 id="modalTitle" class="text-2xl font-heading font-extrabold text-[#235D3A] tracking-tight">
+                    <h2 id="modalTitle" class="text-xl sm:text-2xl font-heading font-extrabold text-[#235D3A] tracking-tight">
                         Report Details</h2>
                 </div>
                 <button onclick="closeDetailModal()"
-                    class="text-gray-500 hover:text-red-500 transition-colors p-2 bg-gray-50 hover:bg-red-50 rounded-full">
+                    class="text-gray-500 hover:text-red-500 transition-colors p-2 bg-gray-50 hover:bg-red-50 rounded-full min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
                         </path>
@@ -909,7 +909,7 @@ $pageDescriptions = [
                 </button>
             </div>
 
-            <div class="flex items-center gap-6 mb-6 pb-6 border-b border-gray-200 shrink-0">
+            <div class="flex flex-wrap items-start gap-x-6 gap-y-3 mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-gray-200 shrink-0">
                 <div>
                     <p class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1">Involved Party /
                         Sender</p>
@@ -924,7 +924,7 @@ $pageDescriptions = [
             <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 pb-4">
                 <p class="text-[11px] font-bold text-[#235D3A] uppercase tracking-widest mb-2">Full Context Payload</p>
                 <div id="modalContent"
-                    class="text-[16px] leading-[1.85] tracking-wide text-gray-800 bg-[#f8faf6] border border-[#e5ebe5] shadow-inner p-7 rounded-2xl whitespace-pre-wrap font-medium">
+                    class="text-[15px] sm:text-[16px] leading-[1.75] sm:leading-[1.85] tracking-wide text-gray-800 bg-[#f8faf6] border border-[#e5ebe5] shadow-inner p-4 sm:p-7 rounded-xl sm:rounded-2xl whitespace-pre-wrap font-medium">
                     --
                 </div>
                 <div id="modalEvidenceContainer" class="mt-4 hidden">
@@ -939,7 +939,7 @@ $pageDescriptions = [
                     </div>
 
                     <a id="modalEvidenceLink" href="#" target="_blank"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors font-semibold text-sm w-full justify-center">
+                        class="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors font-semibold text-sm w-full justify-center">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -951,7 +951,7 @@ $pageDescriptions = [
 
             </div><div class="px-5 sm:px-7 py-4 border-t border-gray-200 flex justify-end shrink-0 bg-white">
                 <button onclick="closeDetailModal()"
-                    class="px-6 py-3 bg-primary hover:bg-primary-darker text-white text-sm font-bold rounded-xl transition-colors shadow-sm">Confirm
+                    class="w-full sm:w-auto min-h-[44px] px-6 py-3 bg-primary hover:bg-primary-darker text-white text-sm font-bold rounded-xl transition-colors shadow-sm">Confirm
                     & Close</button>
             </div>
         </div>
@@ -1002,7 +1002,7 @@ $pageDescriptions = [
                     legend: {
                         position: 'bottom',
                         labels: {
-                            usePointStyle: true, padding: 20, font: { size: 13 },
+                            usePointStyle: true, padding: window.innerWidth < 480 ? 12 : 20, font: { size: window.innerWidth < 480 ? 11 : 13 },
                             generateLabels(chart) {
                                 const counts = chart.data.datasets[0].data;
                                 return Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart)
@@ -1064,7 +1064,15 @@ $pageDescriptions = [
                 borderColor: 'rgba(0,0,0,0.05)',
                 strokeDashArray: 4,
                 yaxis: { lines: { show: true } }
-            }
+            },
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    chart: { height: 225 },
+                    yaxis: { title: { text: undefined } },
+                    xaxis: { labels: { style: { fontSize: '10px' } } }
+                }
+            }]
         };
 
         let areaChart = barCtx ? new ApexCharts(barCtx, barConfig) : null;
@@ -2052,9 +2060,9 @@ $pageDescriptions = [
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
                             <span class="text-xs text-gray-400">Counseling Request</span>
-                            <a href="${link}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#235D3A] hover:bg-[#19452B] text-white text-xs font-semibold shadow-sm transition-colors">
+                            <a href="${link}" class="inline-flex items-center justify-center gap-1 w-full sm:w-auto min-h-[44px] px-3.5 py-2 rounded-lg bg-[#235D3A] hover:bg-[#19452B] text-white text-xs font-semibold shadow-sm transition-colors">
                                 View Case & Connect →
                             </a>
                         </div>

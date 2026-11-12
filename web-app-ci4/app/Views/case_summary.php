@@ -159,8 +159,8 @@
 <body class="school-staff-page font-sans antialiased text-gray-900 leading-normal">
 
     <!-- Header Navigation (Non-print) -->
-    <header class="glass-header no-print bg-primary border-b-4 border-[#EAB308] text-white py-3 px-6 md:px-8 flex justify-between items-center shadow-md">
-        <div class="flex items-center gap-4">
+    <header class="glass-header no-print bg-primary border-b-4 border-[#EAB308] text-white py-3 px-4 sm:px-6 md:px-8 flex flex-wrap justify-between items-center gap-2 sm:gap-4 shadow-md">
+        <div class="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
             <a href="/admin/dashboard" class="text-white hover:text-[#EAB308] transition-colors flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -169,21 +169,21 @@
             <div class="flex items-center gap-3">
                 <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="h-9 w-9 object-contain">
                 <div>
-                    <h1 class="font-heading font-extrabold text-sm tracking-wider uppercase leading-none">St. Vincent Blessed School of Manila</h1>
+                    <h1 class="font-heading font-extrabold text-xs sm:text-sm tracking-wider uppercase leading-tight">St. Vincent Blessed School of Manila</h1>
                     <p class="text-[9px] text-[#EAB308] font-bold uppercase tracking-widest mt-0.5">StudentShield Portal</p>
                 </div>
             </div>
         </div>
-        <div class="flex items-center gap-3">
-            <button onclick="window.print()" class="bg-[#EAB308] hover:bg-[#D9AA2E] text-slate-900 font-bold px-4 py-2 rounded-xl text-xs transition-all flex items-center gap-2 shadow cursor-pointer">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button onclick="window.print()" class="bg-[#EAB308] hover:bg-[#D9AA2E] text-slate-900 font-bold px-3 sm:px-4 py-2 min-h-[40px] rounded-xl text-xs transition-all flex items-center gap-1.5 sm:gap-2 shadow cursor-pointer whitespace-nowrap">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
-                Print / Export PDF
+                <span class="hidden sm:inline">Print / Export PDF</span><span class="sm:hidden">Print</span>
             </button>
             <form action="<?= base_url('logout') ?>" method="POST" class="inline">
                 <?= csrf_field() ?>
-                <button type="submit" class="flex items-center gap-1.5 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-white rounded-xl border border-red-500/30 text-xs font-semibold transition-all cursor-pointer shadow">
+                <button type="submit" class="flex items-center gap-1.5 px-3 py-2 min-h-[40px] bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-white rounded-xl border border-red-500/30 text-xs font-semibold transition-all cursor-pointer shadow whitespace-nowrap">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>

@@ -129,7 +129,7 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout #meetingBellBtn { color: white; background: #ffffff12; border-color: #ffffff40; width: 44px; min-height: 44px; }
     .staff-layout #meetingBellBtn:hover { background: #ffffff25; }
     .staff-layout #meetingBellBtn > span:not(#meetingBadge) { display: none; }
-    .staff-layout #staffMain { padding: 18px 12px calc(88px + env(safe-area-inset-bottom)) !important; }
+    .staff-layout #staffMain { padding: 18px 12px 24px !important; }
     .staff-layout .staff-page-intro { gap: 16px; margin-bottom: 18px; }
     .staff-layout .staff-page-intro h2, .staff-layout .staff-page-heading h2 { font-size: 24px; line-height: 1.25; letter-spacing: -.6px; }
     .staff-layout .staff-page-intro p, .staff-layout .staff-page-heading p { font-size: 13px; line-height: 1.5; }
@@ -153,7 +153,7 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout .staff-filter-toggle:hover { background: #edf6ef; border-color: #235d3a; }
     .staff-filter-toggle.has-active-filters::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #d9aa2e; }
     .staff-layout .staff-filter-bar input, .staff-layout .staff-filter-bar select, .staff-layout .staff-filter-controls button { min-height: 44px; border-radius: 8px; }
-    .staff-layout .staff-filter-bar > .delete-btn-vents, .staff-layout .staff-filter-bar > .delete-btn-incidents { grid-column: 1 / -1; }
+    .staff-layout .staff-filter-bar > :is(.delete-btn-vents, .delete-btn-incidents) { grid-column: 1 / -1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
     .staff-layout #section-vents { background: transparent; border: 0; box-shadow: none; overflow: visible; }
     .staff-layout #section-vents .staff-filter-bar { background: white; border: 1px solid #e2e8e5; border-radius: 12px; margin-bottom: 12px; }
     .staff-layout .staff-vents-table, .staff-layout .staff-vents-table tbody { min-width: 0; width: 100%; }
@@ -189,6 +189,11 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout .staff-review-button:hover { background: #09652c; }
     .staff-layout .mobile-card-table td::before { text-transform: none; letter-spacing: 0; font-size: 11px; color: #61756b; font-weight: 500; }
     .staff-layout .mobile-card-table tbody tr.tbl-row-hidden { display: none !important; }
+    .staff-layout .mobile-card-table tr.show-all-row { grid-template-columns: minmax(0, 1fr) !important; padding: 4px !important; border: 1px dashed #cfd9d4 !important; background: #f8faf9 !important; box-shadow: none !important; }
+    .staff-layout .mobile-card-table tr.show-all-row td { grid-column: 1 / -1 !important; padding: 0 !important; background: transparent !important; }
+    .staff-layout .mobile-card-table tr.show-all-row td::before, .staff-layout .mobile-card-table td[colspan]::before { display: none !important; }
+    .staff-layout .mobile-card-table tr.show-all-row button { width: 100%; min-height: 44px; justify-content: center; padding: 10px 14px; font-size: 13px; }
+    .staff-layout .mobile-card-table td[colspan] { grid-column: 1 / -1 !important; text-align: center !important; padding: 24px 16px !important; background: transparent !important; }
     .staff-layout #section-incidents .mobile-card-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 16px; box-shadow: none; border: 1px solid #e2e8e5; border-radius: 12px; background: white; margin-bottom: 12px; }
     .staff-layout #section-incidents .mobile-card-table td { padding: 0 !important; grid-column: 1 / -1; white-space: normal; min-width: 0; border: 0; }
     .staff-layout #section-incidents td[data-label="Reporter"] { grid-column: 1; grid-row: 1; }
@@ -215,7 +220,18 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout #section-incidents td[data-label="Action"] form:last-child button { background: white; border: 1px solid #cfd9d4; color: #526259; }
     .staff-layout #section-incidents td[data-label="Select"]::before, .staff-layout #section-incidents td[data-label="Reporter"]::before, .staff-layout #section-incidents td[data-label="Action"]::before { display: none; }
     .staff-layout #section-incidents td[data-label="Action"] button, .staff-layout #section-incidents td[data-label="Action"] a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
-    .staff-layout #section-alerts .mobile-card-table td { white-space: normal; overflow-wrap: anywhere; }
+    .staff-layout #section-alerts .alerts-table-scroll { background: #f4f7f5; overflow-y: visible; }
+    .staff-layout #section-alerts .mobile-card-table tbody { display: grid; gap: 12px; padding: 12px; background: #f4f7f5; }
+    .staff-layout #section-alerts .mobile-card-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; padding: 14px; margin-bottom: 0; border: 1px solid #d8e3db; border-radius: 14px; background: white; box-shadow: 0 3px 10px -8px #173e2540; }
+    .staff-layout #section-alerts .mobile-card-table td { display: flex; flex-direction: column; padding: 0 !important; min-width: 0; border: 0; text-align: left !important; white-space: normal; overflow-wrap: anywhere; background: transparent; }
+    .staff-layout #section-alerts td[data-label="Method"] { grid-column: 1; grid-row: 1; align-items: flex-start; }
+    .staff-layout #section-alerts td[data-label="Timestamp"] { grid-column: 2; grid-row: 1; align-items: flex-end; justify-content: center; text-align: right !important; font-size: 11px; color: #61756b; white-space: nowrap; }
+    .staff-layout #section-alerts td[data-label="Method"]::before, .staff-layout #section-alerts td[data-label="Timestamp"]::before { display: none; }
+    .staff-layout #section-alerts td[data-label="Recipient"] { grid-column: 1 / -1; grid-row: 2; gap: 2px; font-size: 14px; font-weight: 600; color: #212825; }
+    .staff-layout #section-alerts td[data-label="Payload / Message"] { grid-column: 1 / -1; grid-row: 3; padding: 12px !important; border: 1px solid #e2e8e5; border-radius: 10px; background: #f7faf8; gap: 6px; }
+    .staff-layout #section-alerts td[data-label="Payload / Message"]::before { content: 'Message'; }
+    .staff-layout #section-alerts td[data-label="Payload / Message"] p { font-style: normal; font-size: 13px; line-height: 1.55; color: #3d4943; }
+    .staff-layout #section-alerts td[data-label="Payload / Message"] > span { opacity: 1; min-height: 28px; display: inline-flex; align-items: center; margin-top: 2px; }
     .staff-layout .user-card .truncate { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
     .staff-layout .user-card .uppercase { text-transform: none; letter-spacing: 0; font-weight: 500; }
     .staff-layout #logsTable, .staff-layout #logsTable tbody { display: block; width: 100%; }
@@ -303,10 +319,22 @@ body.staff-layout #staffMain :is(h1, h2, h3, h4) { font-family: 'Nunito', sans-s
 .staff-registration-notice .staff-nav-count { margin-left: 0; }
 .staff-registration-notice [hidden], #navRegistrationsBadge[hidden] { display: none !important; }
 @media (max-width: 767px) { .staff-registration-label { display: none; } .staff-registration-notice { padding: 8px; } }
+@media (hover: none) {
+    .staff-layout #section-alerts td[data-label="Payload / Message"] > span,
+    .staff-layout #section-incidents td[data-label="Description"] > span { opacity: 1; }
+}
 @media (max-width: 420px) {
     .staff-layout .staff-topbar-tools:has(.staff-registration-notice) .staff-clock { display: none; }
     .staff-layout .staff-mobile-brand { min-width: 0; }
     .staff-layout .staff-mobile-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .staff-layout .staff-metrics .stat-card { padding: 10px 8px; }
+    .staff-layout .stat-card [id^="stat-"] { font-size: 20px; }
+}
+@media (max-width: 360px) {
+    .staff-layout #section-alerts .mobile-card-table tbody tr { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .staff-layout #section-alerts td[data-label="Timestamp"] { grid-column: 1; grid-row: 2; align-items: flex-start; text-align: left !important; white-space: normal; }
+    .staff-layout #section-alerts td[data-label="Recipient"] { grid-row: 3; }
+    .staff-layout #section-alerts td[data-label="Payload / Message"] { grid-row: 4; }
 }
 
 /* Quiet school identity details shared by the staff workspaces. */
