@@ -420,7 +420,7 @@
             <div>
                 <p class="text-blue-800 text-sm font-semibold">Approval Policy</p>
                 <p class="text-blue-700 text-xs mt-0.5 leading-relaxed">
-                    Only Guidance Counselors can approve registrations. Review the guardian name against school records before approval. Students with a missing or unsafe contact can reach the Guidance Office for help with verification.
+                    Super Admin verifies guardian contact details against school records. After the guardian gives consent, only a Guidance Counselor can approve the registration. Students who lack a safe guardian contact can ask the Guidance Office for help.
                 </p>
             </div>
         </div>
