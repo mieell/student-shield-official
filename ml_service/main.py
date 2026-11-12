@@ -247,6 +247,26 @@ class MLResponse(BaseModel):
 
 # HELPER FUNCTIONS
 
+_POSITIVE_EMO_WEIGHTS = {
+    "gratitude": 0.85, "joy": 0.80, "optimism": 0.75, "love": 0.70,
+    "excitement": 0.65, "amusement": 0.55, "admiration": 0.50, "pride": 0.45,
+    "relief": 0.40, "caring": 0.35, "approval": 0.30,
+}
+
+
+def _get_positive_emotion_conf(translated_text: str) -> float:
+    """Safely inspect go_emotions positive confidence without altering get_risk_components' signature."""
+    try:
+        if not translated_text or not translated_text.strip():
+            return 0.0
+        emo_result = emotion_classifier(translated_text[:1500])[0]
+        if not isinstance(emo_result, dict):
+            return 0.0
+        return _POSITIVE_EMO_WEIGHTS.get(emo_result.get("label"), 0.0) * float(emo_result.get("score", 0.0))
+    except Exception:
+        return 0.0
+
+
 def get_risk_components(translated_text: str, normalized_text: str) -> tuple[float, float]:
     try:
         max_distress_conf = 0.0
@@ -262,11 +282,7 @@ def get_risk_components(translated_text: str, normalized_text: str) -> tuple[flo
             "fascination": 0.0, "gratitude": 0.0, "love": 0.0, "optimism": 0.0,
             "pride": 0.0, "realization": 0.0, "relief": 0.0
         }
-        positive_emotion_weights = {
-            "gratitude": 0.85, "joy": 0.80, "optimism": 0.75, "love": 0.70,
-            "excitement": 0.65, "amusement": 0.55, "admiration": 0.50, "pride": 0.45,
-            "relief": 0.40, "caring": 0.35, "approval": 0.30,
-        }
+        positive_emotion_weights = _POSITIVE_EMO_WEIGHTS
 
         trans_sentences = nltk.sent_tokenize(translated_text)
         norm_sentences = nltk.sent_tokenize(normalized_text)
@@ -730,6 +746,12 @@ POSITIVE_SENTIMENT = [
     r"\bsobrang happy\b", r"\bhappy ko\b", r"\bnag-?pay off\b", r"\bfeeling blessed\b", r"\bgood vibes\b",
     r"\bnapakasaya\b", r"\bsobrang saya\b", r"\bnakaka-?proud\b", r"\bnakaka-?inspire\b",
     r"\bnaiiyak(?: ako)? sa tuwa\b", r"\btears of joy\b", r"\bhappy tears\b",
+    r"(?<!\bnot )(?<!\bhindi )(?<!\bdi )(?<!\bwalang )\bhappy\b",
+    r"(?<!\bnot )(?<!\bhindi )(?<!\bdi )(?<!\bwalang )\bmasaya\b",
+    r"\byay\b", r"\byey\b", r"\bsobrang slay\b", r"\bslay\b",
+    r"\bfeeling good\b", r"\bfeeling great\b", r"\bawesome\b", r"\bamazing\b",
+    r"\bna-upgrade\b", r"\bswerte\b", r"\bpanalo\b", r"\bproud\b",
+    r"\bnakakatuwa\b", r"\bnatutuwa\b",
 ]
 
 ### COGNITIVE DISTORTIONS 
@@ -1301,12 +1323,13 @@ def _apply_rule_engine(
     risk_score: float,
     distress_conf: float,
     neg_emo_conf: float,
+    pos_emo_conf: float,
     scan_text: str,
     flags: dict[str, bool],
     violent_threat,
     expert_reasoning: list[str],
     signal_count: int,
-) -> tuple[str, float, str, bool]:
+) -> tuple[str, float, str]:
     """Run Stage 7 priority rules and Stage 7.5 positive vent guard."""
     risk = "LOW"
     reason = "NLP: No severe negativity detected."
@@ -1505,13 +1528,18 @@ def _apply_rule_engine(
             "cat3", "academic", "relationship", "school_avoid", "hope", "dist",
         )
     )
-    is_positive_vent = bool(flags["positive"] and not severe_flags and not distress_flags and neg_emo_conf < 0.25)
+    is_positive_vent = bool(
+        (flags["positive"] or pos_emo_conf >= 0.40)
+        and not severe_flags
+        and not distress_flags
+        and neg_emo_conf < 0.45
+    )
     if risk in ("LOW", "MEDIUM") and is_positive_vent:
         risk = "LOW"
         risk_score = min(risk_score, 0.28)
         reason = "NLP: Positive/grateful vent — no active distress indicators."
 
-    return risk, risk_score, reason, is_positive_vent
+    return risk, risk_score, reason
 
 
 def _apply_risk_history_escalation(
@@ -1520,7 +1548,6 @@ def _apply_risk_history_escalation(
     risk: str,
     risk_score: float,
     reason: str,
-    is_positive_vent: bool,
 ) -> tuple[str, float, str, str, float]:
     """Apply Stage 8 14-day durable risk history escalation."""
     trajectory = "INSUFFICIENT_DATA"
@@ -1541,19 +1568,10 @@ def _apply_risk_history_escalation(
             risk = "HIGH"
             risk_score = max(0.78, risk_score)
             reason = "HIGH ESCALATION: Persistent MEDIUM distress with repeated high-risk history. " + reason
-        elif risk == "LOW" and not is_positive_vent:
-            risk = "MEDIUM"
-            risk_score = max(0.45, risk_score)
-            reason = "MEDIUM ESCALATION: Repeated high-risk history, monitoring mild vent. " + reason
-    elif trajectory == "ESCALATING":
-        if risk == "LOW" and not is_positive_vent:
-            risk = "MEDIUM"
-            risk_score = max(0.45, risk_score)
-            reason = "MEDIUM ESCALATION: Repeated worsening emotional distress over 14 days. " + reason
-        elif risk == "MEDIUM":
-            risk = "HIGH"
-            risk_score = max(0.75, risk_score)
-            reason = "HIGH ESCALATION: Repeated worsening emotional distress over 14 days. " + reason
+    elif trajectory == "ESCALATING" and risk == "MEDIUM":
+        risk = "HIGH"
+        risk_score = max(0.75, risk_score)
+        reason = "HIGH ESCALATION: Repeated worsening emotional distress over 14 days. " + reason
 
     return risk, risk_score, reason, trajectory, escalation_prob
 
@@ -1573,20 +1591,23 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
         lambda value: GoogleTranslator(source="auto", target="en").translate(value),
     )
 
-    distress_conf, neg_emo_conf = get_risk_components(translated_text, normalized_text)
+    scoped_translated = current_disclosure_text(translated_text)
+    scoped_normalized = current_disclosure_text(normalized_text)
+    distress_conf, neg_emo_conf = get_risk_components(scoped_translated, scoped_normalized)
+    pos_emo_conf = _get_positive_emotion_conf(scoped_translated)
     base_score = (0.50 * distress_conf) + (0.50 * neg_emo_conf)
 
     compiled = _get_compiled_regexes()
-    scan_text = current_disclosure_text(text) + " " + current_disclosure_text(normalized_text)
+    scan_text = current_disclosure_text(text) + " " + scoped_normalized
     flags, violent_threat = _extract_signal_flags(text, scan_text, compiled)
 
     risk_score, expert_reasoning, signal_count = _apply_psychological_heuristics(base_score, flags)
-    risk, risk_score, reason, is_positive_vent = _apply_rule_engine(
-        risk_score, distress_conf, neg_emo_conf, scan_text,
+    risk, risk_score, reason = _apply_rule_engine(
+        risk_score, distress_conf, neg_emo_conf, pos_emo_conf, scan_text,
         flags, violent_threat, expert_reasoning, signal_count,
     )
     risk, risk_score, reason, trajectory, escalation_prob = _apply_risk_history_escalation(
-        student_id, risk_history, risk, risk_score, reason, is_positive_vent,
+        student_id, risk_history, risk, risk_score, reason,
     )
     risk_percent = _band_risk_score(risk, risk_score)
 

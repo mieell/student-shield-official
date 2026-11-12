@@ -9,9 +9,9 @@ ACTION = r"(?:kill myself|end my life|cut myself|harm myself|hurt myself)"
 DENIAL = re.compile(r"^\s*i (?:do not|don't|don’t|never) (?:want|plan|intend) to " + ACTION + r"\b", re.I)
 HISTORY = re.compile(r"^\s*(?:years ago|last year|in the past) i used to (?:say|think)\s+[\"“]?i (?:want|wanted) to " + ACTION + r"\b[\"”]?", re.I)
 FICTION = re.compile(r'^[^.!?;\n]{0,100}?\bfictional character\s+(?:who\s+)?(?:says|said)\s*["“][^"”\n]{1,250}["”]', re.I)
-PAST_EXPECTATION = re.compile(r"\bakala ko\b", re.I)
+PAST_EXPECTATION = re.compile(r"\b(?:akala ko|kanina|earlier)\b", re.I)
 PHYSICAL_METHOD = re.compile(r"\b(?:kill myself|end my life|cut myself|harm myself|hurt myself|magpakamatay|laslas|naglaslas|maglaslas|bibigti|magbigti|mamatay|sinasaksak|sinasaktan ko sarili)\b", re.I)
-POSITIVE_PIVOT = re.compile(r"\b(?:plot twist|sa tuwa|tears of joy|happy tears|pumasa|nakapasa|line of 9|sobrang saya|napakasaya)\b", re.I)
+POSITIVE_PIVOT = re.compile(r"\b(?:plot twist|sa tuwa|tears of joy|happy tears|pumasa|nakapasa|line of 9|sobrang saya|napakasaya|sobrang slay|slay|na-upgrade|happy|masaya|blessed|thankful|grateful)\b", re.I)
 
 
 def current_disclosure_text(text: str) -> str:
