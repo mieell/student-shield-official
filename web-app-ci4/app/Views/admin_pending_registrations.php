@@ -310,7 +310,7 @@
                                     <?php $consentStatus = empty($student['verified_phone']) ? 'Contact needs verification' : match ($student['response']) {
                                                 'accepted' => 'Consent accepted',
                                                 'declined' => 'Consent declined',
-                                                default => strtotime($student['expires_at']) <= time() ? 'Link expired' : match ($student['sms_state']) {
+                                                default => strtotime($student['expires_at']) <= time() ? 'Consent request expired' : match ($student['sms_state']) {
                                                     'Queued' => 'SMS queued · awaiting guardian',
                                                     'Unknown' => 'SMS status uncertain',
                                                     'Manual' => 'Manual link generated; awaiting guardian',
@@ -349,7 +349,7 @@
                                         <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="guardian-verification">
                                             <?= csrf_field() ?>
                                             <h3>Verify guardian contact</h3>
-                                            <p>Check the details against school records before sending the consent link.</p>
+                                            <p>Check the details against school records before sending the consent code or link.</p>
                                             <div class="guardian-field"><label for="verified-name-<?= $uid ?>">Guardian name from school records</label>
                                             <input class="w-full border rounded-lg px-2 py-2 text-sm" type="text" id="verified-name-<?= $uid ?>" name="verified_name" maxlength="120" required>
                                             </div>
@@ -361,7 +361,7 @@
                                                 <span>I confirmed the guardian and this number against current school records.</span>
                                             </label>
                                             <?php if ($canSendSms): ?>
-                                            <button type="submit" name="delivery" value="sms" class="approve-btn font-semibold">Send consent link by SMS</button>
+                                            <button type="submit" name="delivery" value="sms" class="approve-btn font-semibold">Send consent code by SMS</button>
                                             <?php endif; ?>
                                             <button type="submit" name="delivery" value="manual" class="approve-btn font-semibold">Generate link for private sharing</button>
                                         </form>

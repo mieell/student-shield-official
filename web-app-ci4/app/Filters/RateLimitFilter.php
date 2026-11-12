@@ -15,11 +15,12 @@ use CodeIgniter\Filters\FilterInterface;
  */
 class RateLimitFilter implements FilterInterface
 {
-    private const MAX_LOGIN_ATTEMPTS  = 5;
-    private const MAX_OTP_ATTEMPTS    = 5;
-    private const MAX_RESEND_ATTEMPTS = 3;
-    private const LOCKOUT_SECONDS     = 300; // 5 minutes
-    private const STORAGE_DIR         = WRITEPATH . 'rate_limits/';
+    private const MAX_LOGIN_ATTEMPTS   = 5;
+    private const MAX_OTP_ATTEMPTS     = 5;
+    private const MAX_RESEND_ATTEMPTS  = 3;
+    private const MAX_CONSENT_ATTEMPTS = 10;
+    private const LOCKOUT_SECONDS      = 300; // 5 minutes
+    private const STORAGE_DIR          = WRITEPATH . 'rate_limits/';
 
     public function before(RequestInterface $request, $arguments = null)
     {
@@ -41,6 +42,10 @@ class RateLimitFilter implements FilterInterface
                 $action = 'otp';
                 $maxAttempts = self::MAX_OTP_ATTEMPTS;
                 $actionLabel = 'verification attempts';
+            } elseif (str_starts_with($uriPath, 'guardian-consent')) {
+                $action = 'guardian_consent';
+                $maxAttempts = self::MAX_CONSENT_ATTEMPTS;
+                $actionLabel = 'consent verification attempts';
             } else {
                 $action = 'login';
                 $maxAttempts = self::MAX_LOGIN_ATTEMPTS;
@@ -87,6 +92,10 @@ class RateLimitFilter implements FilterInterface
                     return $redirect->back()->with('error', $errorMessage);
                 }
 
+                if ($action === 'guardian_consent') {
+                    return $redirect->to('/guardian-consent')->with('error', $errorMessage);
+                }
+
                 $target = (strpos($uriPath, 'admin') !== false) ? '/admin/login' : '/login';
                 return $redirect->to($target)->with('error', $errorMessage);
             }
@@ -104,6 +113,15 @@ class RateLimitFilter implements FilterInterface
     {
         try {
             $ip = $request->getIPAddress();
+            $uriPath = trim($request->getUri()->getPath(), '/');
+
+            if (str_starts_with($uriPath, 'guardian-consent') && $response->getStatusCode() === 200) {
+                $consentFile = self::STORAGE_DIR . md5($ip . '_guardian_consent') . '.json';
+                if (file_exists($consentFile)) {
+                    @unlink($consentFile);
+                }
+                return;
+            }
 
             // On fully successful login, clear all rate limit buckets for this IP
             if (session()->get('isLoggedIn')) {

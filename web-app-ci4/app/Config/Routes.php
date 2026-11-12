@@ -13,6 +13,9 @@ $routes->match(['GET', 'POST'], '/login/authenticate', 'AuthController::authenti
 
 $routes->get('/register', 'AuthController::studentRegisterView');
 $routes->post('/register/process', 'AuthController::processStudentRegistration');
+$routes->get('/guardian-consent', 'GuardianConsentController::index');
+$routes->post('/guardian-consent', 'GuardianConsentController::lookup');
+$routes->post('/guardian-consent/respond', 'GuardianConsentController::respond');
 $routes->get('/guardian-consent/(:segment)', 'GuardianConsentController::form/$1');
 $routes->post('/guardian-consent/(:segment)', 'GuardianConsentController::respond/$1');
 

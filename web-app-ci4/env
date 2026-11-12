@@ -72,3 +72,5 @@
 # IPROG_SMS_API_TOKEN =
 # School-approved guardian consent wording shown before the guardian responds.
 # GUARDIAN_CONSENT_NOTICE =
+# Optional override for the domain shown in guardian consent SMS (defaults to app.baseURL host).
+# GUARDIAN_CONSENT_SMS_HOST =

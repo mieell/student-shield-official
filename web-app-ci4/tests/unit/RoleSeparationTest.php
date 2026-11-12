@@ -617,11 +617,45 @@ final class RoleSeparationTest extends CIUnitTestCase
         [$phone, $message] = $gateway->messages[0];
         $this->assertSame('+639123456789', $phone);
         $this->assertStringNotContainsString('PRIVATE_STUDENT_12', $message);
-        $this->assertMatchesRegularExpression('#/guardian-consent/[a-f0-9]{32}$#', $message);
+        $this->assertStringNotContainsString('http://', $message);
+        $this->assertStringNotContainsString('https://', $message);
+        $this->assertStringNotContainsString('.', $message);
+        $this->assertSame(1, preg_match('/enter code ([A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4})$/', $message, $matches));
+        $canonicalCode = \App\Libraries\GuardianConsent::normalizeCode($matches[1]);
+        $this->assertNotNull($canonicalCode);
         $row = $this->rbacDb->table('guardian_consents')->where('user_id', 12)->get()->getRowArray();
-        $this->assertSame(hash('sha256', substr($message, -32)), $row['token_hash']);
+        $this->assertSame(hash('sha256', $canonicalCode), $row['token_hash']);
         $this->assertSame('Queued', $row['sms_state']);
         $this->assertNull($row['response']);
+
+        // Direct segment access must reject 8-char SMS codes; phone+code lookup is required.
+        session()->remove('isLoggedIn');
+        $public = \App\Controllers\GuardianConsentController::class;
+        $this->assertSame(404, $this->controller($public, 'guardian-consent/' . $canonicalCode)->form($canonicalCode)->getStatusCode());
+        $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+            'guardian_phone' => '09998887777',
+            'consent_code' => $matches[1],
+        ])->lookup()->getStatusCode());
+
+        $found = $this->controller($public, 'guardian-consent', [
+            'guardian_phone' => '09123456789',
+            'consent_code' => strtolower(str_replace('-', ' ', $matches[1])),
+        ])->lookup();
+        $this->assertSame(200, $found->getStatusCode());
+        $this->assertStringContainsString('Approved fixture notice.', $found->getBody());
+        $this->assertStringNotContainsString('PRIVATE_STUDENT_12', $found->getBody());
+
+        $submitted = $this->controller($public, 'guardian-consent/respond', [
+            'guardian_phone' => '+639123456789',
+            'consent_code' => $matches[1],
+            'guardian_name' => 'Test Guardian',
+            'choice' => 'accepted',
+        ])->respond();
+        $this->assertSame(200, $submitted->getStatusCode());
+        $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+            'guardian_phone' => '09123456789',
+            'consent_code' => $matches[1],
+        ])->lookup()->getStatusCode());
     }
 
     public function testSensitiveRoutesKeepAuthAndRegistrationActionsRequirePost(): void

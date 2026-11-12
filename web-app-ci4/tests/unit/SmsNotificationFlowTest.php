@@ -201,6 +201,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         $this->assertSame('SMS (Guardian Consent)', $logs[0]['type']);
         $this->assertSame('+639179998888', $logs[0]['recipient']);
         $this->assertStringNotContainsString('guardian-consent/', $logs[0]['message']);
+        $this->assertDoesNotMatchRegularExpression('/[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}/', $logs[0]['message']);
         $this->assertSame('SMS (Counselor)', $logs[1]['type']);
         $this->assertSame('09171234567', $logs[1]['recipient']);
     }

@@ -94,8 +94,8 @@ class Filters extends BaseFilters
      */
     public array $filters = [
         'ratelimit'   => [
-            'before' => ['login/authenticate', 'admin/login/authenticate', 'admin/verify-otp', 'admin/resend-otp'],
-            'after'  => ['login/authenticate', 'admin/login/authenticate', 'admin/verify-otp', 'admin/resend-otp'],
+            'before' => ['login/authenticate', 'admin/login/authenticate', 'admin/verify-otp', 'admin/resend-otp', 'guardian-consent', 'guardian-consent/respond'],
+            'after'  => ['login/authenticate', 'admin/login/authenticate', 'admin/verify-otp', 'admin/resend-otp', 'guardian-consent', 'guardian-consent/respond'],
         ],
         'ipwhitelist' => ['before' => ['admin', 'admin/*']],
     ];
