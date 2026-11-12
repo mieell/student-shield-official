@@ -131,16 +131,7 @@ class AdminController extends BaseController
             ->limit(500)
             ->get()->getResultArray();
 
-        $encrypter = \Config\Services::encrypter();
-        foreach ($vents as &$vent) {
-            try {
-                if (ctype_xdigit($vent['raw_text'])) {
-                    $vent['raw_text'] = $encrypter->decrypt(hex2bin($vent['raw_text']));
-                }
-            } catch (\Exception $e) {
-                // Fallback for older non-encrypted plain text vents
-            }
-        }
+        $this->decryptRowsField($vents, 'raw_text');
 
         return $this->response->setJSON($vents);
     }
@@ -156,48 +147,22 @@ class AdminController extends BaseController
 
     public function deleteVent($id)
     {
-        if (!$this->guardStaffAccess()) return $this->forbidden();
-        $db = \Config\Database::connect();
-        // Soft Delete: set deleted_at timestamp instead of permanent removal
-        $db->table('vent_logs')->where('id', $id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
-        $this->logAudit('SOFT_DELETE', 'vent', (int) $id);
-        return redirect()->to('/admin/dashboard')->with('message', "Vent Entry #$id archived (soft-deleted).");
+        return $this->setArchiveState('vent_logs', (int) $id, date('Y-m-d H:i:s'), 'SOFT_DELETE', 'vent', '/admin/dashboard', "Vent Entry #$id archived (soft-deleted).");
     }
 
     public function deleteMultipleVents()
     {
-        if (!$this->guardStaffAccess()) return $this->forbidden();
-        $ids = $this->request->getPost('vent_ids');
-        if (!empty($ids) && is_array($ids)) {
-            $db = \Config\Database::connect();
-            // Soft Delete: set deleted_at timestamp instead of permanent removal
-            $db->table('vent_logs')->whereIn('id', $ids)->update(['deleted_at' => date('Y-m-d H:i:s')]);
-            $this->logAudit('BULK_SOFT_DELETE', 'vent', 0);
-            return redirect()->to('/admin/dashboard')->with('message', count($ids) . " Vents archived (soft-deleted).");
-        }
-        return redirect()->to('/admin/dashboard')->with('error', "No vents selected for deletion.");
+        return $this->setBulkArchiveState('vent_logs', 'vent_ids', date('Y-m-d H:i:s'), 'BULK_SOFT_DELETE', 'vent', '/admin/dashboard', 'Vents archived (soft-deleted).', 'No vents selected for deletion.');
     }
 
     public function restoreVent($id)
     {
-        if (!$this->guardStaffAccess()) return $this->forbidden();
-        $db = \Config\Database::connect();
-        $db->table('vent_logs')->where('id', $id)->update(['deleted_at' => null]);
-        $this->logAudit('RESTORE', 'vent', (int) $id);
-        return redirect()->to('/admin/dashboard')->with('message', "Vent Entry #$id unarchived and restored.");
+        return $this->setArchiveState('vent_logs', (int) $id, null, 'RESTORE', 'vent', '/admin/dashboard', "Vent Entry #$id unarchived and restored.");
     }
 
     public function restoreMultipleVents()
     {
-        if (!$this->guardStaffAccess()) return $this->forbidden();
-        $ids = $this->request->getPost('vent_ids');
-        if (!empty($ids) && is_array($ids)) {
-            $db = \Config\Database::connect();
-            $db->table('vent_logs')->whereIn('id', $ids)->update(['deleted_at' => null]);
-            $this->logAudit('BULK_RESTORE', 'vent', 0);
-            return redirect()->to('/admin/dashboard')->with('message', count($ids) . " Vents unarchived and restored.");
-        }
-        return redirect()->to('/admin/dashboard')->with('error', "No vents selected for restoration.");
+        return $this->setBulkArchiveState('vent_logs', 'vent_ids', null, 'BULK_RESTORE', 'vent', '/admin/dashboard', 'Vents unarchived and restored.', 'No vents selected for restoration.');
     }
 
     public function fetchIncidents()
@@ -224,16 +189,7 @@ class AdminController extends BaseController
             ->limit(500)
             ->get()->getResultArray();
 
-        $encrypter = \Config\Services::encrypter();
-        foreach ($incidents as &$incident) {
-            try {
-                if (ctype_xdigit($incident['description'])) {
-                    $incident['description'] = $encrypter->decrypt(hex2bin($incident['description']));
-                }
-            } catch (\Exception $e) {
-                // Fallback for older non-encrypted plain text descriptions
-            }
-        }
+        $this->decryptRowsField($incidents, 'description');
 
         return $this->response->setJSON($incidents);
     }
@@ -281,44 +237,28 @@ class AdminController extends BaseController
         $smsAccepted = 0;
         $smsUnconfirmed = 0;
 
-        // 1. Alert the Victim's Parent (SMS & Email)
         if (!empty($report->victim_student_id)) {
-            $victim = $db->table('users')
-                ->select('users.*, students.parent_phone, students.parent_email')
-                ->join('students', 'students.user_id = users.id', 'left')
-                ->where('users.id', $report->victim_student_id)
-                ->get()->getRow();
-            if ($victim) {
-                $victimMsg = "SVBSM Guidance Alert: A verified report indicates your child may be involved in a bullying incident as a victim. Please offer a warm check-in with your child tonight. Our counselors have confirmed the report and are actively investigating.";
-                if (!empty($victim->parent_phone)) {
-                    $accepted = $this->sendLocalSms($victim->parent_phone,
-                        'SVBSM Guidance: A verified incident involving your child needs follow-up. Please contact the Guidance Office.',
-                        "incident:{$id}:verified-victim-parent");
-                    $accepted ? $smsAccepted++ : $smsUnconfirmed++;
-                }
-                if (!empty($victim->parent_email))
-                    $this->sendLocalEmail($victim->parent_email, $victimMsg);
-            }
+            $this->notifyIncidentParent(
+                $db,
+                (int) $id,
+                (int) $report->victim_student_id,
+                'victim',
+                'SVBSM Guidance Alert: A verified report indicates your child may be involved in a bullying incident as a victim. Please offer a warm check-in with your child tonight. Our counselors have confirmed the report and are actively investigating.',
+                $smsAccepted,
+                $smsUnconfirmed
+            );
         }
 
-        // 2. Alert the Bully's Parent (SMS & Email)
         if (!empty($report->bully_student_id)) {
-            $bully = $db->table('users')
-                ->select('users.*, students.parent_phone, students.parent_email')
-                ->join('students', 'students.user_id = users.id', 'left')
-                ->where('users.id', $report->bully_student_id)
-                ->get()->getRow();
-            if ($bully) {
-                $bullyMsg = "SVBSM Guidance Alert: A verified report involving your child regarding a disciplinary incident has been confirmed by our guidance team. Our administration is currently investigating. Please contact the school office tomorrow.";
-                if (!empty($bully->parent_phone)) {
-                    $accepted = $this->sendLocalSms($bully->parent_phone,
-                        'SVBSM Guidance: A verified incident involving your child needs follow-up. Please contact the Guidance Office.',
-                        "incident:{$id}:verified-bully-parent");
-                    $accepted ? $smsAccepted++ : $smsUnconfirmed++;
-                }
-                if (!empty($bully->parent_email))
-                    $this->sendLocalEmail($bully->parent_email, $bullyMsg);
-            }
+            $this->notifyIncidentParent(
+                $db,
+                (int) $id,
+                (int) $report->bully_student_id,
+                'bully',
+                'SVBSM Guidance Alert: A verified report involving your child regarding a disciplinary incident has been confirmed by our guidance team. Our administration is currently investigating. Please contact the school office tomorrow.',
+                $smsAccepted,
+                $smsUnconfirmed
+            );
         }
 
         return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id VERIFIED. SMS gateway accepted {$smsAccepted} request(s); delivery is not yet confirmed. {$smsUnconfirmed} SMS request(s) were not confirmed. Email notifications were attempted for available contacts.");
@@ -469,48 +409,22 @@ class AdminController extends BaseController
 
     public function deleteIncident($id)
     {
-        if (!$this->guardStaffAccess()) return $this->forbidden();
-        $db = \Config\Database::connect();
-        // Soft Delete
-        $db->table('bully_reports')->where('id', $id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
-        $this->logAudit('SOFT_DELETE', 'incident', (int) $id);
-        return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id archived (soft-deleted).");
+        return $this->setArchiveState('bully_reports', (int) $id, date('Y-m-d H:i:s'), 'SOFT_DELETE', 'incident', '/admin/incidents', "Incident Report #$id archived (soft-deleted).");
     }
 
     public function deleteMultipleIncidents()
     {
-        if (!$this->guardStaffAccess()) return $this->forbidden();
-        $ids = $this->request->getPost('incident_ids');
-        if (!empty($ids) && is_array($ids)) {
-            $db = \Config\Database::connect();
-            // Soft Delete
-            $db->table('bully_reports')->whereIn('id', $ids)->update(['deleted_at' => date('Y-m-d H:i:s')]);
-            $this->logAudit('BULK_SOFT_DELETE', 'incident', 0);
-            return redirect()->to('/admin/incidents')->with('message', count($ids) . " Incident Reports archived (soft-deleted).");
-        }
-        return redirect()->to('/admin/incidents')->with('error', "No incidents selected for deletion.");
+        return $this->setBulkArchiveState('bully_reports', 'incident_ids', date('Y-m-d H:i:s'), 'BULK_SOFT_DELETE', 'incident', '/admin/incidents', 'Incident Reports archived (soft-deleted).', 'No incidents selected for deletion.');
     }
 
     public function restoreIncident($id)
     {
-        if (!$this->guardStaffAccess()) return $this->forbidden();
-        $db = \Config\Database::connect();
-        $db->table('bully_reports')->where('id', $id)->update(['deleted_at' => null]);
-        $this->logAudit('RESTORE', 'incident', (int) $id);
-        return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id unarchived and restored.");
+        return $this->setArchiveState('bully_reports', (int) $id, null, 'RESTORE', 'incident', '/admin/incidents', "Incident Report #$id unarchived and restored.");
     }
 
     public function restoreMultipleIncidents()
     {
-        if (!$this->guardStaffAccess()) return $this->forbidden();
-        $ids = $this->request->getPost('incident_ids');
-        if (!empty($ids) && is_array($ids)) {
-            $db = \Config\Database::connect();
-            $db->table('bully_reports')->whereIn('id', $ids)->update(['deleted_at' => null]);
-            $this->logAudit('BULK_RESTORE', 'incident', 0);
-            return redirect()->to('/admin/incidents')->with('message', count($ids) . " Incident Reports unarchived and restored.");
-        }
-        return redirect()->to('/admin/incidents')->with('error', "No incidents selected for restoration.");
+        return $this->setBulkArchiveState('bully_reports', 'incident_ids', null, 'BULK_RESTORE', 'incident', '/admin/incidents', 'Incident Reports unarchived and restored.', 'No incidents selected for restoration.');
     }
 
     public function fetchAlertLogs()
@@ -780,6 +694,87 @@ class AdminController extends BaseController
             return in_array($column, $db->getFieldNames($table), true);
         } catch (\Throwable $e) {
             return false;
+        }
+    }
+
+    private function decryptRowsField(array &$rows, string $field): void
+    {
+        $encrypter = \Config\Services::encrypter();
+        foreach ($rows as &$row) {
+            try {
+                if (isset($row[$field]) && is_string($row[$field]) && ctype_xdigit($row[$field])) {
+                    $row[$field] = $encrypter->decrypt(hex2bin($row[$field]));
+                }
+            } catch (\Exception $e) {
+                // Fallback for older plain-text entries
+            }
+        }
+    }
+
+    private function setArchiveState(
+        string $table,
+        int $id,
+        ?string $deletedAt,
+        string $auditAction,
+        string $entity,
+        string $redirectUrl,
+        string $message
+    ) {
+        if (!$this->guardStaffAccess()) return $this->forbidden();
+        $db = \Config\Database::connect();
+        $db->table($table)->where('id', $id)->update(['deleted_at' => $deletedAt]);
+        $this->logAudit($auditAction, $entity, $id);
+        return redirect()->to($redirectUrl)->with('message', $message);
+    }
+
+    private function setBulkArchiveState(
+        string $table,
+        string $postKey,
+        ?string $deletedAt,
+        string $auditAction,
+        string $entity,
+        string $redirectUrl,
+        string $successSuffix,
+        string $emptyError
+    ) {
+        if (!$this->guardStaffAccess()) return $this->forbidden();
+        $ids = $this->request->getPost($postKey);
+        if (!empty($ids) && is_array($ids)) {
+            $db = \Config\Database::connect();
+            $db->table($table)->whereIn('id', $ids)->update(['deleted_at' => $deletedAt]);
+            $this->logAudit($auditAction, $entity, 0);
+            return redirect()->to($redirectUrl)->with('message', count($ids) . ' ' . $successSuffix);
+        }
+        return redirect()->to($redirectUrl)->with('error', $emptyError);
+    }
+
+    private function notifyIncidentParent(
+        $db,
+        int $incidentId,
+        int $studentUserId,
+        string $roleLabel,
+        string $emailMessage,
+        int &$smsAccepted,
+        int &$smsUnconfirmed
+    ): void {
+        $student = $db->table('users')
+            ->select('users.*, students.parent_phone, students.parent_email')
+            ->join('students', 'students.user_id = users.id', 'left')
+            ->where('users.id', $studentUserId)
+            ->get()->getRow();
+        if (!$student) {
+            return;
+        }
+        if (!empty($student->parent_phone)) {
+            $accepted = $this->sendLocalSms(
+                $student->parent_phone,
+                'SVBSM Guidance: A verified incident involving your child needs follow-up. Please contact the Guidance Office.',
+                "incident:{$incidentId}:verified-{$roleLabel}-parent"
+            );
+            $accepted ? $smsAccepted++ : $smsUnconfirmed++;
+        }
+        if (!empty($student->parent_email)) {
+            $this->sendLocalEmail($student->parent_email, $emailMessage);
         }
     }
 }

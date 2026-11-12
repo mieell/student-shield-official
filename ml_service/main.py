@@ -1176,478 +1176,426 @@ async def root_health_check():
         "message": "Send POST requests to /analyze-text to classify vents.",
     }
 
-def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict] | None = None) -> dict:
-    ## ┐
-    ### STAGE 0: SLANG NORMALIZATION & GLOBAL TRANSLATION      
-    ## ┘
-    normalized_text = normalize_slang(text)
-    translated_text = translation_gate.translate(
-        normalized_text,
-        lambda value: GoogleTranslator(source='auto', target='en').translate(value),
-    )
+_CRYING_ONLY_PATTERNS = {
+    r"\bnaliyak\b", r"\bnaiyak\b", r"\bnaiiyak\b", r"\bumiyak\b", r"\bumiiyak\b", r"\biyak\b",
+}
+_JOY_CRIER_RE = re.compile(
+    r"\b(sa tuwa|tears of joy|happy tears|sobrang saya|napakasaya|nakaka-?proud)\b",
+    re.I,
+)
+_ACADEMIC_DESTRUCT_WORDS = (
+    "throw", "anger", "bwisit", "galit", "punch", "failed the whole class",
+    "never go to class", "drop out", "bagsak", "stop going to class", "mad",
+)
+_HEURISTIC_RULES = (
+    ("dist", 0.10, "Cognitive distortion detected.", False),
+    ("hope", 0.15, "Hopelessness detected.", False),
+    ("ext", 0.10, "High emotional intensity.", True),
+    ("emotional", 0.12, "Emotional distress keywords present.", False),
+    ("isolation", 0.12, "Social isolation/withdrawal detected.", False),
+    ("school_avoid", 0.18, "School avoidance / somatic distress detected.", False),
+    ("self_worth", 0.12, "Self-worth impairment detected.", False),
+    ("masked_dep", 0.14, "Masked depression pattern: hides feelings when around others.", False),
+    ("relationship", 0.10, "Relationship distress (breakup/rejection/betrayal) detected.", False),
+)
+_COMPOUND_FLAG_KEYS = (
+    "emotional", "isolation", "anhedonia", "hope", "dist",
+    "self_worth", "masked_dep", "relationship", "school_avoid",
+)
+_RISK_RANGES = {
+    "LOW": (1, 30),
+    "MEDIUM": (31, 60),
+    "HIGH": (61, 85),
+    "CRITICAL": (86, 100),
+}
 
-    ## ┐
-    ### STAGE 1: SCORE COMPONENTS                              
-    ## ┘
-    distress_conf, neg_emo_conf = get_risk_components(translated_text, normalized_text)
 
-    ## ┐
-    ### STAGE 2: SCORE BALANCING                               
-    ## ┘
-    risk_score = (0.50 * distress_conf) + (0.50 * neg_emo_conf)
-
-    ## ┐
-    ### STAGE 3: REGEX COMPILE (once, then cached globally)    
-    ## ┘
+def _get_compiled_regexes() -> dict:
+    """Compile and cache all clinical lexicon regexes on first request."""
     global COMPILED_REGEXES
     if not COMPILED_REGEXES:
-        COMPILED_REGEXES['cat1']        = compile_regexes(CAT1_DIRECT)
-        COMPILED_REGEXES['passive_ideation'] = compile_regexes(PASSIVE_DISAPPEARANCE_IDEATION) # NEW
-        COMPILED_REGEXES['cat2']        = compile_regexes(CAT2_WORDS)
-        COMPILED_REGEXES['cat3']        = compile_regexes(CAT3_WORDS)
-        COMPILED_REGEXES['emotional']   = compile_regexes(EMOTIONAL_DISTRESS)
-        COMPILED_REGEXES['isolation']   = compile_regexes(SOCIAL_ISOLATION)
-        COMPILED_REGEXES['joke']        = compile_regexes(JOKE_PATTERNS)
-        COMPILED_REGEXES['dist']        = compile_regexes(DISTORTIONS)
-        COMPILED_REGEXES['hope']        = compile_regexes(HOPELESSNESS)
-        COMPILED_REGEXES['ext']         = compile_regexes(EXTREME_VENTING)
-        COMPILED_REGEXES['final']       = compile_regexes(FINALITY)
-        COMPILED_REGEXES['anhedonia']   = compile_regexes(ANHEDONIA)
-        COMPILED_REGEXES['sexual']      = compile_regexes(SEXUAL_HARASSMENT)
-        COMPILED_REGEXES['academic']    = compile_regexes(ACADEMIC_PRESSURE)
-        COMPILED_REGEXES['school_avoid']= compile_regexes(SCHOOL_AVOIDANCE_SOMATIC) # NEW v7.6
-        COMPILED_REGEXES['self_worth']  = compile_regexes(SELF_WORTH)       # NEW v7
-        COMPILED_REGEXES['masked_dep']  = compile_regexes(MASKED_DEPRESSION) # NEW v7
-        COMPILED_REGEXES['relationship']= compile_regexes(RELATIONSHIP_DISTRESS) # NEW v7.1
-        COMPILED_REGEXES['positive']    = compile_regexes(POSITIVE_SENTIMENT)
-        COMPILED_REGEXES['method_pairs'] = [
+        pattern_groups = {
+            "cat1": CAT1_DIRECT,
+            "passive_ideation": PASSIVE_DISAPPEARANCE_IDEATION,
+            "cat2": CAT2_WORDS,
+            "cat3": CAT3_WORDS,
+            "emotional": EMOTIONAL_DISTRESS,
+            "isolation": SOCIAL_ISOLATION,
+            "joke": JOKE_PATTERNS,
+            "dist": DISTORTIONS,
+            "hope": HOPELESSNESS,
+            "ext": EXTREME_VENTING,
+            "final": FINALITY,
+            "anhedonia": ANHEDONIA,
+            "sexual": SEXUAL_HARASSMENT,
+            "academic": ACADEMIC_PRESSURE,
+            "school_avoid": SCHOOL_AVOIDANCE_SOMATIC,
+            "self_worth": SELF_WORTH,
+            "masked_dep": MASKED_DEPRESSION,
+            "relationship": RELATIONSHIP_DISTRESS,
+            "positive": POSITIVE_SENTIMENT,
+        }
+        for key, patterns in pattern_groups.items():
+            COMPILED_REGEXES[key] = compile_regexes(patterns)
+        COMPILED_REGEXES["method_pairs"] = [
             (re.compile(m, re.IGNORECASE), re.compile(s, re.IGNORECASE))
             for m, s in CAT1_METHOD_SELF_PAIRS
         ]
-    if 'positive' not in COMPILED_REGEXES:
-        COMPILED_REGEXES['positive'] = compile_regexes(POSITIVE_SENTIMENT)
-    if 'passive_ideation' not in COMPILED_REGEXES:
-        COMPILED_REGEXES['passive_ideation'] = compile_regexes(PASSIVE_DISAPPEARANCE_IDEATION)
+    return COMPILED_REGEXES
 
-    ## ┐
-    ### STAGE 4: SARCASM / JOKE DETECTION (v7)                 
-    ## ┘
-    scan_text = current_disclosure_text(text) + " " + current_disclosure_text(normalized_text)
-    is_joke = any(pat.search(scan_text) for pat in COMPILED_REGEXES['joke'])
 
-    ## ┐
-    ### STAGE 5: KEYWORD MATCH FLAGS                           
-    ## ┘
-    has_cat1_direct = any(pat.search(scan_text) for pat in COMPILED_REGEXES['cat1'])
-
-    has_cat1_method = False
-    for method_pat, self_pat in COMPILED_REGEXES['method_pairs']:
-        if method_pat.search(scan_text) and self_pat.search(scan_text):
-            has_cat1_method = True
-            break
-
-    has_cat1       = has_cat1_direct or has_cat1_method
+def _extract_signal_flags(text: str, scan_text: str, compiled: dict) -> tuple[dict[str, bool], object]:
+    """Evaluate all safety, distress, joke, and positive-sentiment flags on the text."""
+    flags = {
+        key: any(pat.search(scan_text) for pat in compiled[key])
+        for key in (
+            "joke", "passive_ideation", "cat2", "cat3", "emotional", "isolation",
+            "dist", "hope", "ext", "final", "anhedonia", "sexual", "academic",
+            "school_avoid", "self_worth", "masked_dep", "relationship", "positive",
+        )
+    }
+    has_cat1_direct = any(pat.search(scan_text) for pat in compiled["cat1"])
+    has_cat1_method = any(
+        method_pat.search(scan_text) and self_pat.search(scan_text)
+        for method_pat, self_pat in compiled["method_pairs"]
+    )
+    flags["cat1"] = has_cat1_direct or has_cat1_method
     violent_threat = detect_violent_threat(text)
-    has_passive_ideation = any(pat.search(scan_text) for pat in COMPILED_REGEXES['passive_ideation'])
-    has_cat2       = any(pat.search(scan_text) for pat in COMPILED_REGEXES['cat2'])
-    has_cat3       = any(pat.search(scan_text) for pat in COMPILED_REGEXES['cat3'])
-    has_emotional  = any(pat.search(scan_text) for pat in COMPILED_REGEXES['emotional'])
-    has_isolation  = any(pat.search(scan_text) for pat in COMPILED_REGEXES['isolation'])
-    has_distortion = any(pat.search(scan_text) for pat in COMPILED_REGEXES['dist'])
-    has_hopeless   = any(pat.search(scan_text) for pat in COMPILED_REGEXES['hope'])
-    has_extreme    = any(pat.search(scan_text) for pat in COMPILED_REGEXES['ext'])
-    has_finality   = any(pat.search(scan_text) for pat in COMPILED_REGEXES['final'])
-    has_anhedonia  = any(pat.search(scan_text) for pat in COMPILED_REGEXES['anhedonia'])
-    has_sexual     = any(pat.search(scan_text) for pat in COMPILED_REGEXES['sexual'])
-    has_academic   = any(pat.search(scan_text) for pat in COMPILED_REGEXES['academic'])
-    has_school_avoid = any(pat.search(scan_text) for pat in COMPILED_REGEXES['school_avoid']) # NEW v7.6
-    has_self_worth    = any(pat.search(scan_text) for pat in COMPILED_REGEXES['self_worth'])  # NEW
-    has_masked_dep   = any(pat.search(scan_text) for pat in COMPILED_REGEXES['masked_dep'])  # NEW
-    has_relationship = any(pat.search(scan_text) for pat in COMPILED_REGEXES['relationship']) # NEW v7.1
-    has_positive     = any(pat.search(scan_text) for pat in COMPILED_REGEXES['positive'])
 
     # Suppress standalone crying keywords when context is explicitly tears of joy/pride.
-    if has_emotional and not (
-        has_cat1 or has_passive_ideation or has_hopeless or has_isolation
-        or has_anhedonia or has_self_worth or has_masked_dep or has_distortion
-    ):
-        crying_only_pats = {r"\bnaliyak\b", r"\bnaiyak\b", r"\bnaiiyak\b", r"\bumiyak\b", r"\bumiiyak\b", r"\biyak\b"}
-        matched_emo_pats = [pat.pattern for pat in COMPILED_REGEXES['emotional'] if pat.search(scan_text)]
-        if matched_emo_pats and all(p in crying_only_pats for p in matched_emo_pats):
-            if re.search(r"\b(sa tuwa|tears of joy|happy tears|sobrang saya|napakasaya|nakaka-?proud)\b", scan_text, re.I):
-                has_emotional = False
-
-    ## ┐
-    ### STAGE 6: PSYCHOLOGICAL HEURISTICS                      
-    ## ┘
-    expert_reasoning = []
-
-    if has_distortion:
-        risk_score += 0.10
-        expert_reasoning.append("Cognitive distortion detected.")
-    if has_hopeless:
-        risk_score += 0.15
-        expert_reasoning.append("Hopelessness detected.")
-    if has_extreme and risk_score > 0.4:
-        risk_score += 0.10
-        expert_reasoning.append("High emotional intensity.")
-    if has_emotional:
-        risk_score += 0.12
-        expert_reasoning.append("Emotional distress keywords present.")
-    if has_isolation:
-        risk_score += 0.12
-        expert_reasoning.append("Social isolation/withdrawal detected.")
-    if has_school_avoid:
-        risk_score += 0.18
-        expert_reasoning.append("School avoidance / somatic distress detected.")
-    if has_self_worth:
-        risk_score += 0.12
-        expert_reasoning.append("Self-worth impairment detected.")
-    if has_masked_dep:
-        risk_score += 0.14
-        expert_reasoning.append("Masked depression pattern: hides feelings when around others.")
-    if has_relationship:
-        risk_score += 0.10
-        expert_reasoning.append("Relationship distress (breakup/rejection/betrayal) detected.")
-
-    # Compound signal detection — expanded to include school avoidance
-    signal_count = sum([
-        has_emotional, has_isolation, has_anhedonia,
-        has_hopeless, has_distortion, has_self_worth, has_masked_dep,
-        has_relationship, has_school_avoid,
-    ])
-    if signal_count >= 2:
-        compound_boost = 0.15 * (signal_count - 1)
-        risk_score += compound_boost
-        expert_reasoning.append(
-            f"Compound signal: {signal_count} concurrent distress indicators."
+    if flags["emotional"] and not any(
+        flags[k] for k in (
+            "cat1", "passive_ideation", "hope", "isolation",
+            "anhedonia", "self_worth", "masked_dep", "dist",
         )
+    ):
+        matched_emo_pats = [pat.pattern for pat in compiled["emotional"] if pat.search(scan_text)]
+        if matched_emo_pats and all(p in _CRYING_ONLY_PATTERNS for p in matched_emo_pats):
+            if _JOY_CRIER_RE.search(scan_text):
+                flags["emotional"] = False
 
-    risk_score = max(min(risk_score, 1.0), 0.0)
+    return flags, violent_threat
 
-    ## ┐
-    ### STAGE 7: FINAL RULE ENGINE (Sequential Priority)       
-    ### 
-    ### Rule 1:   Explicit suicide (Cat1)                      
-    ### Rule 2:   Positive sentiment override                  
-    ### Rule 3:   Finality / preparation                       
-    ### Rule 4:   Physical violence (Cat2)                     
-    ### Rule 4.5: Sexual harassment                            
-    ### Rule 5:   Emotional / Anhedonia / Isolation            
-    ### Rule 5.5: Self-worth issues          ← NEW v7          
-    ### Rule 5.7: Masked depression          ← NEW v7          
-    ### Rule 6:   Verbal abuse (Cat3)                          
-    ### Rule 6.3: Relationship distress     ← NEW v7.1         
-    ### Rule 6.5: Academic pressure                            
-    ### Rule 7:   Pure risk score                              
-    ## ┘
-    risk   = "LOW"
+
+def _apply_psychological_heuristics(risk_score: float, flags: dict[str, bool]) -> tuple[float, list[str], int]:
+    """Adjust base ML score using Stage 6 psychological heuristics and compound signals."""
+    expert_reasoning = []
+    for key, delta, message, requires_elevated in _HEURISTIC_RULES:
+        if flags[key] and (not requires_elevated or risk_score > 0.4):
+            risk_score += delta
+            expert_reasoning.append(message)
+
+    signal_count = sum(flags[k] for k in _COMPOUND_FLAG_KEYS)
+    if signal_count >= 2:
+        risk_score += 0.15 * (signal_count - 1)
+        expert_reasoning.append(f"Compound signal: {signal_count} concurrent distress indicators.")
+
+    return max(min(risk_score, 1.0), 0.0), expert_reasoning, signal_count
+
+
+def _append_reasoning(reason: str, expert_reasoning: list[str]) -> str:
+    return f"{reason} {' '.join(expert_reasoning)}" if expert_reasoning else reason
+
+
+def _apply_rule_engine(
+    risk_score: float,
+    distress_conf: float,
+    neg_emo_conf: float,
+    scan_text: str,
+    flags: dict[str, bool],
+    violent_threat,
+    expert_reasoning: list[str],
+    signal_count: int,
+) -> tuple[str, float, str, bool]:
+    """Run Stage 7 priority rules and Stage 7.5 positive vent guard."""
+    risk = "LOW"
     reason = "NLP: No severe negativity detected."
 
     if risk_score > 0.4 and (neg_emo_conf >= 0.15 or expert_reasoning):
-        risk   = "MEDIUM"
+        risk = "MEDIUM"
         reason = "NLP: Negative sentiment detected."
 
-    ### RULE 1: Explicit threats to life (never downgraded by jokes or positivity)
+    is_joke = flags["joke"]
+
     if violent_threat:
         risk = "CRITICAL"
         risk_score = max(0.99, risk_score)
-        reason = violent_threat['flag_reason']
-    elif has_cat1:
-        risk       = "CRITICAL"
+        reason = violent_threat["flag_reason"]
+    elif flags["cat1"]:
+        risk = "CRITICAL"
         risk_score = max(0.95, risk_score)
-        if is_joke:
-            reason = "CRITICAL: Masked Depression — sarcasm disguising explicit suicidal intent."
-        else:
-            reason = "CRITICAL: Explicit self-harm or suicidal intent detected."
-    ### RULE 1.5: Passive disappearance & Invisibility ideation (C-SSRS Level 2)
-    elif has_passive_ideation:
-        risk       = "HIGH"
+        reason = (
+            "CRITICAL: Masked Depression — sarcasm disguising explicit suicidal intent."
+            if is_joke
+            else "CRITICAL: Explicit self-harm or suicidal intent detected."
+        )
+    elif flags["passive_ideation"]:
+        risk = "HIGH"
         risk_score = max(0.79, risk_score)
-        reason     = "HIGH: Passive disappearance ideation and social invisibility detected (C-SSRS Level 2)."
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-    ### RULE 2: Finality / preparation signals 
-    elif has_finality:
+        reason = _append_reasoning(
+            "HIGH: Passive disappearance ideation and social invisibility detected (C-SSRS Level 2).",
+            expert_reasoning,
+        )
+    elif flags["final"]:
+        risk = "HIGH"
+        risk_score = max(0.85 if is_joke else 0.80, risk_score)
+        base = (
+            "HIGH: Masked Depression — sarcasm disguising preparation signals."
+            if is_joke
+            else "HIGH: Subtle preparation hints (closure, peace, organizing) detected."
+        )
+        reason = _append_reasoning(base, expert_reasoning)
+    elif flags["cat2"]:
         if is_joke:
-            risk       = "HIGH"
-            risk_score = max(0.85, risk_score)
-            reason     = "HIGH: Masked Depression — sarcasm disguising preparation signals."
-        else:
-            risk       = "HIGH"
-            risk_score = max(0.80, risk_score)
-            reason     = "HIGH: Subtle preparation hints (closure, peace, organizing) detected."
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 4: Physical violence / bullying 
-    elif has_cat2:
-        if is_joke:
-            risk       = "MEDIUM"
+            risk = "MEDIUM"
             risk_score = max(0.5, risk_score)
-            reason     = "Bullying keywords found but context indicates sarcasm."
+            base = "Bullying keywords found but context indicates sarcasm."
         else:
-            risk       = "HIGH"
+            risk = "HIGH"
             risk_score = max(0.80, risk_score)
-            reason     = "HIGH: Physical bullying or threat detected."
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 4.5: Sexual harassment / assault 
-    elif has_sexual:
-        risk       = "CRITICAL"
+            base = "HIGH: Physical bullying or threat detected."
+        reason = _append_reasoning(base, expert_reasoning)
+    elif flags["sexual"]:
+        risk = "CRITICAL"
         risk_score = max(0.95, risk_score)
-        reason     = "CRITICAL: Sexual harassment, assault, or inappropriate conduct detected."
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 5: Emotional distress, Anhedonia, or Isolation 
-    elif has_emotional or has_anhedonia or has_isolation:
+        reason = _append_reasoning(
+            "CRITICAL: Sexual harassment, assault, or inappropriate conduct detected.",
+            expert_reasoning,
+        )
+    elif flags["emotional"] or flags["anhedonia"] or flags["isolation"]:
         if is_joke:
             if signal_count >= 3:
-                # v7.2: Heavy compound distress through ironic tone is still
-                # clinically significant — bitter sarcasm masking real pain.
-                risk       = "HIGH"
+                risk = "HIGH"
                 risk_score = max(0.70, risk_score)
-                reason     = (
+                base = (
                     f"HIGH: {signal_count} concurrent distress indicators detected "
                     f"through ironic/sarcastic expression — monitoring for escalation."
                 )
             else:
-                risk       = "MEDIUM"
+                risk = "MEDIUM"
                 risk_score = max(0.4, risk_score)
-                reason     = "Distress/isolation keywords found but may be casual venting."
+                base = "Distress/isolation keywords found but may be casual venting."
         elif signal_count >= 3:
-            risk       = "HIGH"
+            risk = "HIGH"
             risk_score = max(0.78, risk_score)
-            reason     = (
-                f"HIGH: Compound emotional signal — "
-                f"{signal_count} concurrent distress indicators detected."
-            )
+            base = f"HIGH: Compound emotional signal — {signal_count} concurrent distress indicators detected."
         elif signal_count == 2:
-            risk       = "MEDIUM"
+            risk = "MEDIUM"
             risk_score = max(0.68, risk_score)
-            reason     = "MEDIUM: Compound emotional signal (2 indicators)."
+            base = "MEDIUM: Compound emotional signal (2 indicators)."
         else:
-            risk       = "MEDIUM"
-            risk_score = max(0.55 if not has_anhedonia else 0.60, risk_score)
-            reason     = (
-                f"MEDIUM: "
-                f"{'Anhedonia/dissociation' if has_anhedonia else 'Emotional distress or social withdrawal'} detected."
-            )
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 5.5: Self-worth issues (NEW v7) 
-    elif has_self_worth:
+            risk = "MEDIUM"
+            risk_score = max(0.60 if flags["anhedonia"] else 0.55, risk_score)
+            kind = "Anhedonia/dissociation" if flags["anhedonia"] else "Emotional distress or social withdrawal"
+            base = f"MEDIUM: {kind} detected."
+        reason = _append_reasoning(base, expert_reasoning)
+    elif flags["self_worth"]:
         if is_joke:
-            risk       = "LOW"
+            risk = "LOW"
             risk_score = max(0.35, risk_score)
-            reason     = "Self-worth keywords found but context suggests casual expression."
+            base = "Self-worth keywords found but context suggests casual expression."
         elif signal_count >= 3:
-            # Self-worth + multiple signals = HIGH (clinical concern)
-            risk       = "HIGH"
+            risk = "HIGH"
             risk_score = max(0.78, risk_score)
-            reason     = (
-                f"HIGH: Self-worth impairment compounded with "
-                f"{signal_count} concurrent distress signals."
-            )
+            base = f"HIGH: Self-worth impairment compounded with {signal_count} concurrent distress signals."
         else:
-            risk       = "MEDIUM"
+            risk = "MEDIUM"
             risk_score = max(0.58, risk_score)
-            reason     = "MEDIUM: Self-worth and self-value impairment detected."
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 5.7: Masked depression (NEW v7) 
-    elif has_masked_dep:
-        # Masked depression is clinically significant on its own — a student
-        # who says "I'm fine around others but different alone" is disclosing
-        # a hidden struggle.
+            base = "MEDIUM: Self-worth and self-value impairment detected."
+        reason = _append_reasoning(base, expert_reasoning)
+    elif flags["masked_dep"]:
         if is_joke:
-            risk       = "LOW"
+            risk = "LOW"
             risk_score = max(0.35, risk_score)
-            reason     = "Masked depression language detected but tone appears casual."
+            base = "Masked depression language detected but tone appears casual."
         elif signal_count >= 3:
-            risk       = "HIGH"
+            risk = "HIGH"
             risk_score = max(0.78, risk_score)
-            reason     = (
-                f"HIGH: Masked depression compounded with "
-                f"{signal_count} concurrent distress signals — hidden suffering pattern."
-            )
+            base = f"HIGH: Masked depression compounded with {signal_count} concurrent distress signals — hidden suffering pattern."
         else:
-            risk       = "MEDIUM"
+            risk = "MEDIUM"
             risk_score = max(0.60, risk_score)
-            reason     = (
+            base = (
                 "MEDIUM: Masked depression — student reports appearing normal to others "
                 "but experiencing different internal emotional state when alone."
             )
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 6: Verbal abuse / cyberbullying 
-    elif has_cat3:
+        reason = _append_reasoning(base, expert_reasoning)
+    elif flags["cat3"]:
         if is_joke:
-            risk   = "LOW"
-            reason = "Verbal insults detected but contextualized as banter."
-        elif has_school_avoid or signal_count >= 2:
-            risk       = "HIGH"
+            risk = "LOW"
+            base = "Verbal insults detected but contextualized as banter."
+        elif flags["school_avoid"] or signal_count >= 2:
+            risk = "HIGH"
             risk_score = max(0.78, risk_score)
-            reason     = (
-                f"HIGH: Targeted bullying/cyberbullying compounded with "
-                f"{'school avoidance and somatic distress' if has_school_avoid else f'{signal_count} concurrent distress indicators'}."
-            )
+            detail = "school avoidance and somatic distress" if flags["school_avoid"] else f"{signal_count} concurrent distress indicators"
+            base = f"HIGH: Targeted bullying/cyberbullying compounded with {detail}."
         elif risk_score < 0.35:
-            risk   = "LOW"
-            reason = "NLP Context Override: Verbal keyword matched but ML model indicates safe usage."
+            risk = "LOW"
+            base = "NLP Context Override: Verbal keyword matched but ML model indicates safe usage."
         else:
-            risk       = "MEDIUM"
+            risk = "MEDIUM"
             risk_score = max(0.6, risk_score)
-            reason = "Verbal cyberbullying or toxicity detected."
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 6.3: Relationship distress (NEW v7.1) 
-    # Breakups are a leading trigger for student suicidal ideation.
-    # Alone → MEDIUM; compounded with distress signals → HIGH.
-    elif has_relationship:
+            base = "Verbal cyberbullying or toxicity detected."
+        reason = _append_reasoning(base, expert_reasoning)
+    elif flags["relationship"]:
         if is_joke:
-            risk       = "LOW"
+            risk = "LOW"
             risk_score = max(0.35, risk_score)
-            reason     = "Relationship keywords found but context suggests casual mention."
+            base = "Relationship keywords found but context suggests casual mention."
         elif signal_count >= 3:
-            # Breakup + multiple signals = HIGH
-            risk       = "HIGH"
+            risk = "HIGH"
             risk_score = max(0.78, risk_score)
-            reason     = (
+            base = (
                 f"HIGH: Relationship distress compounded with "
-                f"{signal_count} concurrent emotional signals — "
-                f"elevated risk for crisis escalation."
+                f"{signal_count} concurrent emotional signals — elevated risk for crisis escalation."
             )
         else:
-            risk       = "MEDIUM"
+            risk = "MEDIUM"
             risk_score = max(0.55, risk_score)
-            reason     = (
-                "MEDIUM: Relationship distress detected (breakup, rejection, betrayal). "
-                "Monitoring for escalation."
-            )
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 6.5: Academic pressure & School Avoidance
-    elif has_academic or has_school_avoid:
-        has_academic_destruct = any(w in scan_text.lower() for w in [
-            "throw", "anger", "bwisit", "galit", "punch", "failed the whole class",
-            "never go to class", "drop out", "bagsak", "stop going to class", "mad"
-        ])
-        if is_joke and not (has_school_avoid or has_academic_destruct):
-            risk   = "LOW"
-            reason = "Academic frustration contextualized as hyperbolic venting."
-        elif has_school_avoid and (has_cat3 or has_isolation or has_emotional or has_hopeless):
-            risk       = "HIGH"
+            base = "MEDIUM: Relationship distress detected (breakup, rejection, betrayal). Monitoring for escalation."
+        reason = _append_reasoning(base, expert_reasoning)
+    elif flags["academic"] or flags["school_avoid"]:
+        scan_lower = scan_text.lower()
+        has_academic_destruct = any(w in scan_lower for w in _ACADEMIC_DESTRUCT_WORDS)
+        if is_joke and not (flags["school_avoid"] or has_academic_destruct):
+            risk = "LOW"
+            base = "Academic frustration contextualized as hyperbolic venting."
+        elif flags["school_avoid"] and any(flags[k] for k in ("cat3", "isolation", "emotional", "hope")):
+            risk = "HIGH"
             risk_score = max(0.78, risk_score)
-            reason     = "HIGH: School avoidance/truancy risk compounded with psychological distress/isolation."
-        elif has_school_avoid or has_academic_destruct:
-            risk       = "MEDIUM"
+            base = "HIGH: School avoidance/truancy risk compounded with psychological distress/isolation."
+        elif flags["school_avoid"] or has_academic_destruct:
+            risk = "MEDIUM"
             risk_score = max(0.55, risk_score)
-            reason     = "MEDIUM: Academic distress, school avoidance ideation, or elevated frustration detected."
+            base = "MEDIUM: Academic distress, school avoidance ideation, or elevated frustration detected."
         elif signal_count >= 2:
-            risk       = "HIGH"
+            risk = "HIGH"
             risk_score = max(0.75, risk_score)
-            reason     = (
-                f"HIGH: Academic pressure/school distress compounded with "
-                f"{signal_count} concurrent emotional distress signals."
-            )
+            base = f"HIGH: Academic pressure/school distress compounded with {signal_count} concurrent emotional distress signals."
         else:
-            risk       = "MEDIUM"
+            risk = "MEDIUM"
             risk_score = max(0.50, risk_score)
-            reason     = "MEDIUM: Academic pressure or school attendance distress detected."
-        if expert_reasoning: reason += " " + " ".join(expert_reasoning)
-
-    ### RULE 7: Pure risk score 
+            base = "MEDIUM: Academic pressure or school attendance distress detected."
+        reason = _append_reasoning(base, expert_reasoning)
     else:
         if risk_score >= 0.70 or (distress_conf >= 0.85 and neg_emo_conf >= 0.80):
-            risk       = "HIGH"
+            risk = "HIGH"
             risk_score = max(0.75, risk_score)
-            reason     = "HIGH: Strong negative sentiment/distress from ML neural networks."
-            if expert_reasoning: reason += " " + " ".join(expert_reasoning)
+            reason = _append_reasoning(
+                "HIGH: Strong negative sentiment/distress from ML neural networks.",
+                expert_reasoning,
+            )
         elif risk_score >= 0.40 and (neg_emo_conf >= 0.15 or expert_reasoning):
-            risk   = "MEDIUM"
-            reason = "Moderate negative sentiment."
-            if expert_reasoning: reason += " " + " ".join(expert_reasoning)
+            risk = "MEDIUM"
+            reason = _append_reasoning("Moderate negative sentiment.", expert_reasoning)
         elif expert_reasoning:
-            risk       = "MEDIUM"
+            risk = "MEDIUM"
             risk_score = max(0.5, risk_score)
-            reason     = "Atypical sentiment pattern flagged by heuristics."
+            reason = "Atypical sentiment pattern flagged by heuristics."
         elif risk_score > 0.35:
             # Prevent uncorroborated binary distress alone from forcing MEDIUM when emotion & rules are clean.
             risk_score = min(risk_score, 0.35)
 
-    ## ┐
-    ### STAGE 7.5: POSITIVE VENT GUARD (suppress false MEDIUM on grateful posts)
-    ## ┘
-    severe_flags = violent_threat or has_cat1 or has_cat2 or has_sexual or has_finality
-    distress_flags = (
-        has_emotional or has_isolation or has_anhedonia or has_self_worth
-        or has_masked_dep or has_cat3 or has_academic or has_relationship
-        or has_school_avoid or has_hopeless or has_distortion
+    severe_flags = bool(
+        violent_threat or flags["cat1"] or flags["cat2"] or flags["sexual"] or flags["final"]
     )
-    is_positive_vent = bool(has_positive and not severe_flags and not distress_flags and neg_emo_conf < 0.25)
-    if risk in ("LOW", "MEDIUM") and is_positive_vent:
-        risk       = "LOW"
-        risk_score = min(risk_score, 0.28)
-        reason     = "NLP: Positive/grateful vent — no active distress indicators."
-
-    ## ┐
-    ### STAGE 8: DURABLE CONTEXTUAL RISK HISTORY              
-    ## ┘
-    # Defaults — overwritten below if student_id is present
-    trajectory     = "INSUFFICIENT_DATA"
-    escalation_prob = 0.0
-
-    if student_id:
-        b_escalate, trajectory, escalation_prob = evaluate_risk_history(
-            risk_history or [], risk
+    distress_flags = any(
+        flags[k] for k in (
+            "emotional", "isolation", "anhedonia", "self_worth", "masked_dep",
+            "cat3", "academic", "relationship", "school_avoid", "hope", "dist",
         )
-        if escalation_prob > 0:
-            reason = f"[Predictive Recurrence Risk: {int(escalation_prob*100)}%] " + reason
-        if b_escalate:
-            if risk == "HIGH" and (trajectory == "ESCALATING" or escalation_prob > 0.6):
-                risk       = "CRITICAL"
-                risk_score = max(0.92, risk_score)
-                reason     = "CRITICAL ESCALATION: Repeated HIGH distress with escalating trajectory. " + reason
-            elif risk == "MEDIUM" and trajectory == "ESCALATING":
-                risk       = "HIGH"
-                risk_score = max(0.78, risk_score)
-                reason     = "HIGH ESCALATION: Persistent MEDIUM distress with repeated high-risk history. " + reason
-            elif risk == "LOW" and not is_positive_vent:
-                risk       = "MEDIUM"
-                risk_score = max(0.45, risk_score)
-                reason     = "MEDIUM ESCALATION: Repeated high-risk history, monitoring mild vent. " + reason
-        elif trajectory == "ESCALATING":
-            if risk == "LOW" and not is_positive_vent:
-                risk       = "MEDIUM"
-                risk_score = max(0.45, risk_score)
-                reason     = "MEDIUM ESCALATION: Repeated worsening emotional distress over 14 days. " + reason
-            elif risk == "MEDIUM":
-                risk       = "HIGH"
-                risk_score = max(0.75, risk_score)
-                reason     = "HIGH ESCALATION: Repeated worsening emotional distress over 14 days. " + reason
+    )
+    is_positive_vent = bool(flags["positive"] and not severe_flags and not distress_flags and neg_emo_conf < 0.25)
+    if risk in ("LOW", "MEDIUM") and is_positive_vent:
+        risk = "LOW"
+        risk_score = min(risk_score, 0.28)
+        reason = "NLP: Positive/grateful vent — no active distress indicators."
+
+    return risk, risk_score, reason, is_positive_vent
 
 
-    ## ┐
-    ### STAGE 9: RISK PERCENTAGE BANDING                       
-    ## ┘
-    raw_percent = int(round(risk_score * 99)) + 1
-    raw_percent = max(1, min(100, raw_percent))
+def _apply_risk_history_escalation(
+    student_id: str | None,
+    risk_history: list[dict] | None,
+    risk: str,
+    risk_score: float,
+    reason: str,
+    is_positive_vent: bool,
+) -> tuple[str, float, str, str, float]:
+    """Apply Stage 8 14-day durable risk history escalation."""
+    trajectory = "INSUFFICIENT_DATA"
+    escalation_prob = 0.0
+    if not student_id:
+        return risk, risk_score, reason, trajectory, escalation_prob
 
-    RISK_RANGES = {
-        "LOW":      (1,  30),
-        "MEDIUM":   (31, 60),
-        "HIGH":     (61, 85),
-        "CRITICAL": (86, 100),
-    }
-    lo, hi     = RISK_RANGES.get(risk, (1, 100))
-    risk_percent = lo + (raw_percent / 100.0) * (hi - lo)
-    risk_percent = int(round(max(lo, min(hi, risk_percent))))
+    b_escalate, trajectory, escalation_prob = evaluate_risk_history(risk_history or [], risk)
+    if escalation_prob > 0:
+        reason = f"[Predictive Recurrence Risk: {int(escalation_prob * 100)}%] " + reason
+
+    if b_escalate:
+        if risk == "HIGH" and (trajectory == "ESCALATING" or escalation_prob > 0.6):
+            risk = "CRITICAL"
+            risk_score = max(0.92, risk_score)
+            reason = "CRITICAL ESCALATION: Repeated HIGH distress with escalating trajectory. " + reason
+        elif risk == "MEDIUM" and trajectory == "ESCALATING":
+            risk = "HIGH"
+            risk_score = max(0.78, risk_score)
+            reason = "HIGH ESCALATION: Persistent MEDIUM distress with repeated high-risk history. " + reason
+        elif risk == "LOW" and not is_positive_vent:
+            risk = "MEDIUM"
+            risk_score = max(0.45, risk_score)
+            reason = "MEDIUM ESCALATION: Repeated high-risk history, monitoring mild vent. " + reason
+    elif trajectory == "ESCALATING":
+        if risk == "LOW" and not is_positive_vent:
+            risk = "MEDIUM"
+            risk_score = max(0.45, risk_score)
+            reason = "MEDIUM ESCALATION: Repeated worsening emotional distress over 14 days. " + reason
+        elif risk == "MEDIUM":
+            risk = "HIGH"
+            risk_score = max(0.75, risk_score)
+            reason = "HIGH ESCALATION: Repeated worsening emotional distress over 14 days. " + reason
+
+    return risk, risk_score, reason, trajectory, escalation_prob
+
+
+def _band_risk_score(risk: str, risk_score: float) -> int:
+    """Map internal 0..1 risk score into the display percentage band for the risk level."""
+    raw_percent = max(1, min(100, int(round(risk_score * 99)) + 1))
+    lo, hi = _RISK_RANGES.get(risk, (1, 100))
+    return int(round(max(lo, min(hi, lo + (raw_percent / 100.0) * (hi - lo)))))
+
+
+def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict] | None = None) -> dict:
+    """Run the multi-stage NLP classification, rule engine, and history escalation pipeline."""
+    normalized_text = normalize_slang(text)
+    translated_text = translation_gate.translate(
+        normalized_text,
+        lambda value: GoogleTranslator(source="auto", target="en").translate(value),
+    )
+
+    distress_conf, neg_emo_conf = get_risk_components(translated_text, normalized_text)
+    base_score = (0.50 * distress_conf) + (0.50 * neg_emo_conf)
+
+    compiled = _get_compiled_regexes()
+    scan_text = current_disclosure_text(text) + " " + current_disclosure_text(normalized_text)
+    flags, violent_threat = _extract_signal_flags(text, scan_text, compiled)
+
+    risk_score, expert_reasoning, signal_count = _apply_psychological_heuristics(base_score, flags)
+    risk, risk_score, reason, is_positive_vent = _apply_rule_engine(
+        risk_score, distress_conf, neg_emo_conf, scan_text,
+        flags, violent_threat, expert_reasoning, signal_count,
+    )
+    risk, risk_score, reason, trajectory, escalation_prob = _apply_risk_history_escalation(
+        student_id, risk_history, risk, risk_score, reason, is_positive_vent,
+    )
+    risk_percent = _band_risk_score(risk, risk_score)
 
     return {
-        "risk_score":             float(risk_percent),
-        "risk_level":             risk,
-        "flag_reason":            reason,
-        "reasoning":              reason,
-        "trajectory":             trajectory,
+        "risk_score": float(risk_percent),
+        "risk_level": risk,
+        "flag_reason": reason,
+        "reasoning": reason,
+        "trajectory": trajectory,
         "escalation_probability": round(float(escalation_prob), 2),
     }
 
