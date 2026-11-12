@@ -212,6 +212,13 @@
                         <p class="text-gray-500 text-sm max-w-sm">No <?= esc($registrationStatus) ?> student registrations match this view.</p>
                     </div>
                 <?php else: ?>
+                    <?php if ($canVerifyContact && ($manualLink = session()->getFlashdata('manual_consent_link'))): ?>
+                        <div class="guardian-verification mb-3">
+                            <label for="manual-consent-link">New guardian consent link</label>
+                            <input type="text" id="manual-consent-link" readonly value="<?= esc($manualLink, 'attr') ?>" onclick="this.select()" class="w-full">
+                            <p>Copy this link now and share it privately with the verified guardian. The link expires in 72 hours.</p>
+                        </div>
+                    <?php endif; ?>
                     <table class="registration-table w-full text-left border-collapse" aria-label="Student registrations">
                         <thead>
                             <tr class="thead-green text-xs uppercase tracking-wider">
@@ -299,6 +306,7 @@
                                                 default => strtotime($student['expires_at']) <= time() ? 'Link expired' : match ($student['sms_state']) {
                                                     'Queued' => 'SMS queued · awaiting guardian',
                                                     'Unknown' => 'SMS status uncertain',
+                                                    'Manual' => 'Manual link generated; awaiting guardian',
                                                     default => 'SMS was not queued',
                                                 },
                                             }) ?></p>
@@ -308,6 +316,14 @@
                                         </div>
                                     <?php endif; ?>
                                     <?php if ($registrationStatus === 'pending'): ?>
+                                    <?php if ($canVerifyContact && !empty($student['verified_phone']) && empty($student['response'])): ?>
+                                        <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="use_verified" value="1">
+                                            <button type="submit" name="delivery" value="manual" class="approve-btn font-semibold" onclick="return confirm('Generate a new consent link? Any previous link will stop working.')">Generate new consent link</button>
+                                        </form>
+                                    <?php endif; ?>
+
                                     <?php if ($canVerifyContact && \App\Libraries\GuardianConsent::canSend($student['requested_at'] ? $student : null, time())): ?>
                                         <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="guardian-verification">
                                             <?= csrf_field() ?>
@@ -323,7 +339,10 @@
                                                 <input type="checkbox" name="checked_records" value="1" required>
                                                 <span>I confirmed the guardian and this number against current school records.</span>
                                             </label>
-                                            <button type="submit" class="approve-btn font-semibold">Send consent link</button>
+                                            <button type="submit" class="approve-btn font-semibold">Send consent link by SMS</button>
+                                            <?php if (empty($student['verified_phone'])): ?>
+                                            <button type="submit" name="delivery" value="manual" class="approve-btn font-semibold">Generate link for private sharing</button>
+                                            <?php endif; ?>
                                         </form>
                                     <?php endif; ?>
                                     <?php if (!$canVerifyContact): ?>

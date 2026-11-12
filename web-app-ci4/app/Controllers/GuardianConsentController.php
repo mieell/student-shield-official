@@ -12,21 +12,23 @@ class GuardianConsentController extends BaseController
     {
         if (!$this->hasRole(2)) return $this->forbidden();
         $back = redirect()->to(site_url('admin/pending-registrations'));
+        $manual = $this->request->getPost('delivery') === 'manual';
+        $useVerified = $manual && $this->request->getPost('use_verified') === '1';
         $phone = GuardianConsent::phone($this->request->getPost('verified_phone'));
         $verifiedName = $this->request->getPost('verified_name');
         $notice = trim((string) env('GUARDIAN_CONSENT_NOTICE', ''));
-        if ($phone === null || !is_string($verifiedName) || trim($verifiedName) === '' || mb_strlen(trim($verifiedName)) > 120
-            || $this->request->getPost('checked_records') !== '1') {
+        if (!$useVerified && ($phone === null || !is_string($verifiedName) || trim($verifiedName) === '' || mb_strlen(trim($verifiedName)) > 120
+            || $this->request->getPost('checked_records') !== '1')) {
             return $back->with('error', 'Confirm the guardian and mobile number against current school records first.');
         }
-        if ($notice === '' || mb_strlen($notice) > 10000 || !trim((string) env('IPROG_SMS_API_TOKEN', ''))) {
+        if ($notice === '' || mb_strlen($notice) > 10000 || (!$manual && !trim((string) env('IPROG_SMS_API_TOKEN', '')))) {
             return $back->with('error', 'Set up the school-approved guardian notice and SMS service before sending consent links.');
         }
 
         $token = bin2hex(random_bytes(16));
         $url = site_url('guardian-consent/' . $token);
-        $message = 'StudentShield: Please review the school consent form: ' . $url;
-        if (strlen($message) > 160 || !preg_match('/\A[A-Za-z0-9 .,:;!?()\/+\-]+\z/D', $message)
+        $message = 'Please review the school consent form: ' . $url;
+        if ((!$manual && (strlen($message) > 160 || !preg_match('/\A[A-Za-z0-9 .,:;!?()\/+\-]+\z/D', $message)))
             || (ENVIRONMENT === 'production' && !str_starts_with($url, 'https://'))) {
             return $back->with('error', 'Configure a public HTTPS site address that fits in the consent SMS.');
         }
@@ -37,16 +39,24 @@ class GuardianConsentController extends BaseController
             $user = GuardianConsent::lockStudent($db, $id);
             $consents = $db->table('guardian_consents');
             $prior = $consents->where('user_id', $id)->get()->getRowArray();
-            if (!$user || !GuardianConsent::canSend($prior, time())) {
+            if (!$user || ($manual ? !empty($prior['response']) : !GuardianConsent::canSend($prior, time()))) {
                 $db->transRollback();
                 return $back->with('error', 'A consent request is already active or the registration has been decided.');
+            }
+            if ($useVerified) {
+                $phone = GuardianConsent::phone($prior['phone'] ?? null);
+                $verifiedName = $prior['verified_name'] ?? '';
+                if ($phone === null || trim($verifiedName) === '') {
+                    $db->transRollback();
+                    return $back->with('error', 'Verify the guardian contact first.');
+                }
             }
             $hash = hash('sha256', $token);
             $data = [
                 'user_id' => $id, 'verified_by' => (int) session()->get('user_id'), 'phone' => $phone,
                 'verified_name' => trim($verifiedName),
                 'token_hash' => $hash, 'notice' => $notice, 'requested_at' => date('Y-m-d H:i:s'),
-                'expires_at' => date('Y-m-d H:i:s', time() + 72 * 3600), 'sms_state' => 'Unknown',
+                'expires_at' => date('Y-m-d H:i:s', time() + 72 * 3600), 'sms_state' => $manual ? 'Manual' : 'Unknown',
                 'response' => null, 'guardian_name' => null, 'responded_at' => null,
             ];
             $db->table('guardian_consents')->upsert($data);
@@ -58,6 +68,10 @@ class GuardianConsentController extends BaseController
         }
 
         $this->logAudit('GUARDIAN_CONTACT_VERIFIED', 'user', $id);
+        if ($manual) {
+            $this->logAudit('GUARDIAN_CONSENT_LINK_GENERATED', 'user', $id);
+            return $back->with('manual_consent_link', $url);
+        }
         $state = $this->smsGateway()->send($phone, $message, 'guardian-consent:' . $hash)['state'];
         $db->table('guardian_consents')->where('user_id', $id)->where('token_hash', $hash)->update(['sms_state' => $state]);
         return $back->with($state === 'Queued' ? 'success' : 'error', match ($state) {

@@ -691,6 +691,7 @@ class AdminController extends BaseController
             return $this->response->setStatusCode(503)->setBody('Registrations are unavailable. Check that the guardian consent database update is installed.');
         }
 
+        $this->response->setHeader('Cache-Control', 'private, no-store');
         return view('admin_pending_registrations', [
             'pendingUsers' => $pendingUsers, 'registrationStatus' => $registrationStatus,
             'canVerifyContact' => $this->hasRole(2),
