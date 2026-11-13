@@ -26,8 +26,6 @@
                         <span id="spCriticalBadge"
                             class="hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-red-100 border border-red-500/30">High
                             Risk Pattern</span>
-                        <span id="spTrajectoryBadge"
-                            class="hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"></span>
                     </h2>
                     <div class="flex flex-wrap gap-4 mt-2 text-white/80 text-sm font-medium">
                         <span class="flex items-center gap-1.5"><svg class="w-4 h-4 text-[#EAB308]" fill="none"
@@ -132,9 +130,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                         </svg>
-                        Student Wellness Trend
+                        Vent Screening History
                     </h3>
-                    <p class="text-xs text-gray-500 font-medium mb-2">How this student has been feeling over time</p>
+                    <p class="text-xs text-gray-500 font-medium mb-2">Screening levels for up to 30 recent Safe Space entries.</p>
+                    <p id="spTrajectoryBadge" class="hidden text-xs text-gray-700 mb-2"></p>
                     <div class="flex flex-wrap gap-3 text-[10px] font-bold uppercase tracking-wider">
                         <span class="flex items-center gap-1"><span
                                 class="w-2.5 h-2.5 rounded-full bg-green-500"></span> <span
@@ -281,23 +280,21 @@
                 document.getElementById('spParentEmail').innerText = u.parent_email || 'N/A';
                 document.getElementById('spParentPhone').innerText = u.parent_phone || 'N/A';
 
-                // Render trajectory from the database-backed 14-day risk history.
+                // Show the trend saved when the latest entry was screened.
                 var trajectoryBadge = document.getElementById('spTrajectoryBadge');
                 var traj = (data.current_trajectory || 'INSUFFICIENT_DATA').toUpperCase();
-                var prob = data.escalation_prob || 0;
-                trajectoryBadge.classList.remove('hidden');
-                if (traj === 'ESCALATING') {
-                    trajectoryBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-red-100 border border-red-500/40';
-                    trajectoryBadge.innerHTML = '&#x2197; Escalating (' + Math.round(prob * 100) + '%)';
-                } else if (traj === 'IMPROVING') {
-                    trajectoryBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-100 border border-emerald-500/30';
-                    trajectoryBadge.innerHTML = '&#x2198; Improving';
-                } else if (traj === 'STABLE') {
-                    trajectoryBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-100 border border-blue-500/30';
-                    trajectoryBadge.innerHTML = '&#x2192; Stable';
-                } else {
-                    trajectoryBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/50 border border-white/20';
-                    trajectoryBadge.innerHTML = '&#x2015; No History';
+                var latest = data.timeline[data.timeline.length - 1];
+                if (latest) {
+                    var trendLabels = {
+                        ESCALATING: 'upward trend',
+                        IMPROVING: 'downward trend',
+                        STABLE: 'no clear upward or downward trend'
+                    };
+                    trajectoryBadge.textContent = 'Latest entry: ' + latest.risk_label + '. ' +
+                        (trendLabels[traj]
+                            ? '14-day trend at that entry: ' + trendLabels[traj] + '.'
+                            : 'No trend estimate was recorded for that entry.');
+                    trajectoryBadge.classList.remove('hidden');
                 }
 
                 // Render Chart

@@ -528,13 +528,14 @@ class AdminController extends BaseController
         $guardianRoute = \App\Libraries\GuardianAlertRouting::resolve($user, $guardianSafety);
 
 
-        // 2. Fetch Vents (wellness tracking data)
-        $vents = $db->table('vent_logs')
+        // Fetch the latest entries, then present the chart in chronological order.
+        $vents = array_reverse($db->table('vent_logs')
             ->where('user_id', $id)
             ->where('deleted_at IS NULL')
-            ->orderBy('created_at', 'ASC')
+            ->orderBy('created_at', 'DESC')
+            ->orderBy('id', 'DESC')
             ->limit(30)
-            ->get()->getResultArray();
+            ->get()->getResultArray());
 
         $encrypter = \Config\Services::encrypter();
         $timelineData = [];

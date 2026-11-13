@@ -70,11 +70,12 @@ class VentController extends BaseController
                 ->where('user_id', $userId)
                 ->where('created_at >=', date('Y-m-d H:i:s', strtotime('-14 days')))
                 ->where('deleted_at IS NULL')
-                ->orderBy('created_at', 'ASC')
+                ->orderBy('created_at', 'DESC')
+                ->orderBy('id', 'DESC')
                 ->limit(100)
                 ->get()->getResultArray();
 
-            foreach ($historyRows as $historyRow) {
+            foreach (array_reverse($historyRows) as $historyRow) {
                 $historyRisk = strtoupper((string) ($historyRow['risk_level'] ?? ''));
                 $historyTimestamp = strtotime((string) ($historyRow['created_at'] ?? ''));
                 if (in_array($historyRisk, ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], true) && $historyTimestamp !== false) {
