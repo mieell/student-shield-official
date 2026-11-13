@@ -89,25 +89,29 @@
         .registration-table { min-width: 64rem; }
         .registration-contact > div { max-width: 16rem; overflow-wrap: anywhere; }
         .registration-contact svg { flex-shrink: 0; }
-        .guardian-verification { min-width: 18rem; max-width: 28rem; margin: 0 auto; padding: 1rem; background: #f7fbf8; border: 1px solid #cfe2d4; border-radius: 12px; text-align: left; }
-        .registration-manage { text-align: center; }
-        .registration-dialog { position: fixed; inset: 0; margin: auto; width: min(32rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; padding: 1rem; border: 1px solid #d4e1d8; border-radius: 12px; background: #fff; text-align: left; }
-        .registration-dialog::backdrop { background: #142c2099; }
-        .registration-panel { margin-top: .5rem; padding: .85rem; border: 1px solid #d4e1d8; border-radius: 8px; background: #f6faf7; }
-        .registration-actions .consent-action { display: inline-flex; align-items: center; min-height: 40px; padding: .5rem .85rem; border-radius: 8px; font-size: .8rem; }
-        .registration-actions .archive-action { margin-top: .65rem; color: #41584b; border: 1px solid #becfc3; background: #fff; }
-        .registration-actions .archive-action:hover { background: #edf4ef; }
-        .registration-actions summary { cursor: pointer; font-size: .8rem; color: #174d30; padding: .55rem; }
-        .guardian-verification h3 { color: #174d30; font-size: .9rem; font-weight: 700; }
-        .guardian-verification p { margin-top: .2rem; color: #526b5b; font-size: .75rem; line-height: 1.45; }
+        .guardian-verification { min-width: 0; max-width: none; margin: 0; padding: 1rem; background: #f8faf6; border: 1px solid #e3ebe3; border-radius: 12px; text-align: left; }
+        .registration-manage { display: inline-flex; flex-direction: column; align-items: center; gap: .375rem; text-align: center; }
+        .registration-dialog { position: fixed; inset: 0; margin: auto; width: min(34rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow: hidden; padding: 0; border: 1px solid #dce6dd; border-radius: 16px; background: #fff; box-shadow: 0 24px 64px -16px rgba(7, 56, 28, 0.34); text-align: left; }
+        .registration-dialog[open] { animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .registration-dialog::backdrop { background: rgba(7, 38, 19, 0.45); backdrop-filter: blur(4px); }
+        .registration-actions .consent-action { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: .55rem .9rem; border-radius: 8px; font-size: .8rem; cursor: pointer; }
+        .registration-actions .secondary-consent-btn { border: 1px solid #cfe2d4; background: #fff; color: #174d30; transition: all 0.2s ease; }
+        .registration-actions .secondary-consent-btn:hover { background: #eaf4ed; border-color: #9ec5aa; }
+        .registration-actions .archive-action { min-height: 38px; padding: .45rem .85rem; color: #b91c1c; border: 1px solid #fecaca; background: #fff; transition: all 0.2s ease; }
+        .registration-actions .archive-action:hover { background: #fef2f2; border-color: #fca5a5; }
+        .registration-dialog details summary { cursor: pointer; font-size: .8rem; font-weight: 600; color: #174d30; padding: .2rem 0; user-select: none; }
+        .registration-dialog details .guardian-verification { border: 0; background: transparent; padding: .75rem 0 .15rem; }
+        .guardian-verification h3 { color: #15492c; font-size: .95rem; font-weight: 700; }
+        .guardian-verification p { margin-top: .25rem; color: #526b5b; font-size: .75rem; line-height: 1.45; }
         .guardian-verification .guardian-field { margin-top: .75rem; }
         .guardian-verification label { display: block; color: #284b35; font-size: .75rem; font-weight: 600; }
-        .guardian-verification input[type='text'], .guardian-verification input[type='tel'] { display: block; width: 100%; min-height: 42px; margin-top: .3rem; padding: .55rem .7rem; border: 1px solid #becfc3; border-radius: 8px; background: #fff; color: #173a2a; }
-        .guardian-verification input:focus-visible { outline: 3px solid #b5dec0; outline-offset: 1px; }
-        .guardian-verification .guardian-check { display: flex; align-items: flex-start; gap: .55rem; margin: .85rem 0; font-weight: 400; line-height: 1.45; }
-        .guardian-verification .guardian-check input { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; accent-color: #096328; }
-        .guardian-verification button { min-height: 42px; padding: .55rem .9rem; border-radius: 8px; font-size: .8rem; }
-        @media (max-width: 767px) { .guardian-verification { min-width: 0; max-width: none; } .guardian-verification button { width: 100%; } }
+        .guardian-verification input[type='text'], .guardian-verification input[type='tel'] { display: block; width: 100%; min-height: 42px; margin-top: .3rem; padding: .55rem .75rem; border: 1px solid #c9d9ce; border-radius: 8px; background: #fff; color: #173a2a; }
+        .guardian-verification input:focus-visible { outline: 3px solid #b5dec0; outline-offset: 1px; border-color: #096328; }
+        .guardian-verification .guardian-check { display: flex; align-items: flex-start; gap: .55rem; margin: .85rem 0 1rem; font-weight: 400; line-height: 1.45; cursor: pointer; }
+        .guardian-verification .guardian-check input { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 2px; accent-color: #096328; }
+        .guardian-verification .guardian-actions { display: flex; flex-wrap: wrap; gap: .625rem; }
+        .guardian-verification .guardian-actions > button { flex: 1 1 11rem; display: inline-flex; align-items: center; justify-content: center; text-align: center; min-height: 42px; padding: .55rem .9rem; border-radius: 8px; font-size: .8rem; line-height: 1.25; cursor: pointer; }
+        @media (max-width: 767px) { .guardian-verification .guardian-actions > button { flex-basis: 100%; width: 100%; } }
         .registration-nav > *, .registration-nav svg { flex-shrink: 0; }
         .registration-nav > a, .registration-nav > span, .registration-nav button { white-space: nowrap; }
         @media (max-width: 1023px) {
@@ -131,8 +135,8 @@
             .registration-name > div { align-items: flex-start; }
             .registration-name > div > span { font-size: 1rem; line-height: 1.5; }
             .registration-status { align-self: center; justify-self: end; }
-            .registration-actions > div { margin-top: 4px; }
-            .registration-actions button { flex: 1; min-width: 0; min-height: 44px; justify-content: center; font-size: .8125rem; }
+            .registration-actions > div { margin-top: 4px; width: 100%; }
+            .registration-actions .registration-manage > button { width: 100%; min-height: 44px; justify-content: center; font-size: .8125rem; }
             #toastContainer { left: 16px; right: 16px; top: 16px; }
         }
     </style>
@@ -343,37 +347,74 @@
                                     </span>
                                 </td>
                                 <td data-label="Action" class="registration-actions px-6 py-4 text-center">
-                                    <?php $consentStatus = empty($student['verified_phone']) ? 'Contact needs verification' : match ($student['response']) {
-                                                'accepted' => 'Consent accepted',
-                                                'declined' => 'Consent declined',
-                                                default => strtotime($student['expires_at']) <= time() ? 'Consent request expired' : match ($student['sms_state']) {
-                                                    'Queued' => 'SMS sent to carrier · awaiting guardian',
-                                                    'Unknown' => 'SMS status uncertain',
-                                                    'Manual' => 'Manual link generated; awaiting guardian',
-                                                    default => 'SMS was not queued',
-                                                },
-                                            }; ?>
+                                    <?php
+                                        $consentStatus = empty($student['verified_phone']) ? 'Contact needs verification' : match ($student['response']) {
+                                            'accepted' => 'Consent accepted',
+                                            'declined' => 'Consent declined',
+                                            default => strtotime((string) ($student['expires_at'] ?? '')) <= time() ? 'Consent request expired' : match ($student['sms_state']) {
+                                                'Queued' => 'SMS sent to carrier · awaiting guardian',
+                                                'Unknown' => 'SMS status uncertain',
+                                                'Manual' => 'Manual link generated; awaiting guardian',
+                                                default => 'SMS was not queued',
+                                            },
+                                        };
+                                        $consentBadgeStyle = match (true) {
+                                            $consentStatus === 'Consent accepted' => ['pill' => 'bg-emerald-50 text-[#0B5E2E] border-emerald-200', 'dot' => 'bg-[#128f42]'],
+                                            in_array($consentStatus, ['Consent declined', 'Consent request expired', 'SMS was not queued'], true) => ['pill' => 'bg-rose-50 text-rose-800 border-rose-200', 'dot' => 'bg-rose-500'],
+                                            default => ['pill' => 'bg-amber-50 text-amber-800 border-amber-200', 'dot' => 'bg-amber-500'],
+                                        };
+                                    ?>
                                     <?php if ($registrationStatus === 'pending'): ?>
                                     <div class="registration-manage">
-                                        <button type="button" class="consent-action" aria-haspopup="dialog" aria-controls="registration-dialog-<?= $uid ?>" onclick="document.getElementById(this.getAttribute('aria-controls')).showModal()">Manage</button>
-                                        <dialog class="registration-dialog" id="registration-dialog-<?= $uid ?>" aria-labelledby="registration-title-<?= $uid ?>">
-                                            <div class="flex items-center justify-between gap-3">
-                                                <h2 class="font-semibold" id="registration-title-<?= $uid ?>">Manage registration · <?= esc($student['name']) ?></h2>
-                                                <button type="button" class="consent-action" autofocus onclick="this.closest('dialog').close()">Close</button>
-                                            </div>
-                                            <p class="mt-2 text-xs"><?= esc($consentStatus) ?></p>
-                                        <div class="registration-panel">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold <?= $consentBadgeStyle['pill'] ?>">
+                                            <span class="w-1.5 h-1.5 rounded-full <?= $consentBadgeStyle['dot'] ?>"></span>
+                                            <?= esc($consentStatus) ?>
+                                        </span>
+                                        <button type="button" class="inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3.5 py-1.5 rounded-lg border border-[#cfe2d4] bg-white hover:bg-[#eaf4ed] hover:border-[#9ec5aa] text-[#15492c] text-xs font-bold shadow-2xs transition-colors cursor-pointer whitespace-nowrap" aria-haspopup="dialog" aria-controls="registration-dialog-<?= $uid ?>" onclick="document.getElementById(this.getAttribute('aria-controls')).showModal()">
+                                            <span>Manage</span>
+                                            <svg class="w-3.5 h-3.5 text-[#3e5948]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                        </button>
+                                        <dialog class="registration-dialog" id="registration-dialog-<?= $uid ?>" aria-labelledby="registration-title-<?= $uid ?>" onclick="if (event.target === this) this.close()">
+                                            <div class="flex flex-col max-h-[calc(100dvh-2rem)]">
+                                                <div class="h-1.5 w-full bg-gradient-to-r from-[#096328] via-[#128f42] to-[#D9AA2E] flex-shrink-0"></div>
+                                                <div class="px-5 sm:px-6 pt-4 pb-3.5 border-b border-[#edf2ed] flex-shrink-0">
+                                                    <div class="flex items-start justify-between gap-3">
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold tracking-wide <?= $consentBadgeStyle['pill'] ?>">
+                                                            <span class="w-1.5 h-1.5 rounded-full <?= $consentBadgeStyle['dot'] ?>"></span>
+                                                            <?= esc($consentStatus) ?>
+                                                        </span>
+                                                        <button type="button" autofocus onclick="this.closest('dialog').close()" aria-label="Close modal" title="Close" class="dialog-close-btn w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-[#f4f7f4] hover:bg-[#e7efe7] text-[#3e5948] flex items-center justify-center transition-colors cursor-pointer">
+                                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                        </button>
+                                                    </div>
+                                                    <h2 class="text-lg sm:text-xl font-extrabold text-[#15492c] mt-2.5 leading-snug break-words" id="registration-title-<?= $uid ?>">Manage registration · <?= esc($student['name']) ?></h2>
+                                                    <?php if (!empty($student['student_id']) || !empty($student['grade_level'])): ?>
+                                                        <p class="text-xs text-[#526b5b] mt-0.5 tabular-nums">
+                                                            <?php if (!empty($student['student_id'])): ?><?= esc($student['student_id']) ?><?php endif; ?>
+                                                            <?php if (!empty($student['student_id']) && !empty($student['grade_level'])): ?> · <?php endif; ?>
+                                                            <?php if (!empty($student['grade_level'])): ?>Grade <?= esc($student['grade_level']) ?><?php if (!empty($student['section'])): ?> · <?= esc($student['section']) ?><?php endif; ?><?php endif; ?>
+                                                        </p>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto custom-scrollbar">
                                     <?php endif; ?>
                                     <?php if (!empty($student['verified_phone'])): ?>
-                                        <div class="text-xs mb-3 space-y-1 leading-relaxed">
-                                            <p>Verified number: <?= esc($student['verified_phone']) ?></p>
-                                            <p>Guardian on school record: <?= esc($student['verified_name']) ?></p>
-                                            <p class="font-semibold"><?= esc($consentStatus) ?></p>
+                                        <div class="rounded-xl bg-[#f8faf6] border border-[#e3ebe3] p-3.5 text-xs space-y-2.5 leading-relaxed">
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                <div>
+                                                    <span class="block uppercase tracking-wider text-[10px] font-bold text-[#61756b]">Verified number</span>
+                                                    <span class="block font-semibold text-[#173a2a] mt-0.5 tabular-nums"><?= esc($student['verified_phone']) ?></span>
+                                                </div>
+                                                <div>
+                                                    <span class="block uppercase tracking-wider text-[10px] font-bold text-[#61756b]">Guardian on school record</span>
+                                                    <span class="block font-semibold text-[#173a2a] mt-0.5 break-words"><?= esc($student['verified_name']) ?></span>
+                                                </div>
+                                            </div>
                                             <?php if (empty($student['response']) && ($student['sms_state'] ?? '') === 'Queued' && strtotime((string) ($student['expires_at'] ?? '')) > time()): ?>
-                                                <p class="text-[11px] text-gray-500">Submitted to the SMS carrier; live delivery receipts are unavailable. You can resend after 5 minutes or generate a link below.</p>
+                                                <p class="text-[11px] text-[#526b5b] pt-2 border-t border-[#e7efe7]">Submitted to the SMS carrier; live delivery receipts are unavailable. You can resend after 5 minutes or generate a link below.</p>
                                             <?php endif; ?>
                                             <?php if ($student['guardian_name']): ?>
-                                                <p>Signed by <?= esc($student['guardian_name']) ?> · <?= esc($student['responded_at']) ?></p>
+                                                <p class="text-[#15492c] font-semibold pt-2 border-t border-[#e7efe7]">Signed by <?= esc($student['guardian_name']) ?> · <?= esc($student['responded_at']) ?></p>
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
@@ -383,43 +424,47 @@
                                             ? \App\Libraries\GuardianConsent::canSend(!empty($student['requested_at']) ? $student : null, $consentNow)
                                             : false; ?>
                                     <?php if ($canVerifyContact && !empty($student['verified_phone']) && empty($student['response'])): ?>
-                                        <?php if ($canSendSms): ?>
-                                            <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="mb-2">
+                                        <div class="rounded-xl border border-[#dce7df] bg-white p-3.5 space-y-3">
+                                            <?php if ($canSendSms): ?>
+                                                <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="use_verified" value="1">
+                                                    <button type="submit" name="delivery" value="sms" class="w-full approve-btn consent-action font-semibold shadow-xs" onclick="return confirm('Resend a new consent SMS to the verified guardian number? Any prior unexpired SMS codes for this number stay active until a response is submitted.')">Resend consent SMS</button>
+                                                    <p class="text-[11px] text-[#526b5b] mt-1.5 leading-relaxed">Sends a fresh SMS code while keeping prior active SMS codes usable for this number.</p>
+                                                </form>
+                                            <?php else:
+                                                $smsStateNow = (string) ($student['sms_state'] ?? '');
+                                                if ($smsStateNow === 'Queued' && !empty($student['requested_at'])) {
+                                                    $waitSeconds = max(1, (strtotime((string) $student['requested_at']) + 300) - $consentNow);
+                                                    $waitLabel = $waitSeconds >= 60 ? (int) ceil($waitSeconds / 60) . 'm' : $waitSeconds . 's';
+                                                    $disabledLabel = 'Resend SMS (wait ' . $waitLabel . ')';
+                                                    $disabledHint = 'Wait 5 minutes from the last SMS before resending.';
+                                                } elseif ($smsStateNow === 'Unknown') {
+                                                    $disabledLabel = 'Resend SMS unavailable';
+                                                    $disabledHint = 'Carrier delivery status is unknown; generate a replacement link or wait for expiry.';
+                                                } else {
+                                                    $disabledLabel = 'Resend SMS unavailable';
+                                                    $disabledHint = 'Active manual link exists; wait until expiry or generate a replacement link.';
+                                                } ?>
+                                                <div>
+                                                    <button type="button" disabled aria-disabled="true" class="w-full inline-flex items-center justify-center min-h-[42px] px-3 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 text-xs font-semibold cursor-not-allowed"><?= esc($disabledLabel) ?></button>
+                                                    <p class="text-[11px] text-[#526b5b] mt-1.5 leading-relaxed"><?= esc($disabledHint) ?></p>
+                                                </div>
+                                            <?php endif; ?>
+                                            <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="pt-2.5 border-t border-[#edf2ed]">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="use_verified" value="1">
-                                                <button type="submit" name="delivery" value="sms" class="approve-btn consent-action font-semibold" onclick="return confirm('Resend a new consent SMS to the verified guardian number? Any prior unexpired SMS codes for this number stay active until a response is submitted.')">Resend consent SMS</button>
-                                                <p class="text-xs mt-1">Sends a fresh SMS code while keeping prior active SMS codes usable for this number.</p>
+                                                <button type="submit" name="delivery" value="manual" class="w-full secondary-consent-btn consent-action font-semibold" onclick="return confirm('Generate a new replacement consent link? Any older replacement link will stop working, while active SMS codes for this number stay usable.')">Generate replacement link</button>
+                                                <p class="text-[11px] text-[#526b5b] mt-1.5 leading-relaxed">Share privately if SMS delivery is uncertain; active SMS codes remain usable.</p>
                                             </form>
-                                        <?php else:
-                                            $smsStateNow = (string) ($student['sms_state'] ?? '');
-                                            if ($smsStateNow === 'Queued' && !empty($student['requested_at'])) {
-                                                $waitSeconds = max(1, (strtotime((string) $student['requested_at']) + 300) - $consentNow);
-                                                $waitLabel = $waitSeconds >= 60 ? (int) ceil($waitSeconds / 60) . 'm' : $waitSeconds . 's';
-                                                $disabledLabel = 'Resend SMS (wait ' . $waitLabel . ')';
-                                                $disabledHint = 'Wait 5 minutes from the last SMS before resending.';
-                                            } elseif ($smsStateNow === 'Unknown') {
-                                                $disabledLabel = 'Resend SMS unavailable';
-                                                $disabledHint = 'Carrier delivery status is unknown; generate a replacement link or wait for expiry.';
-                                            } else {
-                                                $disabledLabel = 'Resend SMS unavailable';
-                                                $disabledHint = 'Active manual link exists; wait until expiry or generate a replacement link.';
-                                            } ?>
-                                            <div class="mb-2">
-                                                <button type="button" disabled aria-disabled="true" class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 text-xs font-semibold cursor-not-allowed"><?= esc($disabledLabel) ?></button>
-                                                <p class="text-xs text-gray-500 mt-1"><?= esc($disabledHint) ?></p>
-                                            </div>
-                                        <?php endif; ?>
-                                        <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="use_verified" value="1">
-                                            <button type="submit" name="delivery" value="manual" class="approve-btn consent-action font-semibold" onclick="return confirm('Generate a new replacement consent link? Any older replacement link will stop working, while active SMS codes for this number stay usable.')">Generate replacement link</button>
-                                            <p class="text-xs mt-1">Share privately if SMS delivery is uncertain; active SMS codes remain usable.</p>
-                                        </form>
+                                        </div>
                                     <?php endif; ?>
 
                                     <?php if ($canVerifyContact && empty($student['response'])): ?>
-                                        <details <?= empty($student['verified_phone']) ? 'open' : '' ?>>
+                                        <?php if (!empty($student['verified_phone'])): ?>
+                                        <details class="rounded-xl border border-[#e3ebe3] bg-[#f9fbf9] px-3.5 py-2.5">
                                         <summary>Verify or update guardian contact</summary>
+                                        <?php endif; ?>
                                         <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="guardian-verification">
                                             <?= csrf_field() ?>
                                             <h3>Verify guardian contact</h3>
@@ -434,46 +479,52 @@
                                                 <input type="checkbox" name="checked_records" value="1" required>
                                                 <span>I confirmed the guardian and this number against current school records.</span>
                                             </label>
-                                            <?php if ($canSendSms): ?>
-                                            <button type="submit" name="delivery" value="sms" class="approve-btn font-semibold">Send consent code by SMS</button>
-                                            <?php endif; ?>
-                                            <button type="submit" name="delivery" value="manual" class="approve-btn font-semibold">Generate link for private sharing</button>
+                                            <div class="guardian-actions">
+                                                <?php if ($canSendSms): ?>
+                                                <button type="submit" name="delivery" value="sms" class="approve-btn font-semibold">Send consent code by SMS</button>
+                                                <?php endif; ?>
+                                                <button type="submit" name="delivery" value="manual" class="secondary-consent-btn font-semibold">Generate link for private sharing</button>
+                                            </div>
                                         </form>
+                                        <?php if (!empty($student['verified_phone'])): ?>
                                         </details>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                     <?php if (!$canVerifyContact): ?>
-                                    <?php if (!$student['requested_at']): ?><p class="text-xs mb-2">Waiting for Super Admin to verify the guardian contact.</p><?php endif; ?>
-                                    <div class="flex items-center justify-center gap-2">
+                                    <?php if (!$student['requested_at']): ?><p class="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900">Waiting for Super Admin to verify the guardian contact.</p><?php endif; ?>
+                                    <div class="flex flex-wrap items-center justify-end gap-2.5 pt-1">
                                         <?php if ($student['response'] === 'accepted'): ?>
-                                        <button type="button" onclick="handleAction('approve', <?= $uid ?>, '<?= esc(addslashes($student['name'])) ?>', this)" class="approve-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide shadow-sm cursor-pointer">
+                                        <button type="button" onclick="handleAction('approve', <?= $uid ?>, '<?= esc(addslashes($student['name'])) ?>', this)" class="approve-btn inline-flex items-center gap-1.5 px-4 py-2 min-h-[42px] rounded-lg text-xs font-bold uppercase tracking-wide shadow-sm cursor-pointer">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                             </svg>
                                             <span>Approve</span>
                                         </button>
                                         <?php endif; ?>
-                                        <button type="button" onclick="handleAction('reject', <?= $uid ?>, '<?= esc(addslashes($student['name'])) ?>', this)" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200 transition-colors cursor-pointer">
-                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <button type="button" onclick="handleAction('reject', <?= $uid ?>, '<?= esc(addslashes($student['name'])) ?>', this)" class="inline-flex items-center gap-1.5 px-4 py-2 min-h-[42px] rounded-lg text-xs font-semibold text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200 transition-colors cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                             </svg>
                                             <span>Reject</span>
                                         </button>
                                     </div>
                                     <?php elseif ($student['response'] === 'accepted'): ?>
-                                        <p class="text-xs">Waiting for counselor approval.</p>
+                                        <p class="rounded-xl bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 text-xs font-medium text-[#0B5E2E]">Waiting for counselor approval.</p>
                                     <?php endif; ?>
-                                    <?php if ($canVerifyContact): ?>
-                                        <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/archive'), 'attr') ?>" onsubmit="return confirm('Archive this registration? Any outstanding consent link will close.')">
-                                            <?= csrf_field() ?>
-                                            <button type="submit" class="consent-action archive-action">Archive registration</button>
-                                        </form>
-                                    <?php endif; ?>
-                                    <?php else: ?><span class="text-sm text-gray-500">Decision recorded</span><?php endif; ?>
-                                    <?php if ($registrationStatus === 'pending'): ?>
-                                        </div>
+                                                </div>
+                                                <?php if ($canVerifyContact): ?>
+                                                <div class="px-5 sm:px-6 py-3 bg-[#fafcfb] border-t border-[#edf2ed] flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+                                                    <span class="text-[11px] text-[#61756b]">Close out duplicate or invalid pending requests</span>
+                                                    <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/archive'), 'attr') ?>" onsubmit="return confirm('Archive this registration? Any outstanding consent link will close.')">
+                                                        <?= csrf_field() ?>
+                                                        <button type="submit" class="consent-action archive-action font-semibold">Archive registration</button>
+                                                    </form>
+                                                </div>
+                                                <?php endif; ?>
+                                            </div>
                                         </dialog>
                                     </div>
-                                    <?php endif; ?>
+                                    <?php else: ?><span class="text-sm text-gray-500">Decision recorded</span><?php endif; ?>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

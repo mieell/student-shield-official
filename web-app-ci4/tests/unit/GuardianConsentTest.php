@@ -355,4 +355,62 @@ final class GuardianConsentTest extends CIUnitTestCase
             $_SERVER = $savedServer;
         }
     }
+
+    public function testManageRegistrationDialogRendersFlatUnverifiedFormAndCollapsedUpdateForm(): void
+    {
+        helper(['url', 'form']);
+        session()->set(['isLoggedIn' => true, 'role' => 2, 'user_id' => 2]);
+        $unverified = [
+            'user_id' => 92,
+            'name' => 'Jayzi',
+            'email' => 'jayzi@example.edu',
+            'student_id' => 'SS-20261113-00092',
+            'lrn' => '123456789012',
+            'grade_level' => '6',
+            'section' => 'Mabini',
+            'parent_phone' => null,
+            'parent_email' => null,
+            'verified_phone' => null,
+            'verified_name' => null,
+            'guardian_name' => null,
+            'response' => null,
+            'responded_at' => null,
+            'requested_at' => null,
+            'expires_at' => null,
+            'sms_state' => null,
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+
+        try {
+            $unverifiedHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [$unverified],
+                'canVerifyContact' => true,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('id="registration-dialog-92"', $unverifiedHtml);
+            self::assertStringContainsString('aria-label="Close modal"', $unverifiedHtml);
+            self::assertStringContainsString('Contact needs verification', $unverifiedHtml);
+            self::assertStringContainsString('class="guardian-actions"', $unverifiedHtml);
+            self::assertStringContainsString('Send consent code by SMS', $unverifiedHtml);
+            self::assertStringContainsString('Generate link for private sharing', $unverifiedHtml);
+            self::assertStringContainsString('Archive registration', $unverifiedHtml);
+            self::assertStringNotContainsString('Verify or update guardian contact', $unverifiedHtml);
+
+            $verifiedHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [array_merge($unverified, [
+                    'verified_phone' => '+639669742070',
+                    'verified_name' => 'Ramos Ramos',
+                    'sms_state' => 'Queued',
+                    'requested_at' => date('Y-m-d H:i:s', time() - 400),
+                    'expires_at' => date('Y-m-d H:i:s', time() + 86400),
+                ])],
+                'canVerifyContact' => true,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('Verify or update guardian contact', $verifiedHtml);
+            self::assertStringNotContainsString('<details open', $verifiedHtml);
+        } finally {
+            session()->remove(['isLoggedIn', 'role', 'user_id']);
+        }
+    }
 }
