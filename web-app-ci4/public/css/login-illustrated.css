@@ -25,7 +25,8 @@ body.student-login.login-illustrated .login-form .submit-btn {
     box-shadow: 0 5px 12px -7px #05341880, inset 0 1px #fff4c780;
 }
 body.student-login.login-illustrated .submit-btn :is(#btnText,#btnIcon,#btnSpinner) { color: #164c2c; mix-blend-mode: normal; }
-body.student-login.login-illustrated .password-toggle { color: #fff4c7; }
+body.student-login.login-illustrated .password-toggle { color: #fff4c7; background: #064923; opacity: 1; }
+body.student-login.login-illustrated .password-toggle:hover { background: #0b5f30; }
 body.student-login.login-illustrated .login-form a { color: #fff0a8; }
 body.student-login.login-illustrated #remember { border-color: #cde3d3; }
 body.student-login.login-illustrated .auth-error { background: #06401e; }
