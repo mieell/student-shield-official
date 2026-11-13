@@ -84,6 +84,9 @@ final class GuardianConsent
         if (in_array($prior['sms_state'], ['Unknown', 'Manual'], true)) {
             return false;
         }
+        if ($prior['sms_state'] !== 'Queued') {
+            return true;
+        }
         return strtotime($prior['requested_at']) <= $now - 300;
     }
 

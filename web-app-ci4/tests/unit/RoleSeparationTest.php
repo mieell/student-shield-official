@@ -658,6 +658,82 @@ final class RoleSeparationTest extends CIUnitTestCase
         ])->lookup()->getStatusCode());
     }
 
+    public function testSuperAdminCanResendConsentSmsAfterCooldownAndRejectsUnverified(): void
+    {
+        $this->login(2);
+        $path = 'admin/registrations/12/send-consent';
+        $gateway = new class extends \App\Libraries\SmsGateway {
+            public array $messages = [];
+
+            public function send(string $phone, string $message, string $eventKey): array
+            {
+                $this->messages[] = [$phone, $message];
+                return ['state' => 'Queued'];
+            }
+        };
+        $controller = new class ($gateway) extends \App\Controllers\GuardianConsentController {
+            public function __construct(private \App\Libraries\SmsGateway $gateway) {}
+
+            protected function smsGateway(): \App\Libraries\SmsGateway
+            {
+                return $this->gateway;
+            }
+        };
+        $savedEnv = $_ENV;
+        $_ENV['GUARDIAN_CONSENT_NOTICE'] = 'Approved fixture notice.';
+        $_ENV['IPROG_SMS_API_TOKEN'] = 'fixture-token';
+        try {
+            // Cannot resend using a verified number when no verified consent row exists yet.
+            $controller->initController($this->request($path, 'POST', ['use_verified' => '1', 'delivery' => 'sms']), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertCount(0, $gateway->messages);
+
+            // Initial verified SMS send succeeds.
+            $controller->initController($this->request($path, 'POST', [
+                'verified_phone' => '09123456789',
+                'verified_name' => 'Test Guardian',
+                'checked_records' => '1',
+                'delivery' => 'sms',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertCount(1, $gateway->messages);
+            preg_match('/enter code ([A-Z0-9]{4}-[A-Z0-9]{4})/', $gateway->messages[0][1], $firstMatch);
+            $firstCode = $firstMatch[1] ?? '';
+            $this->assertNotSame('', $firstCode);
+
+            // Immediate resend via use_verified=1 stays blocked during the 5-minute cooldown.
+            $controller->initController($this->request($path, 'POST', ['use_verified' => '1', 'delivery' => 'sms']), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertCount(1, $gateway->messages);
+
+            // Once 5 minutes have elapsed, Super Admin can resend without re-entering guardian details.
+            $this->rbacDb->table('guardian_consents')->where('user_id', 12)->update([
+                'requested_at' => date('Y-m-d H:i:s', time() - 301),
+            ]);
+            $controller->initController($this->request($path, 'POST', ['use_verified' => '1', 'delivery' => 'sms']), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertCount(2, $gateway->messages);
+            preg_match('/enter code ([A-Z0-9]{4}-[A-Z0-9]{4})/', $gateway->messages[1][1], $secondMatch);
+            $secondCode = $secondMatch[1] ?? '';
+            $this->assertNotSame('', $secondCode);
+            $this->assertNotSame($firstCode, $secondCode);
+
+            // Old SMS code is invalidated and the new SMS code resolves cleanly.
+            $public = \App\Controllers\GuardianConsentController::class;
+            session()->remove('isLoggedIn');
+            $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09123456789',
+                'consent_code' => $firstCode,
+            ])->lookup()->getStatusCode());
+            $this->assertSame(200, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09123456789',
+                'consent_code' => $secondCode,
+            ])->lookup()->getStatusCode());
+        } finally {
+            $_ENV = $savedEnv;
+        }
+    }
+
     public function testSensitiveRoutesKeepAuthAndRegistrationActionsRequirePost(): void
     {
         $routes = service('routes'); $routes->loadRoutes();

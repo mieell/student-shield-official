@@ -311,8 +311,8 @@
                                     <div class="text-sm text-gray-700 space-y-0.5">
                                         <?php if ($displayPhone !== ''): ?>
                                             <div class="flex items-center gap-1 flex-wrap">
-                                                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                                                <span><?= esc($displayPhone) ?></span>
+                                                <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                                <span class="whitespace-nowrap"><?= esc($displayPhone) ?></span>
                                                 <?php if (empty($student['parent_phone']) && !empty($student['verified_phone'])): ?>
                                                     <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold">Verified</span>
                                                 <?php endif; ?>
@@ -374,8 +374,38 @@
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
-                                    <?php if ($registrationStatus === 'pending'): ?>
+                                    <?php if ($registrationStatus === 'pending'):
+                                        $consentNow = time();
+                                        $canSendSms = ($canVerifyContact && empty($student['response']))
+                                            ? \App\Libraries\GuardianConsent::canSend(!empty($student['requested_at']) ? $student : null, $consentNow)
+                                            : false; ?>
                                     <?php if ($canVerifyContact && !empty($student['verified_phone']) && empty($student['response'])): ?>
+                                        <?php if ($canSendSms): ?>
+                                            <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="mb-2">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="use_verified" value="1">
+                                                <button type="submit" name="delivery" value="sms" class="approve-btn consent-action font-semibold" onclick="return confirm('Resend a new consent SMS to the verified guardian number? Any previous link and code will stop working.')">Resend consent SMS</button>
+                                                <p class="text-xs mt-1">Sends a fresh SMS code and invalidates the previous code.</p>
+                                            </form>
+                                        <?php else:
+                                            $smsStateNow = (string) ($student['sms_state'] ?? '');
+                                            if ($smsStateNow === 'Queued' && !empty($student['requested_at'])) {
+                                                $waitSeconds = max(1, (strtotime((string) $student['requested_at']) + 300) - $consentNow);
+                                                $waitLabel = $waitSeconds >= 60 ? (int) ceil($waitSeconds / 60) . 'm' : $waitSeconds . 's';
+                                                $disabledLabel = 'Resend SMS (wait ' . $waitLabel . ')';
+                                                $disabledHint = 'Wait 5 minutes from the last SMS before resending.';
+                                            } elseif ($smsStateNow === 'Unknown') {
+                                                $disabledLabel = 'Resend SMS unavailable';
+                                                $disabledHint = 'Carrier delivery status is unknown; generate a replacement link or wait for expiry.';
+                                            } else {
+                                                $disabledLabel = 'Resend SMS unavailable';
+                                                $disabledHint = 'Active manual link exists; wait until expiry or generate a replacement link.';
+                                            } ?>
+                                            <div class="mb-2">
+                                                <button type="button" disabled aria-disabled="true" class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 text-xs font-semibold cursor-not-allowed"><?= esc($disabledLabel) ?></button>
+                                                <p class="text-xs text-gray-500 mt-1"><?= esc($disabledHint) ?></p>
+                                            </div>
+                                        <?php endif; ?>
                                         <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="use_verified" value="1">
@@ -384,8 +414,7 @@
                                         </form>
                                     <?php endif; ?>
 
-                                    <?php if ($canVerifyContact && empty($student['response'])):
-                                        $canSendSms = \App\Libraries\GuardianConsent::canSend($student['requested_at'] ? $student : null, time()); ?>
+                                    <?php if ($canVerifyContact && empty($student['response'])): ?>
                                         <details <?= empty($student['verified_phone']) ? 'open' : '' ?>>
                                         <summary>Verify or update guardian contact</summary>
                                         <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="guardian-verification">

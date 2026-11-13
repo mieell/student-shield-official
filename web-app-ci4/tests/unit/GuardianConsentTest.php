@@ -169,4 +169,87 @@ final class GuardianConsentTest extends CIUnitTestCase
         self::assertStringNotContainsString('SMS queued · awaiting guardian', $html);
         session()->remove(['isLoggedIn', 'role', 'user_id']);
     }
+
+    public function testPreCarrierFailuresAllowImmediateSmsRetryWhileUnknownRemainsBlocked(): void
+    {
+        $now = time();
+        foreach (['NotConfigured', 'InvalidRequest', 'StorageUnavailable'] as $state) {
+            self::assertTrue(GuardianConsent::canSend([
+                'response' => null,
+                'sms_state' => $state,
+                'requested_at' => date('Y-m-d H:i:s', $now - 5),
+                'expires_at' => date('Y-m-d H:i:s', $now + 600),
+            ], $now), "{$state} should allow immediate retry");
+        }
+
+        $unknown = [
+            'response' => null,
+            'sms_state' => 'Unknown',
+            'requested_at' => date('Y-m-d H:i:s', $now - 400),
+            'expires_at' => date('Y-m-d H:i:s', $now + 600),
+        ];
+        self::assertFalse(GuardianConsent::canSend($unknown, $now));
+        self::assertTrue(GuardianConsent::canSend($unknown, $now + 601));
+    }
+
+    public function testPendingRegistrationsViewRendersEnabledAndCooldownResendSmsStates(): void
+    {
+        helper('form');
+        session()->set(['isLoggedIn' => true, 'role' => 2, 'user_id' => 2]);
+        $now = time();
+        $baseRow = [
+            'user_id' => 91,
+            'name' => 'Jc Ramos',
+            'email' => 'jc.ramos@example.edu',
+            'student_id' => 'SS-20261113-CCEE2',
+            'lrn' => '348903528792',
+            'grade_level' => '5',
+            'section' => 'Rizal',
+            'parent_phone' => null,
+            'parent_email' => null,
+            'verified_phone' => '+639669742070',
+            'verified_name' => 'Ramos Ramos',
+            'guardian_name' => null,
+            'response' => null,
+            'responded_at' => null,
+            'expires_at' => date('Y-m-d H:i:s', $now + 86400),
+            'created_at' => date('Y-m-d H:i:s', $now - 3600),
+        ];
+
+        try {
+            $readyHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [$baseRow + ['sms_state' => 'Queued', 'requested_at' => date('Y-m-d H:i:s', $now - 400)]],
+                'canVerifyContact' => true,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('<span class="whitespace-nowrap">+639669742070</span>', $readyHtml);
+            self::assertStringContainsString('>Resend consent SMS</button>', $readyHtml);
+            self::assertStringContainsString('Generate replacement link', $readyHtml);
+
+            $cooldownHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [$baseRow + ['sms_state' => 'Queued', 'requested_at' => date('Y-m-d H:i:s', $now - 60)]],
+                'canVerifyContact' => true,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('Resend SMS (wait 4m)', $cooldownHtml);
+            self::assertStringNotContainsString('>Resend consent SMS</button>', $cooldownHtml);
+
+            $retryHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [$baseRow + ['sms_state' => 'NotConfigured', 'requested_at' => date('Y-m-d H:i:s', $now - 10)]],
+                'canVerifyContact' => true,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('>Resend consent SMS</button>', $retryHtml);
+
+            $unknownHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [$baseRow + ['sms_state' => 'Unknown', 'requested_at' => date('Y-m-d H:i:s', $now - 400)]],
+                'canVerifyContact' => true,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('Resend SMS unavailable', $unknownHtml);
+            self::assertStringNotContainsString('>Resend consent SMS</button>', $unknownHtml);
+        } finally {
+            session()->remove(['isLoggedIn', 'role', 'user_id']);
+        }
+    }
 }

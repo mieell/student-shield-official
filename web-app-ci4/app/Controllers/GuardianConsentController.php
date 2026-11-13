@@ -13,7 +13,7 @@ class GuardianConsentController extends BaseController
         if (!$this->hasRole(2)) return $this->forbidden();
         $back = redirect()->to(site_url('admin/pending-registrations'));
         $manual = $this->request->getPost('delivery') === 'manual';
-        $useVerified = $manual && $this->request->getPost('use_verified') === '1';
+        $useVerified = $this->request->getPost('use_verified') === '1';
         $phone = GuardianConsent::phone($this->request->getPost('verified_phone'));
         $verifiedName = $this->request->getPost('verified_name');
         $notice = trim((string) env('GUARDIAN_CONSENT_NOTICE', ''));
