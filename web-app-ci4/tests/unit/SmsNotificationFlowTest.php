@@ -113,8 +113,11 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
 
     public static function ventPolicies(): iterable
     {
+        yield 'LOW positive vent sends zero alerts' => ['Gusto ko nang sumuko at maglaho kanina habang naghihintay ng deliberation ng panel, kasi akala ko bumagsak na kami. Plot twist, pagpasok namin sa room, sinabi nilang pasado kami with flying colors at tears of joy pala!', false, 'LOW', []];
+        yield 'Case 2 sustained distress HIGH never contacts parents' => ["Araw-araw akong gumigising na parang durog na durog ang pagkatao ko at wala nang natitirang rason para bumangon pa. Pakiramdam ko ay wala akong silbi at hindi ako karapat-dapat mahalin. Gusto ko na lang matapos itong walang katapusang paghihirap.", false, 'HIGH', ['639171234567']];
         yield 'HIGH never contacts parents' => ['Sinampal ako sa school.', false, 'HIGH', ['639171234567']];
         yield 'CRITICAL includes eligible parent' => ['naglalaslas ako', false, 'CRITICAL', ['639171234567', '639181234567']];
+        yield 'Tagalog crisis includes eligible parent' => ['papakamatay na ako at hindi ko na kaya mabuhay ngayon', false, 'CRITICAL', ['639171234567', '639181234567']];
         yield 'legacy preference cannot suppress CRITICAL parent alert' => ['naglalaslas ako', true, 'CRITICAL', ['639171234567', '639181234567']];
     }
 

@@ -374,6 +374,7 @@ def get_risk_components(translated_text: str, normalized_text: str) -> tuple[flo
         scan_lower = normalized_text.lower() + " " + translated_text.lower()
         is_masked = any(p in scan_lower for p in [
             "jokes", "tumatawa", "nakangiti", "sa labas", "outside", "pretend", "nagpapanggap",
+            "magkunwari", "nagkukunwari",
             "tahimik", "mag-isa", "pag-uwi", "alone", "dalhin mag-isa", "makaramdam",
             "anger", "throw", "galit", "bwisit", "failed", "bagsak", "mad", "never go to class",
             "hate", "punch", "drop out"
@@ -452,7 +453,9 @@ CAT1_DIRECT = [
 
 ### CATEGORY 1.5: HIGH — Passive Disappearance & Invisibility Ideation (C-SSRS Level 2)
 PASSIVE_DISAPPEARANCE_IDEATION = [
-    r"wish\s+i\s+could\s+disappear",
+    r"wish\s+i\s+could\s+(?:just\s+|simply\s+)?disappear",
+    r"\bgusto\s+(?:ko\s+)?(?:nang?|na\s+lang|na\s+talagang|kong)\s+(?:maglaho|mawala)\b",
+    r"\bmas\s+mabuti\s+pang\s+(?:maglaho|mawala)\b",
     r"\bmay magbabago\b.{0,30}\bkung wala ako\b",
     r"\bmas maayos\b.{0,20}\bkung wala ako\b",
     r"\bmas maganda\b.{0,20}\bkung wala ako\b",
@@ -571,11 +574,12 @@ EMOTIONAL_DISTRESS = [
     r"\bpagod na ako\b", r"\bsobrang\s+pagod\s+na\s+(?:ako|ko|aq)\b", r"\bsobrang lungkot\b", r"\bsobrang bigat\b", r"\bkapagod\b",
     r"\bdrowning\s+in\s+(?:sadness|sorrow|pain|grief|darkness)\b",
     r"\bnalulunod\s+sa\s+(?:lungkot|sakit|kalungkutan)\b",
+    r"\bnilalamon\s+ng\s+(?:lungkot|dilim|kalungkutan)\b",
     r"\bmamatay (?:sa |s |nang |ng )?(?:pagod|kaba|stress|overwork|puyat)\b",
     r"\bhirap na hirap\b", r"\bsawang sawa na\b", r"\bdi ko na kaya\b",
-    r"\bayoko na\b", r"\bdurug na durog\b", r"\bnamamatay\b",
+    r"\bayoko na\b", r"\bdurug na durog\b", r"\bdurog\s+na\s+durog\b", r"\bnamamatay\b",
     r"\bwasak na wasak\b", r"\bsukong suko na\b", r"\bparang sasabog utak ko\b",
-    r"\bwalang silbi\b", r"\bwala akong kwenta\b", r"\bpabigat ako\b",
+    r"\bwalang silbi\b", r"\bwala\s+(?:na\s+)?akong\s+silbi\b", r"\bwala akong kwenta\b", r"\bpabigat ako\b",
     r"\bnaliyak\b", r"\bnaiyak\b", r"\bnaiiyak\b", r"\bumiyak\b", r"\biyak\b",
     r"iyak nang iyak", r"\bumiiyak s[a]? cr\b", r"\bnassad\b", r"\bnasad\b", r"\bmalungkot\b", r"\bnalulungkot\b", r"\bnalungkot\b",
     r"\blungkot\b", r"\bsobrang sad\b", r"\bna-depress\b", r"\bnadedepress\b",
@@ -644,7 +648,9 @@ EMOTIONAL_DISTRESS = [
     r"\bwala\s+nang\s+natitirang\s+lakas\b",
     r"\b(?:sobrang\s+)?pagod\s+na\s+pagod\s+na\s+(?:ako|akong|ko|aq)\b",
     r"\bpasan\s+ko\s+ang\s+(?:buong\s+)?mundo\b",
-    r"\bwalang\s+katapusang\s+(?:sakit|pagod|hirap|lungkot)\b",
+    r"\bwalang\s+katapusang\s+(?:sakit|pagod|hirap|lungkot|paghihirap)\b",
+    r"\b(?:hindi|di)\s+ko\s+na\s+(?:talaga\s+)?kayang\s+dalhin\b",
+    r"\baraw-?araw\b.{0,35}\b(?:durog|bigat|lungkot|pagod|gumigising)\b",
 ]
 
 ### SOCIAL ISOLATION / WITHDRAWAL 
@@ -810,6 +816,10 @@ POSITIVE_SENTIMENT = [
     r"\bnakakatuwa\b", r"\bnatutuwa\b",
     r"\bpure\s+relief\b", r"\btears\s+of\s+relief\b",
     r"\bscreaming\s+with\s+joy\b", r"\bgreatest\s+miracle\b",
+    r"\b(?<!sana\s)(?<!kung\s)pasado(?:\s+(?:kami|ako|na))?\b", r"\bpumasa\b", r"\bnakapasa\b",
+    r"\bwith\s+flying\s+colors\b", r"\bbest\s+thesis\b",
+    r"\btapos\s+na\s+ang\s+kalbaryo\b", r"\bdasurv\b",
+    r"\bligtas\s+na\b", r"\bmaayos\s+na\s+pala\b", r"\bturned\s+out\s+(?:fine|okay)\b",
 ]
 
 ### COGNITIVE DISTORTIONS 
@@ -888,6 +898,8 @@ HOPELESSNESS = [
     r"\bwala\s+nang\s+(?:natitirang\s+)?lakas(?:\s+pa)?\s+(?:para|upang)?\s*(?:lumaban|magpatuloy)\b",
     r"(?<!\bhindi )(?<!\bdi )\bmatagal\s+na\s+(?:ako|akong)\s+sumuko(?!\s+sa\s+(?:game|laro|ml|valo|dota|quiz|puzzle))\b",
     r"\b(?:naghihintay|nag-?aantay)\s+na\s+lang\s+(?:na\s+)?matapos\s+ang\s+lahat\b",
+    r"\bwala\s+nang?\s+(?:natitirang\s+)?(?:rason|dahilan)\s+para\s+bumangon\b",
+    r"\bmatapos\s+(?:na\s+)?itong\s+(?:walang\s+katapusang\s+)?(?:paghihirap|hirap|sakit)\b",
 ]
 
 ### EXTREME VENTING 
@@ -1113,6 +1125,9 @@ SELF_WORTH = [
     r"\bhindi ako kailangan ng sinuman\b",
     r"\bpabigat\s+(?:na\s+)?lang(?:\s+naman)?\s+ako\b",
     r"\bwala\s+(?:na\s+)?akong\s+halaga\b",
+    r"\bwala\s+(?:na\s+)?akong\s+silbi\b",
+    r"\b(?:hindi|di)\s+(?:na\s+)?(?:ako\s+)?karapat-?dapat\s+mahalin\b",
+    r"\bunworthy\s+of\s+(?:being\s+loved|love)\b",
     r"\bpalo lang ako\b",
     # Bisaya
     r"\bway pulos ako\b",
@@ -1194,7 +1209,9 @@ MASKED_DEPRESSION = [
     r"\bdi mabalin maamuan\b",
     r"\bokay sa ruar\b.{0,20}\bsaan sa uneg\b",
     # Masked tiredness & forced smiling
-    r"\b(?:hirap|pagod(?:\s+na\s+pagod)?)\s+(?:na\s+)?(?:ako|akong|ko)\s+magpanggap\b",
+    r"\b(?:hirap|pagod(?:\s+na\s+pagod)?)\s+(?:na\s+)?(?:ako|akong|ko)\s+(?:magpanggap|magkunwari(?:ng)?)\b",
+    r"\b(?:magkunwari(?:ng)?|nagkukunwari(?:ng)?)\s+(?:malakas|okay|masaya|fine)\b",
+    r"\bpretend(?:ing)?\s+to\s+be\s+strong\b",
     r"\b(?:pilit|pinipilit)\s+kong\s+ngumiti\b",
 ]
 
@@ -1285,7 +1302,7 @@ _CRYING_ONLY_PATTERNS = {
 _JOY_CRIER_RE = re.compile(
     r"\b(sa tuwa|tears of joy|happy tears|sobrang saya|napakasaya|nakaka-?proud|"
     r"pure relief|from (?:pure )?relief|tears of relief|screaming with joy|"
-    r"crying (?:with|from) joy|greatest miracle)\b",
+    r"crying (?:with|from) joy|greatest miracle|tapos na ang kalbaryo|with flying colors|dasurv)\b",
     re.I,
 )
 _ACADEMIC_DESTRUCT_WORDS = (
@@ -1510,7 +1527,17 @@ def _apply_rule_engine(
             risk = "LOW"
             risk_score = max(0.35, risk_score)
             base = "Self-worth keywords found but context suggests casual expression."
-        elif signal_count >= 3 or (signal_count >= 2 and flags["hope"]):
+        elif signal_count >= 3 or (
+            signal_count >= 2
+            and (
+                flags["hope"]
+                or re.search(
+                    r"\b(?:gusto\s+(?:ko\s+)?nang?\s+sumuko|suko\s+na\s+talaga|no\s+strength\s+left\s+to\s+(?:keep\s+)?fighting)\b",
+                    scan_text,
+                    re.I,
+                )
+            )
+        ):
             risk = "HIGH"
             risk_score = max(0.78, risk_score)
             base = f"HIGH: Self-worth impairment compounded with {signal_count} concurrent distress signals."
@@ -1524,7 +1551,17 @@ def _apply_rule_engine(
             risk = "LOW"
             risk_score = max(0.35, risk_score)
             base = "Masked depression language detected but tone appears casual."
-        elif signal_count >= 3 or (signal_count >= 2 and flags["hope"]):
+        elif signal_count >= 3 or (
+            signal_count >= 2
+            and (
+                flags["hope"]
+                or re.search(
+                    r"\b(?:gusto\s+(?:ko\s+)?nang?\s+sumuko|suko\s+na\s+talaga|no\s+strength\s+left\s+to\s+(?:keep\s+)?fighting)\b",
+                    scan_text,
+                    re.I,
+                )
+            )
+        ):
             risk = "HIGH"
             risk_score = max(0.78, risk_score)
             base = f"HIGH: Masked depression compounded with {signal_count} concurrent distress signals — hidden suffering pattern."
@@ -1558,7 +1595,17 @@ def _apply_rule_engine(
             risk = "LOW"
             risk_score = max(0.35, risk_score)
             base = "Relationship keywords found but context suggests casual mention."
-        elif signal_count >= 3:
+        elif signal_count >= 3 or (
+            signal_count >= 2
+            and (
+                flags["hope"]
+                or re.search(
+                    r"\b(?:gusto\s+(?:ko\s+)?nang?\s+sumuko|suko\s+na\s+talaga|no\s+strength\s+left\s+to\s+(?:keep\s+)?fighting)\b",
+                    scan_text,
+                    re.I,
+                )
+            )
+        ):
             risk = "HIGH"
             risk_score = max(0.78, risk_score)
             base = (
@@ -1601,7 +1648,7 @@ def _apply_rule_engine(
                 "HIGH: Strong negative sentiment/distress from ML neural networks.",
                 expert_reasoning,
             )
-        elif risk_score >= 0.40 and (neg_emo_conf >= 0.15 or expert_reasoning or distress_conf >= 0.85):
+        elif risk_score >= 0.40 and (neg_emo_conf >= 0.15 or expert_reasoning):
             risk = "MEDIUM"
             reason = _append_reasoning("Moderate negative sentiment.", expert_reasoning)
         elif expert_reasoning:
@@ -1669,11 +1716,43 @@ def _apply_risk_history_escalation(
     return risk, risk_score, reason, trajectory, escalation_prob
 
 
-def _band_risk_score(risk: str, risk_score: float) -> int:
-    """Map internal 0..1 risk score into the display percentage band for the risk level."""
+def _compute_raw_severity(base_score: float, flags: dict[str, bool], risk_score: float, violent_threat) -> float:
+    """Compute unclipped severity intensity so high-density vents do not plateau at band ceilings."""
+    raw = float(base_score)
+    for key, delta, _, requires_elevated in _HEURISTIC_RULES:
+        if flags[key] and (not requires_elevated or raw > 0.4):
+            raw += delta
+    signal_count = sum(flags[k] for k in _COMPOUND_FLAG_KEYS)
+    if signal_count >= 2:
+        raw += 0.15 * (signal_count - 1)
+    if flags.get("cat1"):
+        raw += 0.55
+    elif flags.get("cat2"):
+        raw += 0.35
+    if flags.get("final"):
+        raw += 0.25
+    if flags.get("passive_ideation"):
+        raw = max(raw, 1.755)
+    if violent_threat:
+        raw = max(raw, 1.92)
+    return max(raw, float(risk_score))
+
+
+def _band_risk_score(risk: str, risk_score: float, raw_severity: Optional[float] = None) -> int:
+    """Map internal risk score deterministically into the display percentage band for the screening level."""
     lo, hi = _RISK_RANGES.get(risk, (1, 100))
+    val = float(risk_score) if raw_severity is None else float(raw_severity)
     if risk == "LOW":
-        scaled = max(0.0, min(1.0, risk_score / 0.40))
+        scaled = max(0.0, min(1.0, min(val, float(risk_score)) / 0.40))
+        return int(round(lo + scaled * (hi - lo)))
+    if risk == "MEDIUM":
+        scaled = max(0.0, min(1.0, (val - 0.40) / 0.90))
+        return int(round(lo + scaled * (hi - lo)))
+    if risk == "HIGH":
+        scaled = max(0.0, min(1.0, (val - 0.72) / 1.38))
+        return int(round(lo + scaled * (hi - lo)))
+    if risk == "CRITICAL":
+        scaled = max(0.0, min(1.0, (val - 0.92) / 1.03))
         return int(round(lo + scaled * (hi - lo)))
     raw_percent = max(1, min(100, int(round(risk_score * 99)) + 1))
     return int(round(max(lo, min(hi, lo + (raw_percent / 100.0) * (hi - lo)))))
@@ -1757,7 +1836,8 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
     risk, risk_score, reason, trajectory, escalation_prob = _apply_risk_history_escalation(
         student_id, risk_history, risk, risk_score, reason,
     )
-    risk_percent = _band_risk_score(risk, risk_score)
+    raw_severity = _compute_raw_severity(base_score, flags, risk_score, violent_threat)
+    risk_percent = _band_risk_score(risk, risk_score, raw_severity)
 
     return {
         "risk_score": float(risk_percent),

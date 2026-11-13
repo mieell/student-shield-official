@@ -1,0 +1,19 @@
+[
+  {"text":"I do not want to kill myself. I am safe and happy.","critical":false},
+  {"text":"I don't plan to end my life. I am safe.","critical":false},
+  {"text":"Years ago I used to say I want to kill myself. I am safe now.","critical":false},
+  {"text":"For class a fictional character says \"I want to kill myself\" in a novel. I feel well.","critical":false},
+  {"text":"I do not want to kill myself but I will kill myself tonight.","critical":true},
+  {"text":"A fictional character says \"I want to kill myself\". I want to kill myself tonight too.","critical":true},
+  {"text":"Years ago I used to say I want to kill myself, but I want to kill myself tonight.","critical":true},
+  {"text":"I am not sure if I want to kill myself.","critical":true},
+  {"text":"I cannot promise I will not kill myself tonight.","critical":true},
+  {"text":"I don't only want to kill myself. I need help.","critical":true},
+  {"text":"I never said I do not want to kill myself.","critical":true},
+  {"text":"I want to kill myself haha just kidding.","critical":true},
+  {"text":"My friend said I want to kill myself and I feel the same way.","critical":true},
+  {"text":"Hindi ko alam kung gusto ko magpakamatay.","critical":true},
+  {"text":"naglalaslas ako kahit sabi ko dati okay ako.","critical":true},
+  {"text":"I do not want to kill myself. Papatayin ko sila.","critical":true},
+  {"text":"I'm writing fiction, but I want to kill myself tonight.","critical":true}
+]

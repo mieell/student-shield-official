@@ -456,7 +456,7 @@
                     '</div>' +
                     '<p class="text-sm text-gray-700 line-clamp-3">"' + v.raw_text + '"</p>' +
                     '<div class="mt-3 flex items-center justify-between border-t border-gray-50 pt-2">' +
-                    '<span class="text-[10px] text-gray-400">AI Risk Score: ' + (v.risk_percent || '0') + '%</span>' +
+                    '<span class="text-[10px] text-gray-400" title="Rule-adjusted screening severity indicator (not calibrated clinical probability)">Screening Indicator: ' + (v.risk_percent || '0') + '%</span>' +
                     '<span class="text-[10px] uppercase font-bold tracking-wider ' + (v.status === 'Resolved' ? 'text-emerald-600' : 'text-amber-500') + '">' +
                     (v.status === 'Resolved' ? '✓ Resolved' : '• Pending Review') +
                     '</span>' +

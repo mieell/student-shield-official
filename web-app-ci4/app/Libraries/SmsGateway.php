@@ -13,7 +13,7 @@ class SmsGateway
         $eventId = hash('sha256', (string) env('app.baseURL', '') . "\0" . $eventKey . "\0" . $phone);
         $result = ['accepted' => false, 'message_id' => null, 'state' => 'InvalidRequest', 'http_status' => 0];
         if (!preg_match('/\A639\d{9}\z/D', $phone) || trim($eventKey) === '' || trim($message) === ''
-            || strlen($message) > 160 || !preg_match('/\A[A-Za-z0-9 .,:;!?()\/+\-\r\n]+\z/D', $message)) return $result;
+            || strlen($message) > 160 || !preg_match('/\A[A-Za-z0-9 .,:;!?()\[\]\/+\-\r\n]+\z/D', $message)) return $result;
         $token = trim((string) env('IPROG_SMS_API_TOKEN', ''));
         if ($token === '' || preg_match('/[\r\n]/', $token)) {
             $result['state'] = 'NotConfigured';

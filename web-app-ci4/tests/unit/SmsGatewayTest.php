@@ -88,4 +88,15 @@ final class SmsGatewayTest extends CIUnitTestCase
             $this->assertNull($result['message_id']);
         }
     }
+
+    public function testAcceptsObfuscatedConsentMessageWithBracketDot(): void
+    {
+        $client = $this->client(['status' => 200, 'body' => '{"status":200,"message_id":"iSms-dot1"}']);
+        $msg = 'StudentShield: Visit studentshield-app [dot] vercel [dot] app in your browser, open Guardian Consent, and enter code ABCD-2345';
+        $this->assertLessThanOrEqual(160, strlen($msg));
+        $res = $client->send('09171234567', $msg, 'consent-dot:' . bin2hex(random_bytes(8)));
+        $this->assertTrue($res['accepted']);
+        $this->assertSame('Queued', $res['state']);
+        $this->assertSame($msg, $client->payloads[0]['message']);
+    }
 }

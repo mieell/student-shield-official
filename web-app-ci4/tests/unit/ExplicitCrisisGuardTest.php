@@ -98,6 +98,6 @@ final class ExplicitCrisisGuardTest extends CIUnitTestCase
         $text = 'Pagod na pagod na akong magpanggap na kaya ko pa, matagal na akong sumuko at pabigat na lang ako, mas mabuti pang maglaho na lang.';
         $result = $fallback->invoke(new VentController(), $text);
         $this->assertSame('HIGH', $result['risk_level']);
-        $this->assertSame(75, $result['risk_percent']);
+        $this->assertSame(79, $result['risk_percent']);
     }
 }

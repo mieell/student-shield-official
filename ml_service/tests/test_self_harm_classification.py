@@ -1,6 +1,7 @@
 """Exercise the complete risk rules offline, with translation and model scores mocked."""
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -157,6 +158,181 @@ def test_resolved_relief_never_masks_explicit_suicidal_disclosure(analyzer):
         "Still I honestly felt like ending my life and want to kill my self from pure relief? No, I want to die."
     )
     assert analyzer(text)["risk_level"] == "CRITICAL"
+
+
+@pytest.mark.parametrize('case', json.loads((Path(__file__).parent / 'fixtures/crisis_context.json').read_text()))
+def test_context_scoping_preserves_current_disclosures(analyzer, case):
+    result = analyzer(case['text'])
+    assert (result['risk_level'] == 'CRITICAL') == case['critical']
+
+
+def test_passive_disappearance_is_high_not_critical(analyzer):
+    result = analyzer('I wish I could disappear. I do not have a plan, but I keep wishing I could stop being here.')
+    assert result['risk_level'] == 'HIGH'
+
+
+@pytest.mark.parametrize("text", [
+    "papakamatay na ako at hindi ko na kaya mabuhay ngayon sobrang hirap na ng mga nararamdaman ko parang wala lang ako sa iba",
+    "i surely do want to kill my self wow amazing lupettt i love ittt!!",
+    "nagbigti na lang kaya ako",
+    "gusto ko nang magpatiwakal",
+])
+def test_tagalog_inflections_and_spaced_kill_myself_are_critical(analyzer, text):
+    assert analyzer(text)["risk_level"] == "CRITICAL"
+
+
+def test_case1_resolved_thesis_panic_stays_low_with_and_without_translation(analyzer, monkeypatch):
+    case1 = (
+        "Gusto ko nang sumuko at maglaho kanina habang naghihintay ng deliberation ng panel, "
+        "kasi akala ko bumagsak na kami at nasayang lahat ng puyat namin. Sobrang bigat sa dibdib at "
+        "parang hihimatayin na ako sa sobrang kaba, halos maiyak na ako sa takot na uulit kami next semester. "
+        "Plot twist, pagpasok namin sa room, sinabi nilang pasado kami with flying colors at best thesis pa! "
+        "Napahagulgol talaga ako sa harap ng prof namin na parang baliw, pero tears of joy pala dahil tapos "
+        "na ang kalbaryo namin—sobrang slay ng ending na ito, dasurv!"
+    )
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.01, 0.02))
+    res_untranslated = analyzer(case1)
+    assert res_untranslated["risk_level"] == "LOW"
+    assert 1 <= res_untranslated["risk_score"] <= 30
+
+    gate = analyzer.__globals__["translation_gate"]
+    monkeypatch.setitem(
+        analyzer.__globals__,
+        "_translate_to_english",
+        lambda _text: (_ for _ in ()).throw(ConnectionError("offline")),
+    )
+    res_failed_translator = analyzer(case1)
+    assert res_failed_translator["risk_level"] == "LOW"
+
+    monkeypatch.setitem(analyzer.__globals__, "_get_positive_emotion_conf", lambda *args: 0.85)
+    monkeypatch.setattr(
+        gate,
+        "translate",
+        lambda text, _fn: (
+            "I wanted to give up and disappear earlier while waiting for the panel's deliberation, "
+            "because I thought we failed. Plot twist, when we entered the room, they said we passed "
+            "with flying colors and best thesis too! I burst into tears, but it was tears of joy "
+            "because our ordeal is over."
+        ),
+    )
+    res_translated = analyzer(case1)
+    assert res_translated["risk_level"] == "LOW"
+    assert 1 <= res_translated["risk_score"] <= 30
+
+
+def test_case2_sustained_daily_distress_is_high_triage_not_medium_or_critical(analyzer, monkeypatch):
+    case2 = (
+        "Sobrang sakit na sa pakiramdam na kahit ibigay mo na ang lahat sa mga taong mahalaga sa'yo, "
+        "sa dulo ay iiwan ka pa rin nilang mag-isa. Araw-araw akong gumigising na parang durog na durog "
+        "ang pagkatao ko at wala nang natitirang rason para bumangon pa. Pagod na pagod na akong "
+        "magkunwaring malakas habang unti-unti na akong nilalamon ng lungkot at dilim sa loob ng kwarto ko. "
+        "Pakiramdam ko ay wala akong silbi at hindi ako karapat-dapat mahalin ng kahit sino. Gusto ko na lang "
+        "matapos itong walang katapusang paghihirap dahil hindi ko na talaga kayang dalhin pa ang bigat sa dibdib ko."
+    )
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.99, 0.01))
+    res_raw = analyzer(case2)
+    assert res_raw["risk_level"] == "HIGH"
+    assert 61 <= res_raw["risk_score"] <= 85
+
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.99, 0.80))
+    res_trans = analyzer(case2)
+    assert res_trans["risk_level"] == "HIGH"
+    assert 61 <= res_trans["risk_score"] <= 85
+
+
+@pytest.mark.parametrize("text", [
+    "Sometimes I wish I could just disappear from everything, even though I won't hurt myself.",
+    "I thought we would fail earlier but we passed with flying colors! Still, gusto ko na talagang maglaho na lang.",
+])
+def test_spaced_and_post_pivot_passive_disappearance_is_high_79(analyzer, text):
+    res = analyzer(text)
+    assert res["risk_level"] == "HIGH"
+    assert int(res["risk_score"]) == 79
+
+
+@pytest.mark.parametrize("text", [
+    "Passed the exam today with flying colors, pero gusto ko na talagang mamatay and end my life tonight.",
+    "I had tears of joy earlier, pero naglalaslas ako ngayon.",
+])
+def test_mixed_positive_and_active_crisis_remains_critical(analyzer, text):
+    assert analyzer(text)["risk_level"] == "CRITICAL"
+
+
+@pytest.mark.parametrize("text", [
+    "Namatay ako sa kakatawa sa meme na yun haha!",
+    "I'm dead tired after PE practice, time to sleep.",
+    "I do not want to kill myself, I am sharing this only to clarify.",
+    "Years ago I used to say I want to kill myself. I am safe now.",
+])
+def test_hyperbole_negation_and_resolved_past_are_not_critical(analyzer, text):
+    assert analyzer(text)["risk_level"] != "CRITICAL"
+
+
+def test_scores_differentiate_across_severity_levels_without_clustering(analyzer, monkeypatch):
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.05, 0.05))
+    low_pos = analyzer("Ang saya ng weekend namin kasama friends!")
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.28, 0.22))
+    low_school = analyzer("Had a tiring week with schoolwork.")
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.15, 0.10))
+    med_mild = analyzer("Stressed about quizzes tomorrow.")
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.99, 0.80))
+    high_case2 = analyzer(
+        "Araw-araw akong gumigising na parang durog na durog ang pagkatao ko at wala nang natitirang "
+        "rason para bumangon pa. Wala akong silbi at hindi ako karapat-dapat mahalin. Gusto ko na lang "
+        "matapos itong walang katapusang paghihirap."
+    )
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.01, 0.01))
+    crit_sarcasm = analyzer("i surely do want to kill my self wow amazing lupettt i love ittt!!")
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.99, 0.85))
+    crit_acute = analyzer("papakamatay na ako at hindi ko na kaya mabuhay ngayon, hopeless na ako, pagod na")
+
+    assert 1 <= low_pos["risk_score"] < low_school["risk_score"] <= 30
+    assert 31 <= med_mild["risk_score"] < 60
+    assert 61 <= high_case2["risk_score"] <= 85
+    assert 86 <= crit_sarcasm["risk_score"] < crit_acute["risk_score"] <= 100
+
+
+def test_risk_history_escalation_in_pipeline(analyzer, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    monkeypatch.setitem(analyzer.__globals__, "get_risk_components", lambda *args: (0.20, 0.15))
+
+    escalating_med = [
+        {"risk_level": "LOW", "created_at": (now - timedelta(days=4)).isoformat()},
+        {"risk_level": "MEDIUM", "created_at": (now - timedelta(days=2)).isoformat()},
+    ]
+    res_med = analyzer("Nalulungkot ako today", student_id="stu-1", risk_history=escalating_med)
+    assert res_med["risk_level"] == "HIGH"
+    assert 61 <= res_med["risk_score"] <= 85
+
+    escalating_high = [
+        {"risk_level": "MEDIUM", "created_at": (now - timedelta(days=6)).isoformat()},
+        {"risk_level": "HIGH", "created_at": (now - timedelta(days=3)).isoformat()},
+        {"risk_level": "HIGH", "created_at": (now - timedelta(days=1)).isoformat()},
+    ]
+    res_high = analyzer("I wish I could disappear.", student_id="stu-2", risk_history=escalating_high)
+    assert res_high["risk_level"] == "CRITICAL"
+    assert res_high["risk_score"] >= 86
+
+    stable_high = [
+        {"risk_level": "HIGH", "created_at": (now - timedelta(days=10)).isoformat()},
+        {"risk_level": "HIGH", "created_at": (now - timedelta(days=7)).isoformat()},
+        {"risk_level": "HIGH", "created_at": (now - timedelta(days=5)).isoformat()},
+        {"risk_level": "HIGH", "created_at": (now - timedelta(days=3)).isoformat()},
+        {"risk_level": "HIGH", "created_at": (now - timedelta(days=1)).isoformat()},
+    ]
+    res_stable = analyzer("I wish I could disappear.", student_id="stu-3", risk_history=stable_high)
+    assert res_stable["risk_level"] == "HIGH"
+
+
+def test_translation_failure_degrades_gracefully(analyzer, monkeypatch):
+    def failing_translate(_value):
+        raise ConnectionError("network disabled")
+
+    monkeypatch.setitem(analyzer.__globals__, "_translate_to_english", failing_translate)
+    res = analyzer("papakamatay na ako ngayon")
+    assert res["risk_level"] == "CRITICAL"
 
 
 def test_public_openapi_and_docs_endpoints_are_disabled(analyzer):

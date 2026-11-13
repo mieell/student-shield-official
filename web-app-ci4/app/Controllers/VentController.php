@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\ExplicitCrisisGuard;
+use App\Libraries\CrisisContext;
 use App\Libraries\VentRiskAnalyzer;
 use App\Libraries\ViolentThreats;
 
@@ -449,6 +450,7 @@ class VentController extends BaseController
      */
     private function localKeywordFallback(string $text): array
     {
+        $text = CrisisContext::currentText($text);
         $threat = ViolentThreats::detect($text);
         if ($threat !== null) {
             return $threat;
@@ -533,7 +535,7 @@ class VentController extends BaseController
             'unalive myself', 'better off dead',
             'sana di na lang ako pinanganak', 'wala nang pag-asa',
             'i wanna die', 'i want to die', 'end my life', 'hang myself',
-            'wish i was never born', 'wish i could disappear',
+            'wish i was never born',
             'done with life', 'tired of living', 'gusto ko maglaho na lang', 'wala nang tutulong sakin',
             'ayoko na sa mundong ito', 'di na worth it mabuhay',
             'gusto ko na lang mawala ng tuluyan', 'para saan pa ako',
@@ -660,6 +662,14 @@ class VentController extends BaseController
             'matagal na akong sumuko',
             'pabigat na lang ako',
             'wala na akong halaga',
+            'durog na durog',
+            'wala nang natitirang rason para bumangon',
+            'wala akong silbi',
+            'hindi ako karapat-dapat mahalin',
+            'magkunwaring malakas',
+            'nilalamon ng lungkot',
+            'walang katapusang paghihirap',
+            'hindi ko na talaga kayang dalhin',
         ];
 
         // STRICT HIGH — Physical Violence (Never downgraded by sarcasm)
@@ -678,7 +688,7 @@ class VentController extends BaseController
 
         // MEDIUM — Verbal Abuse, Cyberbullying, Masked Depression, Passive Invisibility
         $medium = [
-            'ugly', 'loser', 'slut', 'whore', 'dumb', 'stupid', 'hate you',
+            'loser', 'slut', 'whore', 'dumb', 'stupid', 'hate you',
             'bobo', 'tanga', 'pangit', 'mataba', 'pokpok', 'squatter', 'gago',
             'tarantado', 'putangina', 'inutil', 'idyota', 'manyak', 'malandi',
             'toxic', 'humiliated', 'shamed', 'bullied', 'bully',
@@ -738,19 +748,34 @@ class VentController extends BaseController
                 return ['risk_level' => 'CRITICAL', 'risk_percent' => 95];
             }
         }
+        if (preg_match('/\b(?:wish\s+i\s+could\s+(?:just\s+|simply\s+)?disappear|gusto\s+(?:ko\s+)?(?:nang?|na\s+talagang|na\s+lang|kong)\s+maglaho|mas\s+mabuti\s+pang\s+maglaho)\b/iu', $lower) === 1) {
+            return ['risk_level' => 'HIGH', 'risk_percent' => 79];
+        }
         foreach ($high_physical as $kw) {
             if (mb_strpos($lower, $kw) !== false) {
                 // Physical abuse is NEVER a joke. Ignore sarcasm completely.
                 return ['risk_level' => 'HIGH', 'risk_percent' => 85];
             }
         }
+        $isJoyCryingRelief = preg_match(
+            '/\b(?:sa\s+tuwa|tears\s+of\s+joy|happy\s+tears|pure\s+relief|from\s+(?:pure\s+)?relief|tears\s+of\s+relief|screaming\s+with\s+joy|crying\s+(?:with|from)\s+joy|greatest\s+miracle)\b/iu',
+            $lower
+        ) === 1;
         foreach ($high_emotional as $kw) {
+            if ($isJoyCryingRelief && in_array($kw, ['crying', 'naiyak', 'umiyak'], true)) {
+                continue;
+            }
             if (mb_strpos($lower, $kw) !== false) {
                 if ($sarcasticContext) {
                     return ['risk_level' => 'MEDIUM', 'risk_percent' => 45];
                 }
                 return ['risk_level' => 'HIGH', 'risk_percent' => 75];
             }
+        }
+        if (preg_match('/\bugly\b(?!-crying\b|\s+crying\b)/iu', $lower) === 1) {
+            return $sarcasticContext
+                ? ['risk_level' => 'LOW', 'risk_percent' => 20]
+                : ['risk_level' => 'MEDIUM', 'risk_percent' => 50];
         }
         foreach ($medium as $kw) {
             if (mb_strpos($lower, $kw) !== false) {

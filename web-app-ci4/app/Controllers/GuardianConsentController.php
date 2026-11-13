@@ -110,7 +110,7 @@ class GuardianConsentController extends BaseController
         );
         $db->table('guardian_consents')->where('user_id', $id)->where('token_hash', $hash)->update(['sms_state' => $state]);
         return $back->with($state === 'Queued' ? 'success' : 'error', match ($state) {
-            'Queued' => 'The provider queued the consent SMS. Approval is available once the guardian accepts.',
+            'Queued' => 'The carrier accepted the consent SMS for delivery. Approval unlocks once the guardian responds (you can resend after 5 minutes or generate a link).',
             'Unknown' => 'SMS delivery is uncertain. Follow up with the verified guardian before sending another code.',
             default => 'The SMS was not queued. Check the number or SMS service and try again in a few minutes.',
         });

@@ -35,6 +35,7 @@ final class ExplicitCrisisGuard
 
     public static function enforce(string $text, array $classification): array
     {
+        $text = CrisisContext::currentText($text);
         $lower = mb_strtolower($text, 'UTF-8');
         foreach (self::PHRASES as $phrase) {
             if (mb_strpos($lower, $phrase) !== false) {

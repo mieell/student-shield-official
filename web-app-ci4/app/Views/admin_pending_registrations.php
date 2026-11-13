@@ -307,11 +307,15 @@
                                     </div>
                                 </td>
                                 <td data-label="Parent Contact" class="registration-contact px-6 py-4">
+                                    <?php $displayPhone = !empty($student['parent_phone']) ? $student['parent_phone'] : ($student['verified_phone'] ?? ''); ?>
                                     <div class="text-sm text-gray-700 space-y-0.5">
-                                        <?php if (!empty($student['parent_phone'])): ?>
-                                            <div class="flex items-center gap-1">
+                                        <?php if ($displayPhone !== ''): ?>
+                                            <div class="flex items-center gap-1 flex-wrap">
                                                 <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                                                <span><?= esc($student['parent_phone']) ?></span>
+                                                <span><?= esc($displayPhone) ?></span>
+                                                <?php if (empty($student['parent_phone']) && !empty($student['verified_phone'])): ?>
+                                                    <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold">Verified</span>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
                                         <?php if (!empty($student['parent_email'])): ?>
@@ -320,7 +324,7 @@
                                                 <span class="text-xs"><?= esc($student['parent_email']) ?></span>
                                             </div>
                                         <?php endif; ?>
-                                        <?php if (empty($student['parent_phone']) && empty($student['parent_email'])): ?>
+                                        <?php if ($displayPhone === '' && empty($student['parent_email'])): ?>
                                             <span class="text-gray-400">—</span>
                                         <?php endif; ?>
                                     </div>
@@ -346,7 +350,7 @@
                                                 'accepted' => 'Consent accepted',
                                                 'declined' => 'Consent declined',
                                                 default => strtotime($student['expires_at']) <= time() ? 'Consent request expired' : match ($student['sms_state']) {
-                                                    'Queued' => 'SMS queued · awaiting guardian',
+                                                    'Queued' => 'SMS sent to carrier · awaiting guardian',
                                                     'Unknown' => 'SMS status uncertain',
                                                     'Manual' => 'Manual link generated; awaiting guardian',
                                                     default => 'SMS was not queued',
@@ -362,6 +366,9 @@
                                             <p>Verified number: <?= esc($student['verified_phone']) ?></p>
                                             <p>Guardian on school record: <?= esc($student['verified_name']) ?></p>
                                             <p class="font-semibold"><?= esc($consentStatus) ?></p>
+                                            <?php if (empty($student['response']) && ($student['sms_state'] ?? '') === 'Queued' && strtotime((string) ($student['expires_at'] ?? '')) > time()): ?>
+                                                <p class="text-[11px] text-gray-500">Submitted to the SMS carrier; live delivery receipts are unavailable. You can resend after 5 minutes or generate a link below.</p>
+                                            <?php endif; ?>
                                             <?php if ($student['guardian_name']): ?>
                                                 <p>Signed by <?= esc($student['guardian_name']) ?> · <?= esc($student['responded_at']) ?></p>
                                             <?php endif; ?>

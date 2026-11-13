@@ -653,7 +653,7 @@ $pageDescriptions = [
                                     class="rounded border-white/40 text-[#F2C300]"></th>
                             <th class="px-6 py-4">Student</th>
                             <th class="px-6 py-4 w-1/3">Entry preview</th>
-                            <th class="px-6 py-4 text-center">Screening score</th>
+                            <th class="px-6 py-4 text-center" title="Rule-adjusted screening severity indicator (1-100%, not calibrated clinical probability)">Screening score</th>
                             <th class="px-6 py-4 text-center">Risk level</th>
                             <th class="px-6 py-4">Timestamp</th>
                             <th class="px-6 py-4 text-center">Action</th>

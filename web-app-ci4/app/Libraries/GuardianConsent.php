@@ -81,8 +81,10 @@ final class GuardianConsent
         if (!$prior) return true;
         if (!empty($prior['response'])) return false;
         if (strtotime($prior['expires_at']) <= $now) return true;
-        return !in_array($prior['sms_state'], ['Queued', 'Unknown', 'Manual'], true)
-            && strtotime($prior['requested_at']) <= $now - 300;
+        if (in_array($prior['sms_state'], ['Unknown', 'Manual'], true)) {
+            return false;
+        }
+        return strtotime($prior['requested_at']) <= $now - 300;
     }
 
     public static function lockStudent(BaseConnection $db, int $id): ?array

@@ -113,4 +113,60 @@ final class GuardianConsentTest extends CIUnitTestCase
         self::assertStringContainsString('name="guardian_phone"', $lookupHtml);
         self::assertStringContainsString('name="consent_code"', $lookupHtml);
     }
+
+    public function testQueuedSmsBlocksImmediateResendAndUnlocksAfterFiveMinutes(): void
+    {
+        $now = time();
+        $recent = [
+            'response' => null,
+            'sms_state' => 'Queued',
+            'requested_at' => date('Y-m-d H:i:s', $now - 60),
+            'expires_at' => date('Y-m-d H:i:s', $now + 3600),
+        ];
+        self::assertFalse(GuardianConsent::canSend($recent, $now));
+
+        $afterCooldown = [
+            'response' => null,
+            'sms_state' => 'Queued',
+            'requested_at' => date('Y-m-d H:i:s', $now - 301),
+            'expires_at' => date('Y-m-d H:i:s', $now + 3600),
+        ];
+        self::assertTrue(GuardianConsent::canSend($afterCooldown, $now));
+    }
+
+    public function testPendingRegistrationsViewShowsVerifiedPhoneAndCarrierSentStatus(): void
+    {
+        helper(['url', 'form']);
+        session()->set(['isLoggedIn' => true, 'role' => 2, 'user_id' => 2]);
+        $html = view('admin_pending_registrations', [
+            'registrationStatus' => 'pending',
+            'canApproveRegistrations' => false,
+            'canVerifyContact' => true,
+            'pendingUsers' => [[
+                'id' => 91,
+                'name' => 'Student Sample',
+                'email' => 'sample@svbsm.edu.ph',
+                'student_id' => 'SS-2026-0091',
+                'lrn' => '136465100328',
+                'grade_level' => 'Grade 10',
+                'section' => 'Rizal',
+                'parent_phone' => null,
+                'parent_email' => null,
+                'created_at' => '2026-11-12 12:40:00',
+                'verified_phone' => '+639188564586',
+                'verified_name' => 'Maria Sample',
+                'requested_at' => date('Y-m-d H:i:s', time() - 600),
+                'expires_at' => date('Y-m-d H:i:s', time() + 3600),
+                'sms_state' => 'Queued',
+                'response' => null,
+                'guardian_name' => null,
+                'responded_at' => null,
+            ]],
+        ]);
+        self::assertStringContainsString('+639188564586', $html);
+        self::assertStringContainsString('Verified', $html);
+        self::assertStringContainsString('SMS sent to carrier · awaiting guardian', $html);
+        self::assertStringNotContainsString('SMS queued · awaiting guardian', $html);
+        session()->remove(['isLoggedIn', 'role', 'user_id']);
+    }
 }
