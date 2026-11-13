@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Libraries\StudentDirectory;
+
 class BullyReportController extends BaseController
 {
     public function index()
@@ -13,7 +15,7 @@ class BullyReportController extends BaseController
             $db = \Config\Database::connect();
             $user = $db->table('users')->where('id', $userId)->get()->getRowArray();
             if (!empty($user['is_locked'])) {
-                return redirect()->to('/student/dashboard')->with('error', 'Your reporting privileges have been suspended. Please visit the Guidance Office.');
+                return redirect()->to('/student/dashboard')->with('error', 'Bullying reports are paused for your account. You can still use Safe Space or approach the Guidance Office.');
             }
         }
 
@@ -25,8 +27,23 @@ class BullyReportController extends BaseController
         return $this->response->setHeader('Cache-Control', 'no-store')
             ->setBody(view('reports/bullying_form', [
                 'studentReports' => $reports,
+                'directorySections' => \App\Libraries\SchoolRoster::sections(),
                 'showReportHistory' => $this->request->getGet('view') === 'reports',
             ]));
+    }
+
+    public function directory()
+    {
+        if (!$this->hasRole(0)) return $this->forbidden();
+        $grade = StudentDirectory::grade($this->request->getGet('grade'));
+        $section = $this->request->getGet('section');
+        $search = $this->request->getGet('q');
+        if ($grade === null || !is_string($section) || trim($section) === '' || mb_strlen($section) > 80
+            || !is_string($search) || mb_strlen(trim($search)) < 2 || mb_strlen($search) > 80) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => 'Choose a grade and section, then enter at least two letters.']);
+        }
+        return $this->response->setHeader('Cache-Control', 'private, no-store')
+            ->setJSON(['students' => StudentDirectory::search(\Config\Database::connect(), $grade, trim($section), trim($search))]);
     }
 
     public function submit()
@@ -40,7 +57,7 @@ class BullyReportController extends BaseController
             $db2 = \Config\Database::connect();
             $user = $db2->table('users')->where('id', $userId)->get()->getRowArray();
             if (!empty($user['is_locked'])) {
-                return redirect()->to('/student/dashboard')->with('error', 'Your reporting privileges have been suspended.');
+                return redirect()->to('/student/dashboard')->with('error', 'Bullying reports are paused for your account. You can still use Safe Space or approach the Guidance Office.');
             }
         }
 
@@ -51,18 +68,50 @@ class BullyReportController extends BaseController
             $waitTime = 120 - (time() - $lastSubmit);
             return redirect()->back()->with('error', "Security Limit: Please wait {$waitTime} seconds before submitting again to prevent spam.");
         }
-        session()->set('last_bully_report_time', time());
         
         $reporterType = $this->request->getPost('reporter_type') ?? 'self';
-        $victimName   = trim($this->request->getPost('victim_name') ?? '');
-        $bullyName    = trim($this->request->getPost('bully_name') ?: $this->request->getPost('perpetrator_name') ?: '');
-        
-        $details      = $this->request->getPost('incident_details') ?: $this->request->getPost('description');
+        $victimName = $this->request->getPost('victim_name') ?? '';
+        $bullyName = $this->request->getPost('bully_name') ?: $this->request->getPost('perpetrator_name') ?: '';
+        $details = $this->request->getPost('incident_details') ?: $this->request->getPost('description');
         $incidentType = $this->request->getPost('incident_type');
-        if (!empty($incidentType)) {
-            $details = "INCIDENT CATEGORY: " . $incidentType . "\n\n" . $details;
+        if (!in_array($reporterType, ['self', 'bystander'], true) || !is_string($details)
+            || trim($details) === '' || mb_strlen($details) > 2000
+            || !is_string($victimName) || !is_string($bullyName)
+            || mb_strlen($victimName) > 160 || mb_strlen($bullyName) > 160
+            || ($incidentType !== null && (!is_string($incidentType) || mb_strlen($incidentType) > 100))) {
+            return redirect()->back()->withInput()->with('error', 'Check the people involved and describe the incident in up to 2,000 characters.');
         }
-        
+        $db = \Config\Database::connect();
+        $victimStudentId = $reporterType === 'self' ? (int) $userId : null;
+        $bullyStudentId = null;
+        foreach (['victim' => $reporterType === 'bystander', 'bully' => true] as $person => $required) {
+            if (!$required) continue;
+            $selectedId = $this->request->getPost($person . '_student_id');
+            if ($selectedId === 'unknown' || $selectedId === null) {
+                if (trim($person === 'victim' ? $victimName : $bullyName) === '') {
+                    return redirect()->back()->withInput()->with('error', 'Select the people involved or describe someone who is not listed.');
+                }
+                continue;
+            }
+            $selected = StudentDirectory::selected($db, $selectedId,
+                $this->request->getPost($person . '_grade'), $this->request->getPost($person . '_section'));
+            if (!$selected || ($person === 'bully' && (int) $selected['id'] === (int) $userId)) {
+                return redirect()->back()->withInput()->with('error', 'Choose a valid student from the selected grade and section.');
+            }
+            if ($person === 'victim') {
+                $victimStudentId = (int) $selected['id'];
+                $victimName = $selected['name'];
+            } else {
+                $bullyStudentId = (int) $selected['id'];
+                $bullyName = $selected['name'];
+            }
+        }
+        if ($reporterType === 'bystander' && $victimStudentId === $bullyStudentId && $victimStudentId !== null) {
+            return redirect()->back()->withInput()->with('error', 'The targeted student and reported aggressor must be different people.');
+        }
+        if ($reporterType === 'self') $victimName = 'Self';
+        if ($incidentType) $details = "INCIDENT CATEGORY: " . $incidentType . "\n\n" . $details;
+
         $evidenceFile = $this->request->getFile('evidence_file');
         $evidencePath = null;
 
@@ -99,26 +148,6 @@ class BullyReportController extends BaseController
 
         $db = \Config\Database::connect();
 
-        // Privacy Upgrade & Security Fix: Resolve Victim Name -> ID using strictly unique fuzzy lookup
-        $victimStudentId = null;
-        if ($reporterType === 'self') {
-            $victimStudentId = $userId;
-        } else if (!empty($victimName)) {
-            $vUsers = $db->table('users')->where('name', $victimName)->get()->getResult();
-            // ONLY associate if there is exactly 1 match to prevent wrong-parent notification panics.
-            if (count($vUsers) === 1) $victimStudentId = $vUsers[0]->id;
-        }
-
-        // Privacy Upgrade & Security Fix: Resolve Bully Name -> ID using strictly unique fuzzy lookup
-        // Note: If multiple comma-separated names are provided, fuzzy lookup will safely fail, keeping bully_student_id Null. 
-        // This is a feature, not a bug, protecting parents from mass incorrect automated SMS panics. The counselor will read the exact list below manually.
-        $bullyStudentId = null;
-        if (!empty($bullyName) && !str_contains($bullyName, ',')) {
-            $bUsers = $db->table('users')->like('name', $bullyName)->get()->getResult();
-            // ONLY associate if there is exactly 1 match to prevent wrong-parent notification panics.
-            if (count($bUsers) === 1) $bullyStudentId = $bUsers[0]->id;
-        }
-
         $encrypter = \Config\Services::encrypter();
         $rawDetails = "TARGETED STUDENT: " . ($victimName ?: 'Self') . "\nREPORTED AGGRESSOR(S): " . ($bullyName ?: 'N/A') . "\n\n" . $details;
         $encryptedDetails = bin2hex($encrypter->encrypt($rawDetails));
@@ -154,23 +183,14 @@ class BullyReportController extends BaseController
             return redirect()->back()->with('error', 'Submission failed due to a system error. Please try again.');
         }
 
+        session()->set('last_bully_report_time', time());
         $this->logAudit('CREATE_INCIDENT', 'incident', (int) $insertId);
 
         // --- Stage 1: Instant Counselor Alert (Report Intake) ---
         // Parent alerts are NOT sent here. They fire only after counselor verification (Stage 2)
         // to prevent fake/malicious reports from triggering parent panic SMS blasts.
         
-        // 1. Alert the Reporter (Email) — confirmation only, no sensitive details
-        $reporter = $db->table('users')
-            ->select('users.*, COALESCE(students.parent_email, counselors.counselor_email, admins.email) AS email')
-            ->join('students', 'students.user_id = users.id', 'left')
-            ->join('counselors', 'counselors.user_id = users.id', 'left')
-            ->join('admins', 'admins.user_id = users.id', 'left')
-            ->where('users.id', $userId)
-            ->get()->getRow();
-        if ($reporter && !empty($reporter->email)) {
-            $this->sendLocalEmail($reporter->email, "Thank you for speaking up. Your report has been received for counselor review. You can check its progress in My reports. If you need help while waiting, please approach the Guidance Office or a trusted school staff member. If you are in immediate danger, seek help from a trusted adult or school staff right away.");
-        }
+        // The reporter receives the confirmation in-app. Guardian alerts require counselor verification.
 
         // 2. Alert the Counselor Immediately (SMS & Email) — so they can investigate ASAP
         $counselorPhone = env('COUNSELOR_PHONE', '');

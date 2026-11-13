@@ -25,6 +25,7 @@ final class RoleAccess
         if (preg_match('#^admin/registrations/[0-9]+/(?:send-consent|archive)$#', $path)) return $role === 2;
         if (preg_match('#^admin/(users(?:/(?:create|(?:update|delete|unlock|access)/[0-9]+))?|audit-logs)$#', $path)) return $role === 2;
         if (preg_match('#^principal/(dashboard|api/analytics|reports/export)$#', $path)) return $role === 3;
+        if (preg_match('#^admin/reports(?:/export)?$#', $path)) return $role === 1;
         if (str_starts_with($path, 'counselor/')) return $role === 1 && self::allows($role, 'admin/' . substr($path, 10));
         $counselor = [
             '#^admin/(vents|incidents|sessions|alerts|analytics)$#',
@@ -34,10 +35,11 @@ final class RoleAccess
             '#^admin/incident/((resolve|verify|reject|undo|delete|restore)/[0-9]+|(delete|restore)-multiple)$#',
             '#^admin/case-summary/([0-9]+(?:/(note|status|meeting/(start|cancel)))?|note/delete/[0-9]+)$#',
             '#^admin/(approve-student|reject-student)/[0-9]+$#',
+            '#^admin/students/[0-9]+/guardian-safety$#',
         ];
         foreach ($counselor as $pattern) if (preg_match($pattern, $path)) return $role === 1;
         if (preg_match('#^student/(dashboard|vent(?:/submit)?|api/meeting/status|meeting/(request|cancel-request))$#', $path)
-            || in_array($path, ['report-bullying', 'report-bullying/submit', 'report/bullying', 'report/bullying/submit'], true)) return $role === 0;
+            || in_array($path, ['report-bullying', 'report-bullying/submit', 'report/bullying', 'report/bullying/submit', 'report/bullying/directory'], true)) return $role === 0;
         if (preg_match('#^meeting/join/[0-9]+$#', $path)) return in_array($role, [0, 1], true);
         return false;
     }

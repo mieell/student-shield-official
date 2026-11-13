@@ -132,8 +132,21 @@ class AdminController extends BaseController
             ->get()->getResultArray();
 
         $this->decryptRowsField($vents, 'raw_text');
-
-        return $this->response->setJSON($vents);
+        $sources = [];
+        if ($vents) {
+            $events = $db->table('audit_logs')->select('entity_id, action')->where('entity_type', 'vent')
+                ->whereIn('entity_id', array_column($vents, 'id'))
+                ->whereIn('action', ['VENT_ANALYSIS_MODEL', 'VENT_ANALYSIS_LOCAL'])
+                ->orderBy('id', 'ASC')->get()->getResultArray();
+            foreach ($events as $event) $sources[$event['entity_id']] = $event['action'] === 'VENT_ANALYSIS_MODEL' ? 'model' : 'local';
+        }
+        foreach ($vents as &$vent) {
+            $vent['screening_analysis'] = \App\Libraries\ScreeningExplanation::decode($vent['analysis_details'] ?? null);
+            $vent['analysis_source'] = $vent['screening_analysis']['source'] ?? $sources[$vent['id']] ?? 'unknown';
+            unset($vent['analysis_details']);
+        }
+        unset($vent);
+        return $this->response->setHeader('Cache-Control', 'private, no-store')->setJSON($vents);
     }
 
     public function resolveVent($id)
@@ -307,6 +320,7 @@ class AdminController extends BaseController
                     ->get()->getRow();
 
                 if ($student) {
+                    $this->routeGuardianContact($db, $student, (int) $reporterId);
                     $parentMsg = "SVBSM Guidance Notice: Your child ({$student->name}) has received a 2nd warning for filing false incident reports on the StudentShield system. One more violation will result in temporary suspension of their reporting privileges. Please discuss responsible use of the school's safety tools with your child.";
                     if (!empty($student->parent_phone))
                         $this->sendLocalSms($student->parent_phone,
@@ -333,6 +347,7 @@ class AdminController extends BaseController
                     ->get()->getRow();
 
                 if ($student) {
+                    $this->routeGuardianContact($db, $student, (int) $reporterId);
                     $lockMsg = "SVBSM Guidance Alert: Your child ({$student->name}) has had their incident reporting privileges temporarily suspended due to 3 confirmed false reports. To restore access, please visit the Guidance Office for a disciplinary meeting.";
                     if (!empty($student->parent_phone))
                         $this->sendLocalSms($student->parent_phone,
@@ -509,6 +524,9 @@ class AdminController extends BaseController
 
         // Remove sensitive info
         unset($user['password_hash']);
+        $guardianSafety = \App\Libraries\GuardianAlertRouting::settings($db, (int) $id);
+        $guardianRoute = \App\Libraries\GuardianAlertRouting::resolve($user, $guardianSafety);
+
 
         // 2. Fetch Vents (wellness tracking data)
         $vents = $db->table('vent_logs')
@@ -567,8 +585,11 @@ class AdminController extends BaseController
         $currentTrajectory       = $latestVent['trajectory']           ?? 'INSUFFICIENT_DATA';
         $currentEscalationProb   = (float)($latestVent['escalation_probability'] ?? 0.0);
 
-        return $this->response->setJSON([
+        return $this->response->setHeader('Cache-Control', 'private, no-store')->setJSON([
             'user'               => $user,
+            'guardian_safety'    => $guardianSafety,
+            'guardian_route_note' => $guardianRoute['note'],
+            'csrf' => csrf_hash(),
             'timeline'           => $timelineData,
             'vents'              => array_reverse($vents),
             'incidents'          => $incidents,
@@ -780,6 +801,7 @@ class AdminController extends BaseController
         if (!$student) {
             return;
         }
+        $this->routeGuardianContact($db, $student, $studentUserId);
         if (!empty($student->parent_phone)) {
             $accepted = $this->sendLocalSms(
                 $student->parent_phone,
@@ -792,4 +814,15 @@ class AdminController extends BaseController
             $this->sendLocalEmail($student->parent_email, $emailMessage);
         }
     }
+    private function routeGuardianContact($db, object $student, int $userId): void
+    {
+        $settings = \App\Libraries\GuardianAlertRouting::settings($db, $userId);
+        $route = \App\Libraries\GuardianAlertRouting::resolve((array) $student, $settings);
+        $student->parent_phone = $route['phone'];
+        $student->parent_email = $route['email'];
+        if ($route['blocked']) {
+            $this->logAudit('GUARDIAN_OUTREACH_REQUIRED', 'student', $userId);
+        }
+    }
+
 }

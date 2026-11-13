@@ -376,8 +376,15 @@ final class RoleSeparationTest extends CIUnitTestCase
 
     public function testRegistrationRequiresUniqueTwelveDigitLrnAndKeepsLeadingZero(): void
     {
-        $post = ['name' => 'Registration fixture', 'lrn' => '012345678901', 'grade_level' => '8', 'section' => 'A', 'parent_contact' => '09123456789', 'password' => 'Example!234A', 'password_confirm' => 'Example!234A', 'terms' => '1'];
+        $post = ['name' => 'Registration fixture', 'lrn' => '012345678901', 'grade_level' => '8', 'section' => 'B', 'parent_contact' => '09123456789', 'password' => 'Example!234A', 'password_confirm' => 'Example!234A', 'terms' => '1'];
         $before = $this->rbacDb->table('users')->countAllResults();
+        foreach ([['grade_level' => '11'], ['section' => 'Unknown section'], ['grade_level' => '7', 'section' => 'B'], ['section' => ['B']], ['password' => ['invalid']]] as $invalidPlacement) {
+            $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, $invalidPlacement))->processStudentRegistration();
+            $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
+            $old = session()->getFlashdata('_ci_old_input')['post'];
+            $this->assertArrayNotHasKey('password', $old);
+            $this->assertArrayNotHasKey('password_confirm', $old);
+        }
         foreach (['guardian@example.test', 'invalid contact', '123', ['guardian@example.test']] as $contact) {
             $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['parent_contact' => $contact]))->processStudentRegistration();
             $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
@@ -463,6 +470,41 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertSame([], $bullying['groups']['risk']);
         $empty = $analytics->summary(SchoolAnalytics::filters(['period' => 'last7', 'section' => "' OR 1=1 --"], $today));
         $this->assertSame(0, $empty['metrics']['events']);
+    }
+
+    public function testCounselorCanGenerateAndExportTheSharedAggregateReport(): void
+    {
+        $this->login(1);
+        service('superglobals')->setGetArray(['period' => 'custom', 'start' => '2026-10-01', 'end' => '2026-10-18', 'grade' => '7']);
+        try {
+            $overview = $this->controller(PrincipalController::class, 'admin/reports')->counselorReports();
+            $this->assertSame(302, $overview->getStatusCode());
+            $this->assertStringEndsWith('/admin/analytics', $overview->getHeaderLine('Location'));
+            $this->assertStringContainsString('no-store', $overview->getHeaderLine('Cache-Control'));
+
+            $export = $this->controller(PrincipalController::class, 'admin/reports/export')->counselorExport();
+            $this->assertSame(200, $export->getStatusCode());
+            $this->assertStringStartsWith('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $export->getHeaderLine('Content-Type'));
+            $this->assertStringContainsString('2026-10-01-to-2026-10-18.xlsx', $export->getHeaderLine('Content-Disposition'));
+            $this->assertStringStartsWith('PK', $export->getBody());
+            $this->assertSame('EXPORT_AGGREGATE_REPORT', $this->rbacDb->table('audit_logs')->orderBy('id', 'DESC')->get()->getRowArray()['action']);
+            $this->assertSame(403, $this->controller(PrincipalController::class, 'principal/reports/export')->export()->getStatusCode());
+        } finally {
+            service('superglobals')->setGetArray([]);
+        }
+    }
+
+    public function testCounselorReportRoutesAndControllerRejectOtherRoles(): void
+    {
+        foreach ([0, 1, 2, 3] as $role) {
+            foreach (['admin/reports', 'admin/reports/export'] as $path) {
+                $this->assertSame($role === 1, RoleAccess::allows($role, $path));
+            }
+            if ($role === 1) continue;
+            $this->login($role);
+            $this->assertSame(403, $this->controller(PrincipalController::class, 'admin/reports')->counselorReports()->getStatusCode());
+            $this->assertSame(403, $this->controller(PrincipalController::class, 'admin/reports/export')->counselorExport()->getStatusCode());
+        }
     }
 
     public function testAuditIpDoesNotTrustArbitraryForwardedHeader(): void

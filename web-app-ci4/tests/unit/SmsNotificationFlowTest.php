@@ -53,6 +53,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
             'vent_logs' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, raw_text TEXT, emotions TEXT, risk_percent REAL, risk_level TEXT, status TEXT, created_at TEXT, deleted_at TEXT',
             'bully_reports' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, reporter_student_id INTEGER, reporter_type TEXT, victim_student_id INTEGER, bully_student_id INTEGER, incident_details TEXT, status TEXT, created_at TEXT, updated_at TEXT',
             'guardian_consents' => 'user_id INTEGER PRIMARY KEY, verified_by INTEGER, phone TEXT, verified_name TEXT, token_hash TEXT, notice TEXT, requested_at TEXT, expires_at TEXT, sms_state TEXT, response TEXT, guardian_name TEXT, responded_at TEXT',
+            'guardian_alert_routes' => 'user_id INTEGER PRIMARY KEY, unsafe_guardian INTEGER DEFAULT 0, alternate_name TEXT, alternate_phone TEXT, alternate_email TEXT, verified_by INTEGER, verified_at TEXT, updated_at TEXT',
         ] as $table => $fields) $this->smsDb->query("CREATE TABLE $table ($fields)");
         foreach ([10 => '09181234567', 11 => '09191234567'] as $id => $phone) {
             $this->smsDb->table('users')->insert(['id' => $id, 'name' => 'PRIVATE STUDENT ' . $id]);
@@ -165,7 +166,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         $this->assertStringContainsString('no-store', (string) $alertsResponse->getHeaderLine('Cache-Control'));
         $recorded = json_decode((string) $alertsResponse->getBody(), true);
         $this->assertCount(2, $recorded);
-        $this->assertSame(['09191234567', '09181234567'], array_column($recorded, 'recipient'));
+        $this->assertSame(['+639191234567', '+639181234567'], array_column($recorded, 'recipient'));
         $this->assertSame(['SMS (Gateway)', 'SMS (Gateway)'], array_column($recorded, 'type'));
         $this->assertSame(['Queued', 'Queued'], array_column($recorded, 'state'));
     }
@@ -178,7 +179,8 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         };
         $this->init($bullyController, [
             'reporter_type' => 'self',
-            'bully_name' => '',
+            'bully_student_id' => 'unknown',
+            'bully_name' => 'Fictional classmate',
             'incident_details' => 'Sinuntok ako sa hallway.',
         ])->submit();
 

@@ -15,6 +15,17 @@ class PrincipalController extends BaseController
     public function index()
     {
         if (!$this->hasRole(3)) return $this->forbidden();
+        return $this->overview();
+    }
+
+    public function counselorReports()
+    {
+        if (!$this->hasRole(1)) return $this->forbidden();
+        return redirect()->to(site_url('admin/analytics'))->setHeader('Cache-Control', 'private, no-store');
+    }
+
+    private function overview()
+    {
         try {
             $report = $this->report();
             $options = (new SchoolAnalytics(\Config\Database::connect()))->options();
@@ -34,12 +45,23 @@ class PrincipalController extends BaseController
     public function export()
     {
         if (!$this->hasRole(3)) return $this->forbidden();
+        return $this->exportSummary();
+    }
+
+    public function counselorExport()
+    {
+        if (!$this->hasRole(1)) return $this->forbidden();
+        return $this->exportSummary();
+    }
+
+    private function exportSummary()
+    {
         try { $report = $this->report(); }
         catch (\InvalidArgumentException $e) { return $this->response->setStatusCode(422)->setJSON(['message' => $e->getMessage()]); }
         try {
             $workbook = SchoolSummaryWorkbook::build($report);
         } catch (\Throwable $e) {
-            log_message('error', 'Principal workbook export failed: {message}', ['message' => $e->getMessage()]);
+            log_message('error', 'School summary workbook export failed: {message}', ['message' => $e->getMessage()]);
             return $this->response->setStatusCode(503)->setContentType('text/plain')->setBody('The Excel report could not be generated. Try again later.');
         }
         $filename = 'StudentShield-Summary-' . $report['filters']['start'] . '-to-' . $report['filters']['end'] . '.xlsx';

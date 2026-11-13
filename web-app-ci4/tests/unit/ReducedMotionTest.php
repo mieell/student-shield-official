@@ -8,7 +8,7 @@ final class ReducedMotionTest extends CIUnitTestCase
     {
         // Guard the CSS policy behind the browser-reproduced opacity=0 failure.
         // Browser rendering is verified separately; this test needs no CDN or database.
-        foreach (['Views/login.php', 'Views/register.php', '../public/css/student-forms.css'] as $view) {
+        foreach (['Views/login.php', '../public/css/registration.css', '../public/css/student-forms.css'] as $view) {
             $source = file_get_contents(APPPATH . $view);
             $this->assertMatchesRegularExpression('/@media\s*\(prefers-reduced-motion:\s*reduce\)/', $source, $view);
             $this->assertDoesNotMatchRegularExpression('/animation-play-state\s*:\s*paused/', $source,

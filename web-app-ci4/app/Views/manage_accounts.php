@@ -16,7 +16,7 @@
 <?= csrf_field() ?>
 <label>Account name<input name="name" required maxlength="255" autocomplete="off" placeholder="e.g. Guidance Counselor 1"></label>
 <label>Role<select name="role"><?php foreach (\App\Libraries\RoleAccess::NAMES as $value => $label): ?><option value="<?= $value ?>"><?= esc($label) ?></option><?php endforeach; ?></select></label>
-<label>Password<input name="passcode" type="password" minlength="8" required autocomplete="new-password" placeholder="Minimum 8 characters"></label>
+<label>Password<input name="passcode" type="password" data-password-toggle minlength="8" required autocomplete="new-password" placeholder="Minimum 8 characters"></label>
 <?= view('partials/account_contacts', ['contactAccount' => []]) ?>
 <p>New Student accounts remain pending until a Counselor approves them.</p>
 <button type="submit">Create account</button>
@@ -62,7 +62,7 @@
 <?= csrf_field() ?>
 <?php if ($role !== 0): ?><label>Account name<input name="name" value="<?= esc($user['name'], 'attr') ?>" maxlength="255" required></label><?php endif; ?>
 <label>Role<select name="role"><?php foreach (\App\Libraries\RoleAccess::NAMES as $value => $label): ?><option value="<?= $value ?>" <?= $role === $value ? 'selected' : '' ?>><?= esc($label) ?></option><?php endforeach; ?></select></label>
-<label>Reset password<input name="passcode" type="password" minlength="8" autocomplete="new-password" placeholder="Leave blank to keep current"></label>
+<label>Reset password<input name="passcode" type="password" data-password-toggle minlength="8" autocomplete="new-password" placeholder="Leave blank to keep current"></label>
 <?= view('partials/account_contacts', ['contactAccount' => $user]) ?>
 <button type="submit">Save account</button></form>
 <?php if ((int) $user['id'] !== (int) session()->get('user_id')): ?>
@@ -105,4 +105,4 @@ createPanel.addEventListener('toggle', () => {
 </script>
 <script src="<?= base_url('js/accounts-directory.js?v=' . filemtime(FCPATH . 'js/accounts-directory.js')) ?>" defer></script>
 <?= view('partials/session_idle_modal') ?>
-</body></html>
+<?= view('partials/password_visibility') ?></body></html>

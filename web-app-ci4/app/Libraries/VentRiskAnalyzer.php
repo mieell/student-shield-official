@@ -39,6 +39,13 @@ final class VentRiskAnalyzer
             'risk_percent' => (float) ($result['risk_score'] ?? $result['risk_percent']),
         ]);
         $classification = ViolentThreats::enforce($text, $classification);
-        return $classification + ['source' => $source, 'trajectory' => $trajectory, 'escalation_probability' => $probability];
+        $reasoning = $source === 'model' && is_string($result['reasoning'] ?? $result['flag_reason'] ?? null)
+            ? ($result['reasoning'] ?? $result['flag_reason'])
+            : ($source === 'model' ? 'The ML service did not return a detailed explanation for this entry.'
+                : 'Local keyword rules determined this review priority. Review the full entry and ask the student about its context.');
+        if ($classification['risk_level'] !== $result['risk_level']) {
+            $reasoning .= ' The PHP safety rules raised the final review priority after the initial analysis.';
+        }
+        return $classification + ['reasoning' => $reasoning, 'source' => $source, 'trajectory' => $trajectory, 'escalation_probability' => $probability];
     }
 }

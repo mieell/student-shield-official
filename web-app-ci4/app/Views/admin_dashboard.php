@@ -6,7 +6,7 @@ $pageDescriptions = [
     'incidents' => 'Review, verify, and follow up on bullying incident reports.',
     'sessions' => 'Review pending counseling requests and open the student’s case to arrange a session.',
     'alerts' => 'Review notification attempts and their recorded messages.',
-    'analytics' => 'Explore risk distribution and student entry volume over the last seven days.',
+    'analytics' => 'Review Safe Space trends and export school activity summaries.',
 ];
 ?>
 <!DOCTYPE html>
@@ -847,6 +847,29 @@ $pageDescriptions = [
         <?php endif; ?>
 
         <?php if ($dashboardPage === 'analytics'): ?>
+        <?php $exportToday = new \DateTimeImmutable('today', new \DateTimeZone('Asia/Manila')); ?>
+        <section class="dashboard-card p-5 sm:p-6 mb-6" aria-labelledby="counselorExportTitle">
+            <h2 id="counselorExportTitle" class="text-base font-semibold text-[#235D3A]">Export Excel summary</h2>
+            <p class="text-sm text-gray-600 mt-1 mb-4">Download counts and trends for all matching Safe Space entries and bullying reports in your selected period.</p>
+            <form method="get" action="<?= esc(base_url('admin/reports/export'), 'attr') ?>" aria-label="Excel report dates" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                <input type="hidden" name="period" value="custom">
+                <label class="text-sm text-gray-700">Start date
+                    <input type="date" name="start" value="<?= esc($exportToday->modify('-6 days')->format('Y-m-d'), 'attr') ?>" max="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" required class="block w-full mt-1 rounded-lg border border-gray-300 px-3 py-2.5 bg-white">
+                </label>
+                <label class="text-sm text-gray-700">End date
+                    <input type="date" name="end" value="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" max="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" required class="block w-full mt-1 rounded-lg border border-gray-300 px-3 py-2.5 bg-white">
+                </label>
+                <label class="text-sm text-gray-700">Event type
+                    <select name="category" class="block w-full mt-1 rounded-lg border border-gray-300 px-3 py-2.5 bg-white">
+                        <option value="all">All event types</option>
+                        <option value="Safe Space">Safe Space</option>
+                        <option value="Bullying">Bullying reports</option>
+                    </select>
+                </label>
+                <button type="submit" class="rounded-lg bg-[#235D3A] text-white font-semibold px-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#235D3A]">Export Excel</button>
+            </form>
+        </section>
+        <p class="text-sm text-gray-600 mb-3">Charts show up to 500 recent active Safe Space entries.</p>
         <div id="section-charts" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-2 animate-slide-up"
             style="animation-delay: 0.5s">
             <div class="dashboard-card p-4 sm:p-6">
@@ -1678,6 +1701,7 @@ $pageDescriptions = [
         }
 
         function openDetailModal(type, sender, timeStr, fullText, badgeText, badgeClass) {
+            document.getElementById('screeningExplanation')?.remove();
             document.getElementById('modalTitle').innerText = type;
             document.getElementById('modalSender').innerText = sender;
             document.getElementById('modalTime').innerText = timeStr;
@@ -1726,6 +1750,7 @@ $pageDescriptions = [
                         ? 'bg-[#2A5DB0]/10 text-[#2A5DB0] border-[#2A5DB0]/20'
                         : 'bg-[#235D3A]/10 text-[#235D3A] border-[#235D3A]/20'));
             openDetailModal('Safe Space Vent Entry', senderInfo, `${dateStr} ${timeStr}`, vent.raw_text, `Threat Level: ${vent.risk_level}`, badgeClass);
+            showScreeningExplanation(vent);
         }
 
         function openIncidentModal(id) {
@@ -2215,6 +2240,7 @@ $pageDescriptions = [
     </script>
 
 
+    <script src="<?= base_url('js/screening-explanation.js?v=' . filemtime(FCPATH . 'js/screening-explanation.js')) ?>"></script>
 </body>
 
 </html>

@@ -159,6 +159,9 @@ class VentController extends BaseController
 
         try {
             $fields = $db->getFieldNames('vent_logs');
+            if (in_array('analysis_details', $fields, true)) {
+                $insertData['analysis_details'] = \App\Libraries\ScreeningExplanation::encode($assessment);
+            }
             if (in_array('trajectory', $fields)) {
                 $insertData['trajectory'] = $trajectory;
             }
@@ -188,8 +191,9 @@ class VentController extends BaseController
                 if ($user) {
                     $studentName = $user->name ?? 'A student';
                     $firstName = explode(' ', trim($studentName))[0];
-                    $hasParentContact = !empty($user->parent_email) || !empty($user->parent_phone);
-                    $parentNote = $hasParentContact ? "" : " (Note: No parent contact registered on file. Please summon student or contact class adviser.)";
+                    $guardianSettings = \App\Libraries\GuardianAlertRouting::settings($db, (int) $userId);
+                    $guardianRoute = \App\Libraries\GuardianAlertRouting::resolve((array) $user, $guardianSettings);
+                    $parentNote = $guardianRoute['note'] === '' ? '' : ' ' . $guardianRoute['note'];
 
                     if ($riskLevel === 'CRITICAL') {
                         // ALWAYS alert the counselor immediately for any CRITICAL vent
@@ -200,11 +204,12 @@ class VentController extends BaseController
                             'StudentShield: CRITICAL alert. Review the counselor dashboard immediately.'
                         );
 
-                        if (!empty($user->parent_phone) && !$this->isAlertOnCooldown($user->parent_phone)) {
-                            $this->triggerSmsAlert($user->parent_phone, "vent:{$ventId}:parent");
+                        if ($guardianRoute['blocked']) $this->logAudit('GUARDIAN_OUTREACH_REQUIRED', 'vent', $ventId);
+                        if ($guardianRoute['phone'] && !$this->isAlertOnCooldown($guardianRoute['phone'])) {
+                            $this->triggerSmsAlert($guardianRoute['phone'], "vent:{$ventId}:parent");
                         }
-                        if (!empty($user->parent_email) && !$this->isAlertOnCooldown($user->parent_email)) {
-                            $this->triggerEmailAlert($user->parent_email, $firstName);
+                        if ($guardianRoute['email'] && !$this->isAlertOnCooldown($guardianRoute['email'])) {
+                            $this->triggerEmailAlert($guardianRoute['email'], $firstName);
                         }
                     } elseif ($riskLevel === 'HIGH') {
                         // HIGH RISK: Alert counselor exclusively to handle professionally at school
@@ -272,7 +277,7 @@ class VentController extends BaseController
 
     private function triggerSmsAlert($parentPhone, string $eventKey)
     {
-        $message = 'StudentShield: Please check in with your child and contact the SVBSM Guidance Office for support.';
+        $message = 'StudentShield: Please contact the SVBSM Guidance Office promptly about a student safety concern.';
         $result = \Config\Services::smsGateway()->send((string) $parentPhone, $message, $eventKey);
         $this->logAlert('SMS (Gateway)', $parentPhone, $message, $result);
         return $result['accepted'];
@@ -280,55 +285,13 @@ class VentController extends BaseController
 
     private function triggerEmailAlert($parentEmail, $studentName = 'your child')
     {
-        $subject = 'StudentShield: Support Alert for ' . ucfirst($studentName);
-
-        $htmlMessage = "
-        <div style=\"background-color: #f7fafc; padding: 40px 20px; font-family: 'Inter', Helvetica, Arial, sans-serif;\">
-            <div style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;\">
-                
-                <!-- Header -->
-                <div style=\"background: linear-gradient(135deg, #2F855A 0%, #38A169 100%); padding: 30px; text-align: center;\">
-                    <img src=\"" . base_url('images/logo.png') . "\" alt=\"SVBSM Logo\" style=\"width: 95px; height: auto; margin-bottom: 12px; display: inline-block; background-color: transparent;\">
-                    <h1 style=\"color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 0.5px;\">StudentShield Portal</h1>
-                    <p style=\"color: #c6f6d5; margin: 8px 0 0 0; font-size: 15px;\">Wellness Support Update</p>
-                </div>
-
-                <!-- Body -->
-                <div style=\"padding: 35px 30px; color: #4a5568;\">
-                    <p style=\"font-size: 16px; margin-top: 0;\">Dear Parent/Guardian,</p>
-                    
-                    <div style=\"background-color: #ebf8f6; border-left: 4px solid #319795; padding: 15px 20px; margin: 25px 0; border-radius: 0 8px 8px 0;\">
-                        <p style=\"margin: 0; font-size: 16px; line-height: 1.6; color: #234e52;\">
-                            Our intelligent wellness portal recently reviewed a submission from <strong>$studentName</strong> and noted some heavy emotions being processed today.
-                        </p>
-                    </div>
-
-                    <p style=\"font-size: 16px; line-height: 1.6;\">This is a completely normal part of student life. We are sending you this proactive courtesy update because we believe in partnering with parents to ensure every student feels supported.</p>
-                    
-                    <h3 style=\"color: #2d3748; font-size: 18px; margin: 30px 0 15px 0; border-bottom: 2px solid #edf2f7; padding-bottom: 8px;\"> How you can help tonight:</h3>
-                    
-                    <ul style=\"padding-left: 20px; margin: 0;\">
-                        <li style=\"margin-bottom: 12px; font-size: 15px; line-height: 1.5;\"><strong>Offer a warm check-in:</strong> Just asking about their day creates a safe, non-judgmental space.</li>
-                        <li style=\"margin-bottom: 12px; font-size: 15px; line-height: 1.5;\"><strong>Listen actively:</strong> Sometimes they just need to vent and be heard, rather than having a problem 'solved'.</li>
-                        <li style=\"margin-bottom: 0px; font-size: 15px; line-height: 1.5;\"><strong>Remind them of support:</strong> Let them know you are always in their corner.</li>
-                    </ul>
-
-                    <div style=\"margin-top: 35px; text-align: center;\">
-                        <a href=\"#\" style=\"display: inline-block; background-color: #2F855A; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 4px rgba(47, 133, 90, 0.3);\">Contact School Counselor</a>
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <div style=\"background-color: #f8fafc; padding: 25px 30px; text-align: center; border-top: 1px solid #e2e8f0;\">
-                    <p style=\"margin: 0; color: #718096; font-size: 14px; line-height: 1.5;\">
-                        <strong>The Counseling & Wellness Team</strong><br>
-                        St. Vincent Blessed School of Manila
-                    </p>
-                    <p style=\"margin: 10px 0 0 0; color: #a0aec0; font-size: 12px;\">This is an automated message. Please do not reply directly to this email.</p>
-                </div>
-            </div>
-        </div>
-        ";
+        $subject = 'StudentShield: Urgent Guidance Office follow-up';
+        $safeName = htmlspecialchars((string) $studentName, ENT_QUOTES, 'UTF-8');
+        $htmlMessage = '<div style="font-family:Arial,sans-serif;line-height:1.6;color:#173d30">'
+            . '<h1>Guidance Office follow-up</h1>'
+            . '<p>You are receiving this message as the recorded guardian or school-approved emergency contact for '
+            . $safeName . '.</p><p>A submission was flagged for urgent counselor review. Please contact the school Guidance Office promptly so staff can coordinate a safe response.</p>'
+            . '<p>St. Vincent Blessed School of Manila</p></div>';
 
         $this->logAlert('Email', $parentEmail, "StudentShield Alert: Sent wellness check email regarding $studentName.");
 

@@ -57,6 +57,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/admin/api/incidents', 'AdminController::fetchIncidents');
     $routes->get('/admin/api/alerts', 'AdminController::fetchAlertLogs');
     $routes->get('/admin/api/student-profile/(:num)', 'AdminController::getStudentProfile/$1');
+    $routes->post('/admin/students/(:num)/guardian-safety', 'GuardianSafetyController::update/$1');
     $routes->get('/admin/evidence/(:segment)', 'AdminController::evidence/$1');
 
     // Case Summary Report Module
@@ -98,6 +99,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->post('/admin/approve-student/(:num)', 'AdminController::approveStudent/$1');
     $routes->post('/admin/reject-student/(:num)', 'AdminController::rejectStudent/$1');
 
+    $routes->get('/report/bullying/directory', 'BullyReportController::directory');
     $routes->get('/report/bullying', 'BullyReportController::index');
     $routes->post('/report/bullying/submit', 'BullyReportController::submit');
     $routes->get('/report-bullying', 'BullyReportController::index');
@@ -107,6 +109,8 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/principal/dashboard', 'PrincipalController::index');
     $routes->get('/principal/api/analytics', 'PrincipalController::analytics');
     $routes->get('/principal/reports/export', 'PrincipalController::export');
+    $routes->get('/admin/reports', 'PrincipalController::counselorReports');
+    $routes->get('/admin/reports/export', 'PrincipalController::counselorExport');
     $routes->post('/admin/users/access/(:num)', 'UserController::access/$1');
 
     // Student Routes

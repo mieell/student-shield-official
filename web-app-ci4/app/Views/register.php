@@ -1,3 +1,9 @@
+<?php
+helper(['form', 'url']);
+$sectionsByGrade = $sectionsByGrade ?? ['7' => [], '8' => [], '9' => [], '10' => []];
+$selectedGrade = (string) set_value('grade_level');
+$selectedSection = (string) set_value('section');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -144,6 +150,7 @@
         }
     </style>
 <?= view('partials/ui_polish') ?>
+<link rel="stylesheet" href="<?= base_url('css/registration.css?v=' . filemtime(FCPATH . 'css/registration.css')) ?>">
 </head>
 <body class="student-registration bg-student min-h-[100dvh] w-full flex flex-col items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-x-hidden overflow-y-auto" onmousemove="updateSpotlight(event)">
 
@@ -164,19 +171,19 @@
                 <div class="registration-heading-copy">
                     <p class="text-white/90 font-semibold text-sm tracking-wide">St. Vincent Blessed School of Manila, Inc.</p>
                     <h1 class="font-heading font-extrabold tracking-tight text-white leading-tight">Student <span class="text-gold">Registration</span></h1>
-                    <p class="text-white/90 font-medium text-sm">Create your secure account</p>
+                    <p class="text-white/90 font-medium text-sm">Use your school details. Guardian consent and Guidance Office approval are needed before you can sign in.</p>
                 </div>
             </div>
 
             <!-- Error/Success Flash -->
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="bg-red-500/10 backdrop-blur-md border border-red-500/30 p-3.5 sm:p-4 mb-4 sm:mb-6 rounded-2xl shadow-lg">
-                    <p class="text-[16px] sm:text-[17px] font-bold text-red-200 leading-snug tracking-tight text-center"><?= session()->getFlashdata('error') ?></p>
+                    <p class="text-[16px] sm:text-[17px] font-bold text-red-200 leading-snug tracking-tight text-center"><?= esc(session()->getFlashdata('error')) ?></p>
                 </div>
             <?php endif; ?>
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="bg-green-500/10 backdrop-blur-md border border-green-500/30 p-3.5 sm:p-4 mb-4 sm:mb-6 rounded-2xl shadow-lg">
-                    <p class="text-[16px] sm:text-[17px] font-bold text-green-200 leading-snug tracking-tight text-center"><?= session()->getFlashdata('success') ?></p>
+                    <p class="text-[16px] sm:text-[17px] font-bold text-green-200 leading-snug tracking-tight text-center"><?= esc(session()->getFlashdata('success')) ?></p>
                 </div>
             <?php endif; ?>
             <?php if (isset($validation)): ?>
@@ -195,7 +202,7 @@
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <i class="fas fa-user text-white/40 group-focus-within/input:text-gold transition-colors text-[16px]"></i>
                         </div>
-                        <input type="text" name="name" id="name" required value="<?= set_value('name') ?>"
+                        <input type="text" name="name" id="name" required maxlength="255" autocomplete="name" value="<?= set_value('name') ?>"
                                class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none"
                                placeholder="Juan Dela Cruz">
                     </div>
@@ -213,9 +220,10 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <i class="fas fa-layer-group text-white/40 group-focus-within/input:text-gold transition-colors text-[16px]"></i>
                             </div>
-                            <input type="text" name="grade_level" id="grade_level" required value="<?= set_value('grade_level') ?>"
-                                   class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none"
-                                   placeholder="e.g. Grade 8">
+                            <select name="grade_level" id="grade_level" required class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none" aria-controls="section">
+                                <option value="">Choose grade</option>
+                                <?php foreach (['7','8','9','10'] as $grade): ?><option value="<?= $grade ?>" <?= $selectedGrade === $grade ? 'selected' : '' ?>>Grade <?= $grade ?></option><?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
 
@@ -225,15 +233,17 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <i class="fas fa-chalkboard-teacher text-white/40 group-focus-within/input:text-gold transition-colors text-[16px]"></i>
                             </div>
-                            <input type="text" name="section" id="section" required value="<?= set_value('section') ?>"
-                                   class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none"
-                                   placeholder="e.g. Rizal">
+                            <select name="section" id="section" required aria-describedby="sectionHelp" class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none">
+                                <option value="">Choose section</option>
+                                <?php foreach ($sectionsByGrade[$selectedGrade] ?? [] as $section): ?><option value="<?= esc($section, 'attr') ?>" <?= $selectedSection === $section ? 'selected' : '' ?>><?= esc($section) ?></option><?php endforeach; ?>
+                            </select>
+                            <p id="sectionHelp" class="text-xs text-white/80 mt-1" role="status">Choose your grade first.</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="space-y-1.5">
-                    <label for="parent_contact" class="block text-sm sm:text-base font-bold text-white/80 ml-1 uppercase tracking-wider">Parent or guardian mobile</label>
+                <div class="registration-guardian space-y-1.5">
+                    <label for="parent_contact" class="block text-sm sm:text-base font-bold text-white/80 ml-1 uppercase tracking-wider">Parent or guardian mobile <span class="registration-optional">(optional)</span></label>
                     <div class="relative group/input">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <i class="fas fa-phone-alt text-white/40 group-focus-within/input:text-gold transition-colors text-[16px]"></i>
@@ -252,7 +262,7 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <i class="fas fa-lock text-white/40 group-focus-within/input:text-gold transition-colors text-[16px]"></i>
                             </div>
-                            <input type="password" name="password" id="password" required
+                            <input type="password" data-password-toggle maxlength="72" autocomplete="new-password" name="password" id="password" required aria-describedby="password-criteria"
                                    class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none tracking-[0.1em]"
                                    placeholder="••••••••">
                         </div>
@@ -272,11 +282,11 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <i class="fas fa-lock text-white/40 group-focus-within/input:text-gold transition-colors text-[16px]"></i>
                             </div>
-                            <input type="password" name="password_confirm" id="password_confirm" required
+                            <input type="password" data-password-toggle maxlength="72" autocomplete="new-password" name="password_confirm" id="password_confirm" required
                                    class="w-full pl-11 pr-4 py-3 input-dark rounded-xl text-[16px] font-bold outline-none tracking-[0.1em]"
                                    placeholder="••••••••">
                         </div>
-                        <p id="password-match-msg" class="text-[14px] text-red-400 mt-1 hidden font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> Passwords do not match</p>
+                        <p aria-live="polite" id="password-match-msg" class="text-[14px] text-red-400 mt-1 hidden font-medium flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> Passwords do not match</p>
                     </div>
                 </div>
 
@@ -284,7 +294,7 @@
                 <div class="registration-consent pt-1">
                     <label class="flex items-start gap-3 p-2 -ml-2 rounded-xl cursor-pointer min-h-[44px] select-none hover:bg-white/5 transition-colors group/checkbox">
                         <div class="relative flex items-center justify-center mt-0.5 shrink-0">
-                            <input type="checkbox" name="terms" id="terms" required class="peer sr-only" <?= set_checkbox('terms', '1') ?>>
+                            <input type="checkbox" name="terms" id="terms" value="1" required class="peer sr-only" <?= set_checkbox('terms', '1') ?>>
                             <div class="w-5 h-5 border-2 border-white/40 rounded-md bg-white/5 peer-checked:bg-gold peer-checked:border-gold transition-all duration-300"></div>
                             <i class="fas fa-check absolute text-[14px] text-[#0A1C11] opacity-0 peer-checked:opacity-100 transition-opacity duration-300 pointer-events-none"></i>
                         </div>
@@ -294,6 +304,7 @@
                     </label>
                 </div>
 
+                <p id="registrationFeedback" role="alert" class="registration-feedback" hidden></p>
                 <button type="submit" id="submitBtn" class="submit-btn w-full font-black py-3.5 px-6 rounded-xl focus:outline-none focus:ring-4 focus:ring-gold/30 flex items-center justify-center gap-3 h-[52px] sm:h-[56px] mt-6 sm:mt-8 group/btn">
                     <span id="btnText" class="font-heading text-[16px] tracking-wide pt-0.5 text-primary-light mix-blend-multiply">Submit Registration</span>
                     <i id="btnIcon" class="fas fa-paper-plane text-primary-light mix-blend-multiply text-sm group-hover/btn:translate-x-1.5 group-hover/btn:-translate-y-1.5 transition-all duration-300"></i>
@@ -312,7 +323,7 @@
     </div>
 
     <!-- Terms and Conditions Modal (Sticky Header & Footer with Independent Internal Scroll) -->
-    <div id="termsModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-3 sm:p-4">
+    <div id="termsModal" role="dialog" aria-modal="true" aria-label="Terms and data privacy" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-3 sm:p-4">
         <!-- Backdrop -->
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity opacity-0" id="termsBackdrop" onclick="closeTermsModal()"></div>
         
@@ -330,17 +341,17 @@
             
             <!-- Scrollable Body -->
             <div class="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar text-white space-y-4 text-sm sm:text-base leading-relaxed">
-                <p>Welcome to Student Shield! By registering an account, you agree to the following terms regarding your usage and how we handle your data.</p>
+                <p>StudentShield is not monitored 24/7. Approach the Guidance Office if you need help while waiting for a response.</p><p>Welcome to Student Shield! By registering an account, you agree to the following terms regarding your usage and how we handle your data.</p>
                 
                 <h3 id="terms-section-terms" class="text-gold font-semibold text-base sm:text-lg mt-4">1. Purpose of the Portal</h3>
                 <p>Student Shield is a secure platform designed for St. Vincent Blessed School of Manila (SVBSM) students to report incidents (such as bullying or conflicts) and to express concerns ("Vents") to the Guidance Counselor. This platform is strictly for school-related well-being and disciplinary matters.</p>
 
                 <h3 id="terms-section-privacy" class="text-gold font-semibold text-base sm:text-lg mt-4">2. Data Collection and Privacy</h3>
-                <p>In compliance with the <strong>Data Privacy Act of 2012 (R.A. 10173)</strong>, we assure you that:</p>
+                <p>The school handles your information under its privacy policy and the <strong>Data Privacy Act of 2012 (R.A. 10173)</strong>.</p>
                 <ul class="list-disc pl-5 space-y-1">
-                    <li>Any personal information (Name, Student ID, Contact Info) collected during registration will be kept strictly confidential.</li>
-                    <li>Reports and Vents submitted through this system are end-to-end secured and only accessible by authorized school personnel (e.g., Guidance Counselors and Administrators).</li>
-                    <li>Your identity will remain protected, and any evidence you upload will be handled with the utmost sensitivity.</li>
+                    <li>Registration details are used to verify your account, request guardian consent, and provide guidance support.</li>
+                    <li>Safe Space messages are screened to help prioritize counselor review. Message text may be processed by configured external services. Stored vent text is encrypted, and access follows assigned staff roles.</li>
+                    <li>School staff may contact a verified guardian or a school-approved emergency contact when a safety concern requires protective action.</li>
                 </ul>
 
                 <h3 class="text-gold font-semibold text-base sm:text-lg mt-4">3. Honest Reporting</h3>
@@ -371,13 +382,17 @@
     </style>
 
 <script>
+    let termsTrigger = null;
     function openTermsModal(section) {
+        termsTrigger = document.activeElement;
         const modal    = document.getElementById('termsModal');
         const backdrop = document.getElementById('termsBackdrop');
         const content  = document.getElementById('termsContentBox');
         const body     = content.querySelector('.overflow-y-auto');
 
         modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        modal.querySelector('button').focus();
 
         // Animate in, then teleport scroll to the requested section
         setTimeout(() => {
@@ -413,11 +428,22 @@
 
         setTimeout(() => {
             modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            termsTrigger?.focus();
             // Reset scroll so next open feels fresh
             const body = content.querySelector('.overflow-y-auto');
             if (body) body.scrollTop = 0;
         }, 300);
     }
+
+    window.addEventListener('pageshow', () => {
+        const button = document.getElementById('submitBtn');
+        button.disabled = false;
+        button.classList.remove('opacity-80', 'cursor-wait', 'scale-[0.98]');
+        document.getElementById('btnText').textContent = 'Submit Registration';
+        document.getElementById('btnIcon').classList.remove('hidden');
+        document.getElementById('btnSpinner').classList.add('hidden');
+    });
 
     function updateSpotlight(e) {
         const overlay = document.getElementById('spotlight-overlay');
@@ -425,6 +451,15 @@
         overlay.style.setProperty('--y', `${e.clientY}px`);
     }
 
+    document.getElementById('termsModal').addEventListener('keydown', event => {
+        if (event.key === 'Escape') { closeTermsModal(); return; }
+        if (event.key === 'Tab') {
+            const buttons = event.currentTarget.querySelectorAll('button');
+            const first = buttons[0], last = buttons[buttons.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+    });
     function passwordRequirements(value) {
         return {
             'req-length': value.length >= 8,
@@ -441,7 +476,10 @@
         
         if (!Object.values(passwordRequirements(pass)).every(Boolean) || pass !== confirmPass) {
             e.preventDefault();
-            alert('Please ensure your password meets all security requirements and that passwords match.');
+            const feedback = document.getElementById('registrationFeedback');
+            feedback.textContent = 'Check the password requirements and make sure both passwords match.';
+            feedback.hidden = false;
+            document.getElementById('password').focus();
             return;
         }
 
@@ -449,6 +487,7 @@
         const text = document.getElementById('btnText');
         const icon = document.getElementById('btnIcon');
         const spinner = document.getElementById('btnSpinner');
+        btn.disabled = true;
         btn.classList.add('opacity-80', 'cursor-wait', 'scale-[0.98]');
         text.innerText = 'Processing...';
         icon.classList.add('hidden');
@@ -479,9 +518,35 @@
         const pass = document.getElementById('password').value;
         const confirm = document.getElementById('password_confirm').value;
         const msg = document.getElementById('password-match-msg');
-        
-        msg.classList.toggle('hidden', confirm.length === 0 || pass === confirm);
+        const mismatch = confirm.length > 0 && pass !== confirm;
+        document.getElementById('password_confirm').setCustomValidity(mismatch ? 'Passwords do not match.' : '');
+        document.getElementById('password_confirm').setAttribute('aria-invalid', String(mismatch));
+        msg.classList.toggle('hidden', !mismatch);
     }
+</script>
+<?= view('partials/password_visibility') ?>
+<script>
+const sectionsByGrade = <?= json_encode($sectionsByGrade, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const gradeField = document.getElementById('grade_level');
+const sectionField = document.getElementById('section');
+function updateSections() {
+    const previous = sectionField.value;
+    sectionField.replaceChildren(new Option(gradeField.value ? 'Choose section' : 'Choose grade first', ''));
+    const sections = sectionsByGrade[gradeField.value] || [];
+    sections.forEach(section => sectionField.add(new Option(section, section, false, section === previous)));
+    document.getElementById('sectionHelp').textContent = !gradeField.value ? 'Choose your grade first.'
+        : sections.length ? 'Choose the section on your school record.'
+        : 'No sections are listed yet. Please contact the Guidance Office.';
+}
+gradeField.addEventListener('change', updateSections);
+updateSections();
+const lrnField = document.getElementById('lrn');
+lrnField.addEventListener('input', () => { lrnField.value = lrnField.value.replace(/[^0-9]/g, '').slice(0, 12); });
+lrnField.addEventListener('paste', event => {
+    event.preventDefault();
+    const digits = event.clipboardData.getData('text').replace(/[^0-9]/g, '');
+    lrnField.value = (lrnField.value.slice(0, lrnField.selectionStart) + digits + lrnField.value.slice(lrnField.selectionEnd)).slice(0, 12);
+});
 </script>
 </body>
 </html>

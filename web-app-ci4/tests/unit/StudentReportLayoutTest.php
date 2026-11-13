@@ -83,7 +83,9 @@ final class StudentReportLayoutTest extends CIUnitTestCase
         $this->assertSame(1, $xpath->query('//button[@data-role="self"][@aria-pressed="true"]')->length);
         $this->assertSame(1, $xpath->query('//button[@data-role="bystander"][@aria-pressed="false"]')->length);
         $this->assertSame(1, $xpath->query('//input[@name="victim_name"][not(@required)]')->length);
-        $this->assertSame(1, $xpath->query('//input[@name="bully_name"][@required]')->length);
+        $this->assertSame(1, $xpath->query('//select[@name="bully_student_id"][@required]')->length);
+        $this->assertSame(1, $xpath->query('//select[@name="victim_student_id"][not(@required)]')->length);
+        $this->assertSame(1, $xpath->query('//select[@name="bully_student_id"]/option[@value="unknown"]')->length);
         $this->assertSame(1, $xpath->query('//textarea[@name="incident_details"][@maxlength="2000"][@required]')->length);
         $this->assertSame(1, $xpath->query('//input[@name="evidence_file"][@type="file"][@accept="image/*,video/*"]')->length);
         $this->assertSame(1, $xpath->query('//button[@id="saveDraftBtn"][@type="button"]')->length);

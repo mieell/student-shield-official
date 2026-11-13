@@ -124,12 +124,12 @@
                         <!-- Who is involved? -->
                         <div class="report-people grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div id="victimNameBox" class="hidden" style="display:none;">
-                                <label for="victim_name" class="block text-xs font-semibold text-gray-800 mb-2">Who is being bullied? <span class="text-red-400">*</span></label>
-                                <input type="text" id="victim_name" name="victim_name" class="w-full bg-white/80 border border-gray-300 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-xl px-4 py-3 text-[14px] focus:ring-2 focus:ring-calm-200 focus:border-calm-400 outline-none transition-all placeholder-gray-400 font-medium" placeholder="Full name of the victim">
+                                <label for="victim-student" class="block text-xs font-semibold text-gray-800 mb-2">Who is being bullied? <span class="text-red-400">*</span></label>
+                                <?= view('reports/partials/student_picker', ['kind' => 'victim']) ?>
                             </div>
                             <div id="aggressorNameBox" class="md:col-span-2">
-                                <label for="aggressor_name" class="block text-xs font-semibold text-gray-800 mb-2">Who is doing the bullying? <span class="text-red-400">*</span></label>
-                                <input type="text" id="aggressor_name" name="bully_name" required class="w-full bg-white/80 border border-gray-300 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-xl px-4 py-3 text-[14px] focus:ring-2 focus:ring-calm-200 focus:border-calm-400 outline-none transition-all placeholder-gray-400 font-medium" placeholder="Enter their full name">
+                                <label for="bully-student" class="block text-xs font-semibold text-gray-800 mb-2">Who is doing the bullying? <span class="text-red-400">*</span></label>
+                                <?= view('reports/partials/student_picker', ['kind' => 'bully']) ?>
                             </div>
                         </div>
 
@@ -224,6 +224,8 @@
     </div>
 
     <script>
+        const directorySections = <?= json_encode($directorySections ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const studentDirectoryUrl = <?= json_encode(site_url('report/bullying/directory')) ?>;
         // --- Save As Draft LocalStorage Implementation ---
         const DRAFT_KEY = 'studentshield_bullying_report_draft';
         
@@ -236,8 +238,8 @@
                         const btn = document.querySelector(`.role-btn[data-role="${data.role}"]`);
                         if (btn) setRole(data.role, btn);
                     }
-                    if (data.victimName) document.getElementById('victim_name').value = data.victimName;
-                    if (data.aggressorName) document.getElementById('aggressor_name').value = data.aggressorName;
+                    if (data.victimName) { document.getElementById('victim-student').value = 'unknown'; document.getElementById('victim-student').dispatchEvent(new Event('change')); document.getElementById('victim_name').value = data.victimName; }
+                    if (data.aggressorName) { document.getElementById('bully-student').value = 'unknown'; document.getElementById('bully-student').dispatchEvent(new Event('change')); document.getElementById('aggressor_name').value = data.aggressorName; }
                     if (data.incidentDetails) {
                         const ta = document.getElementById('incident_details');
                         ta.value = data.incidentDetails;
@@ -301,11 +303,13 @@
                 victimBox.classList.remove('hidden');
                 victimBox.style.display = 'block';
                 aggBox.className = ''; // remove col-span-2 so it takes 1 column
-                victimInput.required = true;
+                document.getElementById('victim-student').required = true;
+                victimInput.required = document.getElementById('victim-student').value === 'unknown';
             } else {
                 victimBox.classList.add('hidden');
                 victimBox.style.display = 'none';
                 aggBox.className = 'md:col-span-2';
+                document.getElementById('victim-student').required = false;
                 victimInput.required = false;
                 victimInput.value = ''; // clear if self
             }
@@ -343,9 +347,9 @@
             const role = document.getElementById('roleInput').value;
             const victimName = document.getElementById('victim_name').value.trim();
 
-            if (!aggressor) { e.preventDefault(); alert("Please tell us who is doing the bullying."); document.getElementById('aggressor_name').focus(); return; }
+            if (!document.getElementById('bully-student').value || (document.getElementById('bully-student').value === 'unknown' && !aggressor)) { e.preventDefault(); alert("Please tell us who is doing the bullying."); document.getElementById('aggressor_name').focus(); return; }
             if (!details) { e.preventDefault(); alert('Please describe what happened.'); document.getElementById('incident_details').focus(); return; }
-            if (role === 'bystander' && !victimName) { e.preventDefault(); alert("Please enter the victim's name."); document.getElementById('victim_name').focus(); return; }
+            if (role === 'bystander' && (!document.getElementById('victim-student').value || (document.getElementById('victim-student').value === 'unknown' && !victimName))) { e.preventDefault(); alert("Please enter the victim's name."); document.getElementById('victim_name').focus(); return; }
 
             // Show loading state — form will submit natively via POST redirect
             btn.disabled = true;
@@ -355,5 +359,6 @@
             spinner.classList.remove('hidden');
         });
     </script>
+    <script src="<?= base_url('js/student-directory.js?v=' . filemtime(FCPATH . 'js/student-directory.js')) ?>"></script>
 </body>
 </html>

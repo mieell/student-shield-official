@@ -513,71 +513,86 @@ class AuthController extends BaseController
             return redirect()->to(\App\Libraries\RoleAccess::home((int) session()->get('role')));
         }
         helper(['form', 'url']);
-        return view('register');
+        return view('register', ['sectionsByGrade' => \App\Libraries\SchoolRoster::sections()]);
     }
 
     public function processStudentRegistration()
     {
         helper(['form', 'url']);
         $db = \Config\Database::connect();
-        $name = trim((string) $this->request->getPost('name'));
+        foreach (['name', 'lrn', 'grade_level', 'section', 'password', 'password_confirm', 'terms'] as $field) {
+            if (!is_string($this->request->getPost($field))) {
+                return $this->registrationFailure('Check the registration fields and try again.');
+            }
+        }
+        $name = trim($this->request->getPost('name'));
+        if ($name === '' || mb_strlen($name) > 255) {
+            return $this->registrationFailure('Enter your full name using up to 255 characters.');
+        }
         $lrn = trim((string) $this->request->getPost('lrn'));
         if (!preg_match('/\A[0-9]{12}\z/', $lrn)) {
-            return redirect()->back()->withInput()->with('error', 'Enter a valid 12-digit LRN.');
+            return $this->registrationFailure('Enter a valid 12-digit LRN.');
         }
         if ($db->table('students')->where('lrn', $lrn)->countAllResults() > 0) {
-            return redirect()->back()->withInput()->with('error', 'That LRN is already registered. Please contact the guidance office.');
+            return $this->registrationFailure('That LRN is already registered. Please contact the guidance office.');
         }
         $gradeLevel = trim((string) $this->request->getPost('grade_level'));
         $section = trim((string) $this->request->getPost('section'));
+        if (!\App\Libraries\SchoolRoster::validPlacement($gradeLevel, $section, \App\Libraries\SchoolRoster::sections($db))) {
+            return $this->registrationFailure('Choose a listed grade and section. If your section is missing, contact the Guidance Office.');
+        }
         $parentContact = $this->request->getPost('parent_contact') ?? '';
         $parentPhone = \App\Libraries\GuardianConsent::phone($parentContact);
         if ($parentPhone === null && (!is_string($parentContact) || trim($parentContact) !== '')) {
-            return redirect()->back()->withInput()->with('error', 'Enter a valid Philippine guardian mobile number, or leave it blank for Guidance Office follow-up.');
+            return $this->registrationFailure('Enter a valid Philippine guardian mobile number, or leave it blank for Guidance Office follow-up.');
         }
         $password = (string) $this->request->getPost('password');
         $confirmPassword = (string) $this->request->getPost('password_confirm');
 
         // Auto-generate a unique system student ID: SS-YYYYMMDD-XXXX
-        $studentId = 'SS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+        $studentId = 'SS-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(5)));
 
         $terms = $this->request->getPost('terms');
 
         if (empty($name) || empty($password)) {
-            return redirect()->back()->withInput()->with('error', 'Name and Password are required.');
+            return $this->registrationFailure('Name and Password are required.');
         }
 
-        if (!$terms) {
-            return redirect()->back()->withInput()->with('error', 'You must agree to the Terms and Conditions.');
+        if ($terms !== '1') {
+            return $this->registrationFailure('You must agree to the Terms and Conditions.');
         }
 
         if ($password !== $confirmPassword) {
-            return redirect()->back()->withInput()->with('error', 'Passwords do not match.');
+            return $this->registrationFailure('Passwords do not match.');
+        }
+
+        if (strlen($password) > 72) {
+            return $this->registrationFailure('Use a password of up to 72 bytes.');
         }
 
         if (strlen($password) < 8) {
-            return redirect()->back()->withInput()->with('error', 'Password must be at least 8 characters long.');
+            return $this->registrationFailure('Password must be at least 8 characters long.');
         }
 
         if (!preg_match('/[A-Z]/', $password)) {
-            return redirect()->back()->withInput()->with('error', 'Password must contain at least one uppercase letter.');
+            return $this->registrationFailure('Password must contain at least one uppercase letter.');
         }
 
         if (!preg_match('/[a-z]/', $password)) {
-            return redirect()->back()->withInput()->with('error', 'Password must contain at least one lowercase letter.');
+            return $this->registrationFailure('Password must contain at least one lowercase letter.');
         }
 
         if (!preg_match('/[0-9]/', $password)) {
-            return redirect()->back()->withInput()->with('error', 'Password must contain at least one number.');
+            return $this->registrationFailure('Password must contain at least one number.');
         }
 
         if (!preg_match('/[\W_]/', $password)) {
-            return redirect()->back()->withInput()->with('error', 'Password must contain at least one special character (e.g., @, #, $, etc.).');
+            return $this->registrationFailure('Password must contain at least one special character (e.g., @, #, $, etc.).');
         }
 
         $existingUser = $db->table('users')->where('name', $name)->get()->getRow();
         if ($existingUser) {
-            return redirect()->back()->withInput()->with('error', 'That name is already registered.');
+            return $this->registrationFailure('That name is already registered.');
         }
 
         $db->transStart();
@@ -605,12 +620,21 @@ class AuthController extends BaseController
         $db->transComplete();
 
         if ($db->transStatus() === false) {
-            return redirect()->back()->withInput()->with('error', 'Registration failed. Please try again.');
+            return $this->registrationFailure('Registration failed. Please try again.');
         }
 
         \App\Libraries\AuditTrail::record('USER_REGISTERED', 'user', (int) $userId, (int) $userId);
 
         return redirect()->to('/login')->with('success', 'Registration submitted. School staff will verify your guardian contact and the Guidance Office will review consent before approving your account.');
+    }
+
+    private function registrationFailure(string $message)
+    {
+        $post = array_filter(array_intersect_key($this->request->getPost(), array_flip([
+            'name', 'lrn', 'grade_level', 'section', 'parent_contact', 'terms',
+        ])), 'is_string');
+        session()->setFlashdata('_ci_old_input', ['get' => [], 'post' => $post]);
+        return redirect()->back()->with('error', $message);
     }
 
     private function shouldUseSecureCookie(): bool

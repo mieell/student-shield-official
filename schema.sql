@@ -45,6 +45,19 @@ CREATE TABLE IF NOT EXISTS guardian_consents (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS guardian_alert_routes (
+    user_id INT NOT NULL PRIMARY KEY,
+    unsafe_guardian TINYINT(1) NOT NULL DEFAULT 0,
+    alternate_name VARCHAR(120) NULL,
+    alternate_phone VARCHAR(13) NULL,
+    alternate_email VARCHAR(254) NULL,
+    verified_by INT NULL,
+    verified_at DATETIME NULL,
+    updated_at DATETIME NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS counselors (
     user_id INT PRIMARY KEY,
     counselor_email VARCHAR(255),
@@ -68,6 +81,7 @@ CREATE TABLE IF NOT EXISTS vent_logs (
     user_id INT NOT NULL,
     raw_text TEXT NOT NULL,
     emotions VARCHAR(255),
+    analysis_details TEXT NULL,
     risk_percent DECIMAL(5,2),
     risk_level VARCHAR(50),
     trajectory VARCHAR(50) DEFAULT 'INSUFFICIENT_DATA',

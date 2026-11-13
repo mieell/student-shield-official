@@ -89,6 +89,34 @@
                 </div>
             </div>
 
+
+            <section class="dashboard-card bg-white p-5 rounded-xl border border-gray-200" aria-labelledby="guardianSafetyHeading">
+                <h3 id="guardianSafetyHeading" class="text-lg font-bold text-gray-900">Guardian alert routing</h3>
+                <p class="text-sm text-gray-600 mt-1">Choose a safe contact for automated guardian alerts. Counselor alerts continue for urgent entries.</p>
+                <p id="spGuardianRouteNote" class="text-sm mt-3" role="status" aria-live="polite">Loading contact settings...</p>
+                <form id="guardianSafetyForm" class="mt-4">
+                    <fieldset id="guardianSafetyFields" disabled class="space-y-4">
+                        <label class="flex gap-3 items-start text-sm font-semibold">
+                            <input type="checkbox" id="spUnsafeGuardian" name="unsafe_guardian" value="1" class="mt-1">
+                            <span>Mark the registered guardian contact as unsafe to notify</span>
+                        </label>
+                        <div id="spAlternateFields" hidden>
+                            <p class="text-sm text-gray-600 mb-3">Leave all alternate details blank if a safe contact is still being arranged. Automated guardian alerts will pause and urgent entries will require counselor outreach.</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="sm:col-span-2"><label for="spAlternateName" class="block text-sm font-semibold mb-1">Alternate contact name</label>
+                                    <input id="spAlternateName" name="alternate_name" type="text" maxlength="120" class="w-full border rounded-lg px-3 py-2"></div>
+                                <div><label for="spAlternatePhone" class="block text-sm font-semibold mb-1">Mobile number</label>
+                                    <input id="spAlternatePhone" name="alternate_phone" type="tel" maxlength="32" placeholder="09XXXXXXXXX" class="w-full border rounded-lg px-3 py-2"></div>
+                                <div><label for="spAlternateEmail" class="block text-sm font-semibold mb-1">Email address</label>
+                                    <input id="spAlternateEmail" name="alternate_email" type="email" maxlength="254" class="w-full border rounded-lg px-3 py-2"></div>
+                            </div>
+                            <label class="flex gap-3 items-start text-sm mt-3"><input type="checkbox" name="school_approved" id="spAlternateApproved" value="1" class="mt-1"><span>I verified this alternate contact and their school approval for emergency outreach.</span></label>
+                        </div>
+                        <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg font-semibold">Save contact routing</button>
+                    </fieldset>
+                    <p id="spGuardianSaveStatus" class="text-sm mt-3" role="status" aria-live="polite"></p>
+                </form>
+            </section>
             <!-- Student Wellness Trend Graph -->
             <div
                 class="dashboard-card bg-white p-5 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
@@ -141,8 +169,53 @@
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
     var studentRiskChart = null;
+    var guardianProfileId = null;
+    var guardianSafetyCsrf = '';
+    var guardianSettingsLoaded = false;
+    document.getElementById('spUnsafeGuardian').addEventListener('change', function () {
+        document.getElementById('spAlternateFields').hidden = !this.checked;
+    });
+    document.getElementById('guardianSafetyForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (!guardianSettingsLoaded || !guardianProfileId) return;
+        var savingId = guardianProfileId;
+        var body = new FormData(this);
+        body.set('<?= csrf_token() ?>', guardianSafetyCsrf);
+        document.getElementById('guardianSafetyFields').disabled = true;
+        var status = document.getElementById('spGuardianSaveStatus');
+        status.textContent = 'Saving...';
+        try {
+            var result = await fetch("<?= base_url('admin/students') ?>/" + savingId + '/guardian-safety', {
+                method: 'POST', body: body, headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            var data = await result.json();
+            if (data.csrf) guardianSafetyCsrf = data.csrf;
+            if (guardianProfileId !== savingId) return;
+            status.textContent = data.error || data.message;
+            if (result.ok) {
+                var unsafe = document.getElementById('spUnsafeGuardian').checked;
+                var alternate = document.getElementById('spAlternatePhone').value.trim() || document.getElementById('spAlternateEmail').value.trim();
+                document.getElementById('spGuardianRouteNote').textContent = unsafe
+                    ? (alternate ? 'Guardian alerts use the school-approved alternate contact.' : 'Guardian alerts are paused. Arrange safe outreach immediately for urgent entries.')
+                    : 'Guardian alerts use the registered guardian contact.';
+            }
+        } catch (error) {
+            if (guardianProfileId === savingId) status.textContent = 'Unable to confirm the save. Reopen the profile to check the current settings.';
+        } finally {
+            if (guardianProfileId === savingId) document.getElementById('guardianSafetyFields').disabled = false;
+        }
+    });
+
 
     function openStudentProfile(userId) {
+        guardianProfileId = userId;
+        guardianSettingsLoaded = false;
+        document.getElementById('guardianSafetyFields').disabled = true;
+        document.getElementById('guardianSafetyForm').reset();
+        document.getElementById('spAlternateFields').hidden = true;
+        document.getElementById('spGuardianSaveStatus').textContent = '';
+        document.getElementById('spGuardianRouteNote').textContent = 'Loading contact settings...';
+
         document.getElementById('studentProfileModal').classList.remove('hidden');
         document.getElementById('studentProfileModal').classList.add('flex');
         
@@ -180,6 +253,20 @@
                 return res.json();
             })
             .then(function (data) {
+                if (guardianProfileId !== userId) return;
+                var settings = data.guardian_safety;
+                guardianSafetyCsrf = data.csrf || '';
+                guardianSettingsLoaded = settings !== null && !!guardianSafetyCsrf;
+                document.getElementById('guardianSafetyFields').disabled = !guardianSettingsLoaded;
+                document.getElementById('spGuardianRouteNote').textContent = data.guardian_route_note || 'Guardian alerts use the registered guardian contact.';
+                if (settings) {
+                    document.getElementById('spUnsafeGuardian').checked = !!Number(settings.unsafe_guardian);
+                    document.getElementById('spAlternateFields').hidden = !Number(settings.unsafe_guardian);
+                    document.getElementById('spAlternateName').value = settings.alternate_name || '';
+                    document.getElementById('spAlternatePhone').value = settings.alternate_phone || '';
+                    document.getElementById('spAlternateEmail').value = settings.alternate_email || '';
+                    document.getElementById('spAlternateApproved').checked = !!settings.verified_by && !!settings.verified_at;
+                }
                 var u = data.user;
                 document.getElementById('spName').innerText = u.name;
 
@@ -235,6 +322,8 @@
     }
 
     function closeStudentProfile() {
+        guardianProfileId = null;
+        guardianSettingsLoaded = false;
         document.getElementById('studentProfileModal').classList.add('hidden');
         document.getElementById('studentProfileModal').classList.remove('flex');
         if (studentRiskChart) {
