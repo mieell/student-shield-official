@@ -823,6 +823,37 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertStringEndsWith('/admin/login', $response->getHeaderLine('Location'));
         $this->assertFalse(session()->has('otp'));
     }
+
+    public function testSuperAdminManualLinkFlashesUrlAndStudentMetadata(): void
+    {
+        $this->login(2);
+        $savedNotice = $_ENV['GUARDIAN_CONSENT_NOTICE'] ?? null;
+        $_ENV['GUARDIAN_CONSENT_NOTICE'] = 'Approved fixture notice.';
+        try {
+            $post = [
+                'verified_phone' => '09123456789',
+                'verified_name' => 'Test Guardian',
+                'checked_records' => '1',
+                'delivery' => 'manual',
+            ];
+            $response = $this->controller(\App\Controllers\GuardianConsentController::class, 'admin/registrations/12/send-consent', $post)->send(12);
+            $this->assertSame(302, $response->getStatusCode());
+            $link = (string) session()->getFlashdata('manual_consent_link');
+            $meta = session()->getFlashdata('manual_consent_meta');
+            $this->assertStringContainsString('/guardian-consent/', $link);
+            $this->assertIsArray($meta);
+            $this->assertSame('PRIVATE_STUDENT_12', $meta['student_name'] ?? null);
+            $this->assertSame('Test Guardian', $meta['guardian_name'] ?? null);
+            $this->assertSame('+639123456789', $meta['phone'] ?? null);
+            $this->assertNotEmpty($meta['expires_at'] ?? '');
+        } finally {
+            if ($savedNotice === null) {
+                unset($_ENV['GUARDIAN_CONSENT_NOTICE']);
+            } else {
+                $_ENV['GUARDIAN_CONSENT_NOTICE'] = $savedNotice;
+            }
+        }
+    }
 }
 
 class SharedLoginNoMailController extends \App\Controllers\AuthController

@@ -64,7 +64,13 @@
             from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes modalPop {
+            from { opacity: 0; transform: translateY(10px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
         .animate-slide-up { animation: slideUp 0.4s ease both; }
+        .animate-modal-pop { animation: modalPop 0.24s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        #manualConsentModal[hidden], #manualConsentBanner[hidden] { display: none !important; }
         .approve-btn {
             background: #096328;
             color: white;
@@ -184,6 +190,42 @@
             </div>
         <?php endif; ?>
 
+        <?php
+            $manualLink = $canVerifyContact ? (string) session()->getFlashdata('manual_consent_link') : '';
+            $rawMeta = ($manualLink !== '' && is_array(session()->getFlashdata('manual_consent_meta'))) ? session()->getFlashdata('manual_consent_meta') : [];
+            $metaStudent = trim((string) ($rawMeta['student_name'] ?? ''));
+            $metaGuardian = trim((string) ($rawMeta['guardian_name'] ?? ''));
+            $metaPhone = trim((string) ($rawMeta['phone'] ?? ''));
+            $metaExpires = trim((string) ($rawMeta['expires_at'] ?? ''));
+            $hasManualContext = ($metaStudent !== '' || $metaGuardian !== '' || $metaPhone !== '' || $metaExpires !== '');
+            $greetingName = $metaGuardian !== '' ? $metaGuardian : 'Guardian';
+            $studentSubject = $metaStudent !== '' ? $metaStudent . "'s" : "your child's";
+            $inviteMessage = $manualLink !== ''
+                ? "Good day {$greetingName}, this is St. Vincent Blessed School of Manila regarding {$studentSubject} StudentShield registration. Please complete the guardian consent form within 72 hours using this private link: {$manualLink}"
+                : '';
+        ?>
+        <?php if ($manualLink !== ''): ?>
+            <div id="manualConsentBanner" hidden class="mb-6 bg-emerald-50/90 border border-emerald-200 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 animate-slide-up">
+                <div class="flex items-center gap-2.5 text-sm text-[#174d30]">
+                    <svg class="w-5 h-5 text-[#096328] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                    </svg>
+                    <span class="font-semibold">
+                        Private guardian consent link generated<?= $metaStudent !== '' ? ' for ' . esc($metaStudent) : '' ?>
+                    </span>
+                    <span class="text-xs font-medium text-[#3e614c]">(expires in 72 hours)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="reopenManualConsentBtn" onclick="reopenManualConsentModal()" class="approve-btn inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-lg text-xs font-bold cursor-pointer">
+                        View & Copy Link
+                    </button>
+                    <button type="button" onclick="dismissManualConsentBanner()" aria-label="Dismiss reminder" class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-[#41584b] hover:bg-emerald-100 transition-colors cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- Table Card -->
         <div class="dashboard-card overflow-hidden animate-slide-up" style="animation-delay: 0.1s">
             <div class="registration-section-header section-header flex justify-between items-center gap-4">
@@ -223,13 +265,6 @@
                         <p class="text-gray-500 text-sm max-w-sm">No <?= esc($registrationStatus) ?> student registrations match this view.</p>
                     </div>
                 <?php else: ?>
-                    <?php if ($canVerifyContact && ($manualLink = session()->getFlashdata('manual_consent_link'))): ?>
-                        <div class="guardian-verification mb-3">
-                            <label for="manual-consent-link">New guardian consent link</label>
-                            <input type="text" id="manual-consent-link" readonly value="<?= esc($manualLink, 'attr') ?>" onclick="this.select()" class="w-full">
-                            <p>Copy this link now and share it privately with the verified guardian. The link expires in 72 hours.</p>
-                        </div>
-                    <?php endif; ?>
                     <table class="registration-table w-full text-left border-collapse" aria-label="Student registrations">
                         <thead>
                             <tr class="thead-green text-xs uppercase tracking-wider">
@@ -410,7 +445,7 @@
         </div>
 
         <!-- Toast Notification Container -->
-        <div id="toastContainer" class="fixed top-20 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+        <div id="toastContainer" class="fixed top-20 right-6 z-[1100] flex flex-col gap-2 pointer-events-none"></div>
 
         <!-- Info Note -->
         <div class="mt-6 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4 animate-slide-up" style="animation-delay: 0.2s">
@@ -424,6 +459,99 @@
                 </p>
             </div>
         </div>
+
+        <?php if ($manualLink !== ''): ?>
+            <!-- Generated Guardian Consent Link Modal -->
+            <div id="manualConsentModal" role="dialog" aria-modal="true" aria-labelledby="manualConsentModalTitle" aria-hidden="false" tabindex="-1" onclick="if (event.target === this) closeManualConsentModal();" class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-[#072613]/45 backdrop-blur-sm">
+                <div class="relative w-full max-w-2xl bg-white rounded-2xl border border-[#dce6dd] shadow-[0_24px_64px_-16px_rgba(7,56,28,0.34)] overflow-hidden max-h-[90vh] flex flex-col animate-modal-pop">
+                    <div class="h-1.5 w-full bg-gradient-to-r from-[#096328] via-[#128f42] to-[#D9AA2E] flex-shrink-0"></div>
+
+                    <div class="px-6 pt-5 pb-4 border-b border-[#edf2ed] flex-shrink-0">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#0B5E2E] text-[11px] font-bold uppercase tracking-wider">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-[#128f42]"></span>
+                                    Private Share Link
+                                </span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold">
+                                    <svg class="w-3.5 h-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Expires in 72 hours
+                                </span>
+                            </div>
+                            <button type="button" onclick="closeManualConsentModal()" aria-label="Close modal" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full bg-[#f4f7f4] hover:bg-[#e7efe7] text-[#3e5948] flex items-center justify-center transition-colors cursor-pointer">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                        <h3 id="manualConsentModalTitle" class="text-xl font-extrabold text-[#15492c] mt-3 leading-snug">Guardian Consent Link Ready</h3>
+                        <p class="text-xs sm:text-sm text-[#526b5b] mt-1 leading-relaxed">Copy this private URL or ready-to-send message to share directly with the verified guardian.</p>
+                    </div>
+
+                    <div class="px-6 py-5 space-y-4 overflow-y-auto custom-scrollbar">
+                        <?php if ($hasManualContext): ?>
+                            <div class="rounded-xl bg-[#f8faf6] border border-[#e3ebe3] p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                <?php if ($metaStudent !== ''): ?>
+                                    <div>
+                                        <span class="block uppercase tracking-wider text-[10px] font-bold text-[#61756b]">Student</span>
+                                        <span class="block font-semibold text-[#173a2a] text-sm mt-0.5 break-words"><?= esc($metaStudent) ?></span>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($metaGuardian !== '' || $metaPhone !== ''): ?>
+                                    <div>
+                                        <span class="block uppercase tracking-wider text-[10px] font-bold text-[#61756b]">Verified Guardian</span>
+                                        <span class="block font-medium text-[#173a2a] text-sm mt-0.5 break-words">
+                                            <?= esc($metaGuardian) ?>
+                                            <?php if ($metaGuardian !== '' && $metaPhone !== ''): ?> · <?php endif; ?>
+                                            <?php if ($metaPhone !== ''): ?><span class="tabular-nums text-[#3f594a]"><?= esc($metaPhone) ?></span><?php endif; ?>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($metaExpires !== ''): ?>
+                                    <div class="sm:col-span-2 pt-2 border-t border-[#e7efe7] flex items-center gap-1.5 text-[#476453]">
+                                        <svg class="w-3.5 h-3.5 text-[#096328] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <span>Valid until <strong class="text-[#173a2a] tabular-nums"><?= esc($metaExpires) ?></strong></span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="rounded-xl bg-[#f4f8f5] border border-[#cfe2d4] p-3.5 space-y-3 focus-within:border-[#096328] focus-within:ring-2 focus-within:ring-[#096328]/15 transition-all">
+                            <div class="flex items-center justify-between gap-2">
+                                <label for="manual-consent-link" class="text-xs font-bold uppercase tracking-wider text-[#284b35]">New guardian consent link</label>
+                                <span class="text-[11px] text-[#61756b]">Tap URL to select all</span>
+                            </div>
+                            <input type="text" id="manual-consent-link" readonly value="<?= esc($manualLink, 'attr') ?>" onclick="this.select()" class="w-full min-w-0 bg-white border border-[#dce7df] rounded-lg px-3.5 py-2.5 text-xs sm:text-[13px] font-mono text-[#133824] focus:outline-none">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-0.5">
+                                <button type="button" id="copyConsentLinkBtn" onclick="copyManualConsentField('link')" class="approve-btn inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg text-sm font-bold whitespace-nowrap cursor-pointer shadow-sm">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                    <span data-label>Copy Link</span>
+                                </button>
+                                <button type="button" id="copyConsentMessageBtn" data-message="<?= esc($inviteMessage, 'attr') ?>" onclick="copyManualConsentField('message')" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-[#cfe2d4] bg-white hover:bg-[#eaf4ed] text-[#174d30] text-sm font-bold whitespace-nowrap transition-colors cursor-pointer">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                                    <span data-label>Copy Message</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <details class="rounded-xl border border-[#e5ebe5] bg-white px-3.5 py-2.5 text-xs text-[#476453]">
+                            <summary class="cursor-pointer font-semibold text-[#284b35] select-none py-1">Preview ready-to-send message (Messenger / Viber / SMS)</summary>
+                            <p class="text-xs text-[#526b5b] bg-[#f8faf6] border border-[#ecf1ec] rounded-lg p-3 mt-2 leading-relaxed break-words select-all"><?= esc($inviteMessage) ?></p>
+                        </details>
+
+                        <div class="flex items-start gap-2.5 text-xs text-[#745112] bg-amber-50/75 border border-amber-200/80 rounded-xl px-3.5 py-2.5 leading-relaxed">
+                            <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                            <span>Copy this link now and share it privately with the verified guardian only. Generating a replacement link immediately invalidates older links.</span>
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 bg-[#f8faf6] border-t border-[#e5ebe5] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 flex-shrink-0">
+                        <span class="text-[11px] text-[#61756b] text-center sm:text-left">Press <kbd class="px-1.5 py-0.5 rounded bg-white border border-gray-200 font-mono text-[10px]">Esc</kbd> to minimize and keep the recall banner</span>
+                        <button type="button" id="closeManualConsentBtn" onclick="closeManualConsentModal()" class="inline-flex items-center justify-center px-5 py-2.5 min-h-[44px] rounded-xl bg-white hover:bg-[#edf4ef] text-[#174d30] border border-[#cfe0d5] text-sm font-bold transition-colors cursor-pointer">
+                            Done & Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
     </main>
 
@@ -527,6 +655,104 @@
                 }
             });
         }
+
+        function setCopyButtonState(btn, copiedLabel, defaultLabel) {
+            if (!btn) return;
+            const labelEl = btn.querySelector('[data-label]');
+            if (!labelEl) return;
+            clearTimeout(btn._copyResetTimer);
+            labelEl.textContent = copiedLabel;
+            btn._copyResetTimer = setTimeout(() => {
+                labelEl.textContent = defaultLabel;
+            }, 2200);
+        }
+
+        async function copyTextSafely(text) {
+            if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (err) {
+                    // Fall back to execCommand below when Clipboard API permission is restricted.
+                }
+            }
+            const helper = document.createElement('textarea');
+            helper.value = text;
+            helper.setAttribute('readonly', '');
+            helper.style.position = 'fixed';
+            helper.style.top = '-9999px';
+            document.body.appendChild(helper);
+            helper.select();
+            helper.setSelectionRange(0, text.length);
+            let ok = false;
+            try {
+                ok = document.execCommand('copy');
+            } catch (err) {
+                ok = false;
+            }
+            helper.remove();
+            return ok;
+        }
+
+        async function copyManualConsentField(mode) {
+            const linkInput = document.getElementById('manual-consent-link');
+            const isLink = (mode === 'link');
+            const btn = document.getElementById(isLink ? 'copyConsentLinkBtn' : 'copyConsentMessageBtn');
+            const text = isLink ? (linkInput?.value || '') : (btn?.dataset.message || '');
+            if (!text) return;
+
+            const copied = await copyTextSafely(text);
+            if (copied) {
+                setCopyButtonState(btn, 'Copied!', isLink ? 'Copy Link' : 'Copy Message');
+                showToast(isLink ? 'Consent link copied to clipboard.' : 'Ready-to-send message copied to clipboard.', true);
+            } else {
+                if (linkInput && isLink) {
+                    linkInput.focus();
+                    linkInput.select();
+                }
+                showToast('Clipboard blocked by browser. Select and press Ctrl+C to copy.', false);
+            }
+        }
+
+        function closeManualConsentModal() {
+            const modal = document.getElementById('manualConsentModal');
+            const banner = document.getElementById('manualConsentBanner');
+            if (!modal) return;
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            if (banner) {
+                banner.hidden = false;
+                document.getElementById('reopenManualConsentBtn')?.focus();
+            }
+        }
+
+        function reopenManualConsentModal() {
+            const modal = document.getElementById('manualConsentModal');
+            const banner = document.getElementById('manualConsentBanner');
+            if (!modal) return;
+            if (banner) banner.hidden = true;
+            modal.hidden = false;
+            modal.setAttribute('aria-hidden', 'false');
+            document.getElementById('copyConsentLinkBtn')?.focus();
+        }
+
+        function dismissManualConsentBanner() {
+            const banner = document.getElementById('manualConsentBanner');
+            if (banner) banner.hidden = true;
+        }
+
+        (function initManualConsentModal() {
+            const modal = document.getElementById('manualConsentModal');
+            if (!modal) return;
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !modal.hidden) {
+                    closeManualConsentModal();
+                }
+            });
+            setTimeout(() => {
+                document.getElementById('copyConsentLinkBtn')?.focus();
+            }, 60);
+        })();
     </script>
     <?= view('partials/session_idle_modal') ?>
     <!-- ── Floating Scroll-to-Top Button ── -->

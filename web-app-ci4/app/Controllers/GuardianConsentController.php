@@ -90,7 +90,14 @@ class GuardianConsentController extends BaseController
         $this->logAudit('GUARDIAN_CONTACT_VERIFIED', 'user', $id);
         if ($manual) {
             $this->logAudit('GUARDIAN_CONSENT_LINK_GENERATED', 'user', $id);
-            return $back->with('manual_consent_link', $url);
+            return $back
+                ->with('manual_consent_link', $url)
+                ->with('manual_consent_meta', [
+                    'student_name' => (string) ($user['name'] ?? ''),
+                    'guardian_name' => trim((string) $verifiedName),
+                    'phone' => (string) $phone,
+                    'expires_at' => date('M j, Y g:i A', strtotime($data['expires_at'])),
+                ]);
         }
         $smsResult = $this->smsGateway()->send($phone, (string) $message, 'guardian-consent:' . $hash);
         $state = $smsResult['state'];

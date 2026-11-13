@@ -119,4 +119,53 @@ final class StaffPagesTest extends CIUnitTestCase
         }
         session()->remove(['isLoggedIn', 'role', 'name']);
     }
+
+    public function testManualConsentModalRendersCleanDialogOnlyForSuperAdmin(): void
+    {
+        helper(['url', 'form']);
+        $link = 'https://studentshield.app/guardian-consent/abc123def456';
+
+        try {
+            // Counselor view must never expose manual consent modal even if flashdata exists.
+            session()->set(['isLoggedIn' => true, 'role' => 1, 'user_id' => 1, 'name' => 'Counselor']);
+            session()->setFlashdata('manual_consent_link', $link);
+            $counselorHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [],
+                'registrationStatus' => 'pending',
+                'canVerifyContact' => false,
+            ]);
+            $this->assertStringNotContainsString('id="manualConsentModal"', $counselorHtml);
+            $this->assertStringNotContainsString($link, $counselorHtml);
+
+            // Super Admin gets dedicated accessible modal outside the table wrapper, even if list is empty.
+            session()->set(['isLoggedIn' => true, 'role' => 2, 'user_id' => 2, 'name' => 'Super Admin']);
+            session()->setFlashdata('manual_consent_link', $link);
+            session()->setFlashdata('manual_consent_meta', [
+                'student_name' => 'Jc <script>alert(1)</script>',
+                'guardian_name' => 'Maria Cruz',
+                'phone' => '+639188564586',
+                'expires_at' => 'Nov 16, 2026 9:13 AM',
+            ]);
+            $adminHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [],
+                'registrationStatus' => 'pending',
+                'canVerifyContact' => true,
+            ]);
+            $dom = new DOMDocument();
+            @$dom->loadHTML($adminHtml);
+            $xpath = new DOMXPath($dom);
+            $this->assertSame(1, $xpath->query('//*[@id="manualConsentModal"][@role="dialog"][@aria-modal="true"]')->length);
+            $this->assertSame(1, $xpath->query('//*[@id="manual-consent-link"][@value="' . $link . '"]')->length);
+            $this->assertSame(1, $xpath->query('//*[@id="copyConsentLinkBtn"]')->length);
+            $this->assertSame(1, $xpath->query('//*[@id="copyConsentMessageBtn"]')->length);
+            $this->assertSame(1, $xpath->query('//*[@id="manualConsentBanner"]')->length);
+            $this->assertSame(0, $xpath->query('//*[contains(@class,"overflow-x-auto")]//*[contains(@class,"guardian-verification")]')->length);
+            $this->assertStringNotContainsString('<script>alert(1)</script>', $adminHtml);
+            $this->assertStringContainsString('Maria Cruz', $adminHtml);
+            $this->assertStringContainsString('+639188564586', $adminHtml);
+            $this->assertStringContainsString('Nov 16, 2026 9:13 AM', $adminHtml);
+        } finally {
+            session()->remove(['isLoggedIn', 'role', 'user_id', 'name']);
+        }
+    }
 }
