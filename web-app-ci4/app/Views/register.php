@@ -258,16 +258,16 @@ $selectedSection = (string) set_value('section');
                 </div>
 
                 <div class="registration-guardian registration-field">
-                    <label for="parent_contact" class="registration-label">Parent or guardian mobile <span class="registration-optional">(optional)</span></label>
+                    <label for="parent_contact" class="registration-label">Parent or guardian mobile (required)</label>
                     <div class="relative group/input">
                         <div class="registration-input-icon pointer-events-none">
                             <i class="fas fa-phone-alt text-white/50 group-focus-within/input:text-gold transition-colors text-[15px]"></i>
                         </div>
-                        <input type="tel" name="parent_contact" id="parent_contact" maxlength="32" aria-describedby="guardian-contact-help" value="<?= set_value('parent_contact') ?>"
+                        <input type="tel" name="parent_contact" id="parent_contact" required maxlength="32" aria-describedby="guardian-contact-help" value="<?= set_value('parent_contact') ?>"
                                class="w-full pl-11 pr-4 input-dark registration-control rounded-xl text-[15px] font-semibold outline-none tabular-nums"
                                placeholder="09123456789">
                     </div>
-                    <p id="guardian-contact-help" class="registration-help">School staff verify this number before sending consent. Leave blank if you lack a safe contact.</p>
+                    <p id="guardian-contact-help" class="registration-help">School staff verify this number before sending a consent request. If you cannot safely provide a number, contact the Guidance Office for help.</p>
                 </div>
 
                 <div class="registration-password-fields grid grid-cols-1 md:grid-cols-2">

@@ -543,8 +543,8 @@ class AuthController extends BaseController
         }
         $parentContact = $this->request->getPost('parent_contact') ?? '';
         $parentPhone = \App\Libraries\GuardianConsent::phone($parentContact);
-        if ($parentPhone === null && (!is_string($parentContact) || trim($parentContact) !== '')) {
-            return $this->registrationFailure('Enter a valid Philippine guardian mobile number, or leave it blank for Guidance Office follow-up.');
+        if ($parentPhone === null) {
+            return $this->registrationFailure('Enter a valid Philippine mobile number for your parent or guardian. If you cannot safely provide one, contact the Guidance Office.');
         }
         $password = (string) $this->request->getPost('password');
         $confirmPassword = (string) $this->request->getPost('password_confirm');

@@ -385,7 +385,7 @@ final class RoleSeparationTest extends CIUnitTestCase
             $this->assertArrayNotHasKey('password', $old);
             $this->assertArrayNotHasKey('password_confirm', $old);
         }
-        foreach (['guardian@example.test', 'invalid contact', '123', ['guardian@example.test']] as $contact) {
+        foreach ([null, '', '   ', 'guardian@example.test', 'invalid contact', '123', ['guardian@example.test']] as $contact) {
             $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['parent_contact' => $contact]))->processStudentRegistration();
             $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
         }

@@ -491,7 +491,7 @@
                                         <?php endif; ?>
                                     <?php endif; ?>
                                     <?php if (!$canVerifyContact): ?>
-                                    <?php if (!$student['requested_at']): ?><p class="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900">Waiting for Super Admin to verify the guardian contact.</p><?php endif; ?>
+                                    <?php if (!$student['requested_at']): ?><p class="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900">Waiting for Super Admin to verify the guardian contact.</p><?php elseif (empty($student['response'])): ?><p class="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900">Awaiting guardian response.</p><?php endif; ?>
                                     <div class="flex flex-wrap items-center justify-end gap-2.5 pt-1">
                                         <?php if ($student['response'] === 'accepted'): ?>
                                         <button type="button" onclick="handleAction('approve', <?= $uid ?>, '<?= esc(addslashes($student['name'])) ?>', this)" class="approve-btn inline-flex items-center gap-1.5 px-4 py-2 min-h-[42px] rounded-lg text-xs font-bold uppercase tracking-wide shadow-sm cursor-pointer">
@@ -711,7 +711,7 @@
                         setTimeout(() => {
                             row.remove();
                             // Check if no more rows left
-                            const remainingRows = document.querySelectorAll('tbody tr');
+                            const remainingRows = document.querySelectorAll('.registration-table tbody tr:not(#noRegistrationsFound)');
                             if (remainingRows.length === 0) {
                                 location.reload();
                             }
