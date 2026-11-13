@@ -63,6 +63,8 @@ def analyzer(monkeypatch):
     "nagpakamatay",
     "nagbigti",
     "magpatiwakal",
+    "i surely do want to kill my self wow amazing lupettt i love it!!",
+    "going to cut my self",
 ])
 def test_explicit_self_harm_is_critical_despite_low_scores(analyzer, text):
     result = analyzer(text)
@@ -135,9 +137,37 @@ def test_ordinary_sadness_stays_medium_with_high_neural_scores(analyzer, monkeyp
     "I am so mentally and emotionally drained that I can no longer picture myself having a future. It feels like I am drowning in sadness every single day, and I just want to give up because nothing ever gets better.",
     "Sobrang pagod na ako kakaisip kung kaya ko pa bang tapusin lahat ng requirements na ito, parang kahit anong effort ang ibigay ko ay kulang pa rin. Honestly, drained na drained na ako mentally at pakiramdam ko ay napag-iiwanan na ako ng lahat.",
     "would even notice if I wasn't here anymore",
+    "Araw-araw na lang akong gumigising na parang pasan ko ang buong mundo at wala nang natitirang lakas para lumaban pa sa sarili kong isip. Kahit anong pilit kong ngumiti at makisama sa mga tao sa paligid ko, sobrang dilim at empty pa rin ng pakiramdam ko sa loob. Pagod na pagod na akong magpanggap na kaya ko pa, dahil ang totoo ay matagal na akong sumuko at naghihintay na lang na matapos ang lahat. Pakiramdam ko ay wala na akong halaga at pabigat na lang ako sa pamilya ko, kaya minsan iniisip ko na mas mabuti pang maglaho na lang nang tuluyan para matapos na itong walang katapusang sakit at pagod.",
 ])
 def test_severe_hopelessness_and_futurelessness_classify_as_high(analyzer, text):
     assert analyzer(text)["risk_level"] == "HIGH"
+
+
+@pytest.mark.parametrize("text", [
+    "I was literally sobbing on the floor and ready to give up all hope this morning because we thought our family dog was not going to survive his emergency surgery. My chest hurt so badly from crying that I could barely breathe, and I honestly felt like my world was ending—until the vet walked out smiling and told us he pulled through completely fine! I collapsed into my chair ugly-crying and shaking uncontrollably from pure relief. I practically lost my voice screaming with joy in the waiting room, lowkey the greatest miracle of my entire life, no cap!",
+    "Sobrang solid ng naging weekend namin kasama ang buong barkada dahil natuloy na rin sa wakas yung matagal naming pinaplanong food trip at movie marathon! Walang katapusang kwentuhan at tawanan lang buong gabi, nakakawala talaga ng pagod kapag kasama mo yung mga taong totoong nagpapasaya sa'yo. Ang sarap sa feeling na lahat kami ay nag-enjoy at nakapag-recharge bago bumalik sa kanya-kanyang trabaho at klase. Sobrang grateful lang talaga ako sa ganitong klase ng friendship at positive energy sa buhay ko, for real for real!",
+])
+def test_resolved_relief_narrative_and_positive_taglish_stay_low(analyzer, text):
+    assert analyzer(text)["risk_level"] == "LOW"
+
+
+def test_resolved_relief_never_masks_explicit_suicidal_disclosure(analyzer):
+    text = (
+        "We thought our dog wouldn't survive, until he pulled through completely fine! "
+        "Still I honestly felt like ending my life and want to kill my self from pure relief? No, I want to die."
+    )
+    assert analyzer(text)["risk_level"] == "CRITICAL"
+
+
+def test_public_openapi_and_docs_endpoints_are_disabled(analyzer):
+    from fastapi.testclient import TestClient
+
+    client = TestClient(analyzer.__globals__["app"])
+    for hidden_path in ("/openapi.json", "/docs", "/redoc"):
+        assert client.get(hidden_path).status_code == 404
+    root = client.get("/")
+    assert root.status_code == 200
+    assert "api_docs" not in root.json()
 
 
 def test_normalize_slang_preserves_english_possessive_my(analyzer):

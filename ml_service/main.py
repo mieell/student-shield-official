@@ -50,6 +50,10 @@ app = FastAPI(
         "Sexual Harassment, Academic Pressure, Self-Worth, and Masked Depression Detection"
     ),
     version="7.3.0",
+    # Do not publish the API schema/Swagger UI publicly; /analyze-text is the only intended surface.
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 ### Rate Limiting 
@@ -402,7 +406,8 @@ CAT1_DIRECT = [
     r"\b(?:mag|nag)?bi(?:bi)?gti\b",
     r"\b(?:mag|nag)?bi(?:bi)?tay\b",
     r"\b(?:(?:pag)?(?:mag|nag)?pa(?:pa)?tiwakal|patiwakal)\b",
-    r"\bsuicide\b", r"\bkill myself\b", r"\bend it all\b", r"\bcut myself\b",
+    r"\bsuicide\b", r"\bkill\s+my\s*self\b", r"\bend it all\b", r"\bcut\s+my\s*self\b",
+    r"\b(?:hang|stab|unalive)\s+my\s*self\b",
     r"\bwant to die\b", r"\bno reason to live\b",
     r"\blaslas\b", r"\btatalon\b", r"\bsugatan\b",
     r"\btatapusin ko na buhay ko\b", r"\btapusin ko na\b", r"\btapusin ko na lang\b",
@@ -414,18 +419,18 @@ CAT1_DIRECT = [
     r"\bunalive myself\b", r"\bbetter off dead\b", r"\bsana matulog at di na magising\b",
     r"\bsana di na lang ako pinanganak\b", r"\bwala nang pag-asa\b",
     r"\bdi ko na alam gagawin\b", r"\blulunukin ko na lang\b",
-    r"i\s*wanna\s*die", r"i\s*want\s*to\s*die", r"kill\s*myself",
+    r"i\s*wanna\s*die", r"i\s*want\s*to\s*die", r"kill\s*my\s*self",
     r"end\s+(my|this)\s+life", r"don't\s+want\s+to\s+exist",
     r"don'?t\s+want\s+to\s+live", r"can'?t\s+do\s+this\s+anymore",
     r"wish\s+i\s+was\s+never\s+born",
     r"world\s+would\s+be\s+better\s+without\s+me", r"no\s+point\s+in\s+living",
     r"\bself.?harm\b", r"\bself.?destruct\b",
     r"i'?m\s+done\s+living", r"done\s+with\s+life", r"tired\s+of\s+living",
-    r"hang\s+myself", r"hanging\s+myself",
+    r"hang\s+my\s*self", r"hanging\s+my\s*self",
     r"\bbigti\b", r"\bbitay\b", r"\bmagbigti\b", r"\bbibitay\b",
     r"\bpabitin\b", r"\bnakabitin\b",
     r"\btumalon\b", r"\blulundag\b",
-    r"slit\s+my\s+wrist", r"stab\s+myself",
+    r"slit\s+my\s+wrist", r"stab\s+my\s*self",
     r"\bpain to stop\b", r"\bwant (?:all )?(?:this )?pain to stop\b",
     r"\bstop (?:the |this )?pain\b", r"\bmake the pain stop\b",
     r"\bfor good\b.{0,20}\b(stop|end|pain|buhay|tonight)\b",
@@ -485,15 +490,16 @@ PASSIVE_DISAPPEARANCE_IDEATION = [
     r"\b(?:hindi|di)\s+ko\s+na\s+makita\s+(?:ang\s+|yung\s+)?sarili\s+ko\s+sa\s+(?:future|hinaharap|bukas)\b",
     r"\b(?:can\s+no\s+longer|can'?t|cannot|don'?t)\s+(?:see|picture)\s+myself\s+(?:having\s+a\s+future|in\s+the\s+future)\b",
     r"\b(?:no\s+longer|can'?t|cannot)\s+(?:see|picture)\s+a\s+future\s+(?:for\s+myself|anymore)\b",
+    r"(?:\b(?:ako|ko|aq)\b.{0,35})?\bmas\s+(?:mabuti|maganda|okay)\s+pang?\s+(?:maglaho|mawala\s+na\s+lang)(?:\s+na\s+lang)?\b",
 ]
 
 CAT1_METHOD_SELF_PAIRS = [
-    (r"\brope\b",           r"\b(myself|hang|neck|bigti|bitay)\b"),
-    (r"\bblades?\b",        r"\b(myself|cut|wrist|laslas|arms?)\b"),
-    (r"\bpills?\b",         r"\b(myself|overdose|swallow|take|inumin)\b"),
-    (r"\bpoison\b",         r"\b(myself|drink|take|inumin)\b"),
-    (r"\boverdose\b",       r"\b(myself|pills?|gamot|take)\b"),
-    (r"jump\s+(off|from)\b", r"\b(myself|building|tulay|bridge|roof)\b"),
+    (r"\brope\b",           r"\b(my\s*self|hang|neck|bigti|bitay)\b"),
+    (r"\bblades?\b",        r"\b(my\s*self|cut|wrist|laslas|arms?)\b"),
+    (r"\bpills?\b",         r"\b(my\s*self|overdose|swallow|take|inumin)\b"),
+    (r"\bpoison\b",         r"\b(my\s*self|drink|take|inumin)\b"),
+    (r"\boverdose\b",       r"\b(my\s*self|pills?|gamot|take)\b"),
+    (r"jump\s+(off|from)\b", r"\b(my\s*self|building|tulay|bridge|roof)\b"),
 ]
 
 ### CATEGORY 2: HIGH — Physical Violence, Bullying, Abuse 
@@ -520,7 +526,7 @@ CAT2_WORDS = [
 
 ### CATEGORY 3: MEDIUM — Verbal Abuse, Cyberbullying 
 CAT3_WORDS = [
-    r"\bugly\b", r"\bfat\b", r"\bloser\b", r"\bslut\b", r"\bwhore\b", r"\bdumb\b",
+    r"\bugly\b(?!-crying\b|\s+crying\b)", r"\bfat\b", r"\bloser\b", r"\bslut\b", r"\bwhore\b", r"\bdumb\b",
     r"\bstupid\b", r"\bcancel\b", r"\bdoxx\b", r"\bexposed\b", r"\bhate you\b",
     r"\bbobo\b", r"\btanga\b", r"\bpangit\b", r"\bmataba\b", r"\bpabuhat\b",
     r"\bchismis\b", r"\bmalandi\b", r"\bpokpok\b", r"\bpabida\b", r"\bsquatter\b",
@@ -635,6 +641,10 @@ EMOTIONAL_DISTRESS = [
     r"\bkumakapit na lang\b",                        # just hanging on
     r"\bkahit paano\b.{0,20}\bkumakapit\b",
     r"\bsinusubukan ko pang\b.{0,30}\b(maging okay|lumaban|magpatuloy)\b",
+    r"\bwala\s+nang\s+natitirang\s+lakas\b",
+    r"\b(?:sobrang\s+)?pagod\s+na\s+pagod\s+na\s+(?:ako|akong|ko|aq)\b",
+    r"\bpasan\s+ko\s+ang\s+(?:buong\s+)?mundo\b",
+    r"\bwalang\s+katapusang\s+(?:sakit|pagod|hirap|lungkot)\b",
 ]
 
 ### SOCIAL ISOLATION / WITHDRAWAL 
@@ -798,6 +808,8 @@ POSITIVE_SENTIMENT = [
     r"\bfeeling good\b", r"\bfeeling great\b", r"\bawesome\b", r"\bamazing\b",
     r"\bna-upgrade\b", r"\bswerte\b", r"\bpanalo\b", r"\bproud\b",
     r"\bnakakatuwa\b", r"\bnatutuwa\b",
+    r"\bpure\s+relief\b", r"\btears\s+of\s+relief\b",
+    r"\bscreaming\s+with\s+joy\b", r"\bgreatest\s+miracle\b",
 ]
 
 ### COGNITIVE DISTORTIONS 
@@ -873,6 +885,9 @@ HOPELESSNESS = [
     r"(?<!\bdon't )(?<!\bdo not )(?<!\bnever )\b(?:just\s+)?want\s+to\s+give\s+up(?:\s+(?:on\s+(?:life|everything)|already|now|because|[.!?,])|$)",
     r"\bnothing\s+(?:ever\s+)?gets\s+better\b",
     r"\bthings\s+(?:will\s+)?never\s+get\s+better\b",
+    r"\bwala\s+nang\s+(?:natitirang\s+)?lakas(?:\s+pa)?\s+(?:para|upang)?\s*(?:lumaban|magpatuloy)\b",
+    r"(?<!\bhindi )(?<!\bdi )\bmatagal\s+na\s+(?:ako|akong)\s+sumuko(?!\s+sa\s+(?:game|laro|ml|valo|dota|quiz|puzzle))\b",
+    r"\b(?:naghihintay|nag-?aantay)\s+na\s+lang\s+(?:na\s+)?matapos\s+ang\s+lahat\b",
 ]
 
 ### EXTREME VENTING 
@@ -1096,7 +1111,8 @@ SELF_WORTH = [
     r"\bparang wala akong nagagawa\b.{0,20}\btama\b",
     r"\bkahit anong subukan ko\b.{0,20}\bpalpak\b",
     r"\bhindi ako kailangan ng sinuman\b",
-    r"\bpabigat lang ako\b",
+    r"\bpabigat\s+(?:na\s+)?lang(?:\s+naman)?\s+ako\b",
+    r"\bwala\s+(?:na\s+)?akong\s+halaga\b",
     r"\bpalo lang ako\b",
     # Bisaya
     r"\bway pulos ako\b",
@@ -1177,6 +1193,9 @@ MASKED_DEPRESSION = [
     # Ilocano
     r"\bdi mabalin maamuan\b",
     r"\bokay sa ruar\b.{0,20}\bsaan sa uneg\b",
+    # Masked tiredness & forced smiling
+    r"\b(?:hirap|pagod(?:\s+na\s+pagod)?)\s+(?:na\s+)?(?:ako|akong|ko)\s+magpanggap\b",
+    r"\b(?:pilit|pinipilit)\s+kong\s+ngumiti\b",
 ]
 
 ### NEW: RELATIONSHIP DISTRESS 
@@ -1255,16 +1274,18 @@ async def root_health_check():
         "status": "online",
         "service": "StudentShield AI Engine",
         "version": "7.3.0",
-        "api_docs": "/docs",
         "translation_policy": "english-skip-cache-retry-v2",
         "message": "Send POST requests to /analyze-text to classify vents.",
     }
 
 _CRYING_ONLY_PATTERNS = {
     r"\bnaliyak\b", r"\bnaiyak\b", r"\bnaiiyak\b", r"\bumiyak\b", r"\bumiiyak\b", r"\biyak\b",
+    r"\bcrying\b", r"\bcried\b", r"\bsobbing\b", r"\btears\b",
 }
 _JOY_CRIER_RE = re.compile(
-    r"\b(sa tuwa|tears of joy|happy tears|sobrang saya|napakasaya|nakaka-?proud)\b",
+    r"\b(sa tuwa|tears of joy|happy tears|sobrang saya|napakasaya|nakaka-?proud|"
+    r"pure relief|from (?:pure )?relief|tears of relief|screaming with joy|"
+    r"crying (?:with|from) joy|greatest miracle)\b",
     re.I,
 )
 _ACADEMIC_DESTRUCT_WORDS = (

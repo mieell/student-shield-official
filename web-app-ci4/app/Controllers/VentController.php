@@ -453,7 +453,7 @@ class VentController extends BaseController
         if ($threat !== null) {
             return $threat;
         }
-        if (ExplicitCrisisGuard::hasTagalogSelfHarm($text)) {
+        if (ExplicitCrisisGuard::hasExplicitSelfHarm($text)) {
             return ['risk_level' => 'CRITICAL', 'risk_percent' => 99];
         }
 
@@ -500,7 +500,7 @@ class VentController extends BaseController
 
         // CRITICAL EXTREME — Explicit Suicide Intent & Farewell Cues (NEVER DOWNGRADED BY SARCASM)
         $critical_extreme = [
-            'suicide', 'kill myself', 'cut myself', 'magpakamatay', 'pakamatay',
+            'suicide', 'kill myself', 'kill my self', 'cut myself', 'cut my self', 'magpakamatay', 'pakamatay',
             'papakamatay', 'magpapakamatay', 'nagpakamatay', 'nagpapakamatay', 'ipakamatay',
             'laslas', 'naglaslas', 'naglalaslas', 'maglaslas',
             'tatalon', 'bibigti', 'nagbigti', 'nagbibigti', 'patayin sarili ko', 'magbibigti',
@@ -654,6 +654,12 @@ class VentController extends BaseController
             'napag-iiwanan na ako ng lahat',
             'pagod na pagod na yung utak ko',
             'pagod na utak ko',
+            'mas mabuti pang maglaho',
+            'mas mabuti pang mawala na lang',
+            'naghihintay na lang na matapos ang lahat',
+            'matagal na akong sumuko',
+            'pabigat na lang ako',
+            'wala na akong halaga',
         ];
 
         // STRICT HIGH — Physical Violence (Never downgraded by sarcasm)

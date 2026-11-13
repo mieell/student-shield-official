@@ -39,6 +39,9 @@ final class ExplicitCrisisGuardTest extends CIUnitTestCase
             'nagbigti',
             'magpatiwakal',
             'kayat kon matayen',
+            'i surely do want to kill my self wow amazing lupettt i love it!!',
+            'kill  my  self',
+            'cut my self',
         ]);
     }
 
@@ -87,5 +90,14 @@ final class ExplicitCrisisGuardTest extends CIUnitTestCase
         $fallback = new ReflectionMethod(VentController::class, 'localKeywordFallback');
         $result = $fallback->invoke(new VentController(), 'i wanna die haha charot');
         $this->assertSame(['risk_level' => 'MEDIUM', 'risk_percent' => 60], $result);
+    }
+
+    public function testTagalogHopelessnessAndDisappearanceFallbackIsHigh(): void
+    {
+        $fallback = new ReflectionMethod(VentController::class, 'localKeywordFallback');
+        $text = 'Pagod na pagod na akong magpanggap na kaya ko pa, matagal na akong sumuko at pabigat na lang ako, mas mabuti pang maglaho na lang.';
+        $result = $fallback->invoke(new VentController(), $text);
+        $this->assertSame('HIGH', $result['risk_level']);
+        $this->assertSame(75, $result['risk_percent']);
     }
 }

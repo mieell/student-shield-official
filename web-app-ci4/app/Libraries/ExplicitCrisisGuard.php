@@ -6,7 +6,7 @@ namespace App\Libraries;
 final class ExplicitCrisisGuard
 {
     private const PHRASES = [
-        'magpakamatay', 'kill myself', 'cut myself', 'slit my wrist',
+        'magpakamatay', 'kill myself', 'kill my self', 'cut myself', 'cut my self', 'slit my wrist',
         'bibigti', 'patayin sarili ko', 'magbibigti', 'self-harm',
         'tapusin ko na buhay ko', 'tapusin ko na lang lahat', 'tapusin ko na lahat', 'tapusin ko na',
         'sana matulog at di na magising', 'mas magiging madali para sa lahat', 'pain to stop tonight',
@@ -19,7 +19,7 @@ final class ExplicitCrisisGuard
         'lost my whole motivation to live', 'lost my motivation to live',
     ];
 
-    // Keep these Tagalog self-harm patterns aligned with CAT1_DIRECT in main.py.
+    // Keep these self-harm patterns aligned with CAT1_DIRECT in main.py.
     private const SELF_HARM_PATTERNS = [
         '/\b(?:laslas|naglaslas|naglalaslas|maglaslas|maglalaslas|nilaslas|nilalaslas|paglaslas|paglalaslas|lalaslas|laslasin|lilaslasin)\b/iu',
         '/\b(?:sinasaktan|sinaktan|sasaktan|saktan|sinasaksak|sinaksak|sasaksakin|saksakin)\s+(?:ko\s+(?:ang\s+)?sarili(?:\s+ko)?|(?:ang\s+)?sarili\s+ko)\b/iu',
@@ -27,6 +27,10 @@ final class ExplicitCrisisGuard
         '/\b(?:mag|nag)?bi(?:bi)?gti\b/iu',
         '/\b(?:mag|nag)?bi(?:bi)?tay\b/iu',
         '/\b(?:(?:pag)?(?:mag|nag)?pa(?:pa)?tiwakal|patiwakal)\b/iu',
+    ];
+
+    private const ENGLISH_SELF_HARM_PATTERNS = [
+        '/\b(?:kill|cut|stab|hang|unalive)\s+my\s*self\b/iu',
     ];
 
     public static function enforce(string $text, array $classification): array
@@ -37,7 +41,7 @@ final class ExplicitCrisisGuard
                 return self::critical($classification);
             }
         }
-        if (self::hasTagalogSelfHarm($text)) {
+        if (self::hasExplicitSelfHarm($text)) {
             return self::critical($classification);
         }
         return $classification;
@@ -45,7 +49,17 @@ final class ExplicitCrisisGuard
 
     public static function hasTagalogSelfHarm(string $text): bool
     {
-        foreach (self::SELF_HARM_PATTERNS as $pattern) {
+        return self::matchesAny($text, self::SELF_HARM_PATTERNS);
+    }
+
+    public static function hasExplicitSelfHarm(string $text): bool
+    {
+        return self::hasTagalogSelfHarm($text) || self::matchesAny($text, self::ENGLISH_SELF_HARM_PATTERNS);
+    }
+
+    private static function matchesAny(string $text, array $patterns): bool
+    {
+        foreach ($patterns as $pattern) {
             if (preg_match($pattern, $text) === 1) {
                 return true;
             }
