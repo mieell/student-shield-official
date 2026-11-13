@@ -642,6 +642,7 @@ class AdminController extends BaseController
         if ($db->affectedRows() !== 1) {
             return $back->with('error', 'Only pending student registrations can be archived.');
         }
+        \App\Libraries\GuardianConsent::clearTokens($id);
         $this->logAudit('STUDENT_REGISTRATION_ARCHIVED', 'user', $id);
         return $back->with('success', 'Registration archived. Any outstanding consent link is closed.');
     }
@@ -694,6 +695,7 @@ class AdminController extends BaseController
             if ($status === 'approved') $db->transRollback();
             return $this->response->setStatusCode(409)->setJSON(['status' => 'error', 'message' => 'Registration could not be updated.']);
         }
+        \App\Libraries\GuardianConsent::clearTokens($id);
         $this->logAudit($status === 'approved' ? 'STUDENT_APPROVED' : 'STUDENT_REGISTRATION_REJECTED', 'user', $id);
         if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'json')) {
             return $this->response->setJSON(['status' => 'success', 'message' => 'Registration ' . $status . '.']);

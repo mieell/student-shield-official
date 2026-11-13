@@ -50,6 +50,7 @@ final class RoleSeparationTest extends CIUnitTestCase
 
     protected function tearDown(): void
     {
+        \App\Libraries\GuardianConsent::clearTokens(12);
         unset($_ENV['staffLogin.otpEnabled']);
         unset($_ENV['staffLogin.demoOtpBypassEnabled']);
         session()->destroy();
@@ -718,18 +719,146 @@ final class RoleSeparationTest extends CIUnitTestCase
             $this->assertNotSame('', $secondCode);
             $this->assertNotSame($firstCode, $secondCode);
 
-            // Old SMS code is invalidated and the new SMS code resolves cleanly.
+            // Both unexpired SMS codes for the same verified number stay usable until responded.
             $public = \App\Controllers\GuardianConsentController::class;
             session()->remove('isLoggedIn');
-            $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+            $this->assertSame(200, $this->controller($public, 'guardian-consent', [
                 'guardian_phone' => '09123456789',
-                'consent_code' => $firstCode,
+                'consent_code' => str_replace('-', "\u{2013}", $firstCode),
             ])->lookup()->getStatusCode());
             $this->assertSame(200, $this->controller($public, 'guardian-consent', [
                 'guardian_phone' => '09123456789',
                 'consent_code' => $secondCode,
             ])->lookup()->getStatusCode());
+
+            // Generating a manual replacement link replaces prior manual links while keeping active SMS codes usable.
+            $this->login(2);
+            $controller->initController($this->request($path, 'POST', ['use_verified' => '1', 'delivery' => 'manual']), Services::response(), Services::logger());
+            $controller->send(12);
+            $token1 = basename((string) parse_url((string) session()->getFlashdata('manual_consent_link'), PHP_URL_PATH));
+            $this->assertMatchesRegularExpression('/\A[a-f0-9]{32}\z/', $token1);
+
+            $controller->initController($this->request($path, 'POST', ['use_verified' => '1', 'delivery' => 'manual']), Services::response(), Services::logger());
+            $controller->send(12);
+            $token2 = basename((string) parse_url((string) session()->getFlashdata('manual_consent_link'), PHP_URL_PATH));
+            $this->assertMatchesRegularExpression('/\A[a-f0-9]{32}\z/', $token2);
+            $this->assertNotSame($token1, $token2);
+
+            session()->remove('isLoggedIn');
+            $this->assertSame(404, $this->controller($public, 'guardian-consent/' . $token1)->form($token1)->getStatusCode());
+            $this->assertSame(200, $this->controller($public, 'guardian-consent/' . $token2)->form($token2)->getStatusCode());
+            $this->assertSame(200, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09123456789',
+                'consent_code' => $firstCode,
+            ])->lookup()->getStatusCode());
+
+            // Submitting consent via an active SMS code closes all active SMS codes and manual links at once.
+            $this->assertSame(200, $this->controller($public, 'guardian-consent/respond', [
+                'guardian_phone' => '09123456789',
+                'consent_code' => $firstCode,
+                'guardian_name' => 'Test Guardian',
+                'choice' => 'accepted',
+            ])->respond()->getStatusCode());
+            foreach ([$firstCode, $secondCode] as $code) {
+                $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+                    'guardian_phone' => '09123456789',
+                    'consent_code' => $code,
+                ])->lookup()->getStatusCode());
+            }
+            $this->assertSame(404, $this->controller($public, 'guardian-consent/' . $token2)->form($token2)->getStatusCode());
         } finally {
+            \App\Libraries\GuardianConsent::clearTokens(12);
+            $_ENV = $savedEnv;
+        }
+    }
+
+    public function testChangingVerifiedPhoneInvalidatesPriorSmsCodesAndManualLinks(): void
+    {
+        $this->login(2);
+        $path = 'admin/registrations/12/send-consent';
+        $gateway = new class extends \App\Libraries\SmsGateway {
+            public array $messages = [];
+
+            public function send(string $phone, string $message, string $eventKey): array
+            {
+                $this->messages[] = [$phone, $message];
+                return ['state' => 'Queued'];
+            }
+        };
+        $controller = new class ($gateway) extends \App\Controllers\GuardianConsentController {
+            public function __construct(private \App\Libraries\SmsGateway $gateway) {}
+
+            protected function smsGateway(): \App\Libraries\SmsGateway
+            {
+                return $this->gateway;
+            }
+        };
+        $savedEnv = $_ENV;
+        $_ENV['GUARDIAN_CONSENT_NOTICE'] = 'Approved fixture notice.';
+        $_ENV['IPROG_SMS_API_TOKEN'] = 'fixture-token';
+        try {
+            $controller->initController($this->request($path, 'POST', [
+                'verified_phone' => '09123456789',
+                'verified_name' => 'Initial Guardian',
+                'checked_records' => '1',
+                'delivery' => 'sms',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertCount(1, $gateway->messages);
+            preg_match('/enter code ([A-Z0-9]{4}-[A-Z0-9]{4})/', $gateway->messages[0][1], $oldMatch);
+            $oldCode = $oldMatch[1] ?? '';
+            $this->assertNotSame('', $oldCode);
+
+            $this->rbacDb->table('guardian_consents')->where('user_id', 12)->update([
+                'requested_at' => date('Y-m-d H:i:s', time() - 301),
+            ]);
+            $controller->initController($this->request($path, 'POST', [
+                'verified_phone' => '09998887777',
+                'verified_name' => 'Updated Guardian',
+                'checked_records' => '1',
+                'delivery' => 'sms',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertCount(2, $gateway->messages);
+            preg_match('/enter code ([A-Z0-9]{4}-[A-Z0-9]{4})/', $gateway->messages[1][1], $newMatch);
+            $newCode = $newMatch[1] ?? '';
+            $this->assertNotSame('', $newCode);
+
+            $public = \App\Controllers\GuardianConsentController::class;
+            session()->remove('isLoggedIn');
+            $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09123456789',
+                'consent_code' => $oldCode,
+            ])->lookup()->getStatusCode());
+            $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09998887777',
+                'consent_code' => $oldCode,
+            ])->lookup()->getStatusCode());
+            $this->assertSame(200, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09998887777',
+                'consent_code' => $newCode,
+            ])->lookup()->getStatusCode());
+
+            // Switching guardian contact with a replacement manual link invalidates prior SMS and older manual links.
+            $this->login(2);
+            $controller->initController($this->request($path, 'POST', [
+                'verified_phone' => '09181112222',
+                'verified_name' => 'Backup Guardian',
+                'checked_records' => '1',
+                'delivery' => 'manual',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $manualToken = basename((string) parse_url((string) session()->getFlashdata('manual_consent_link'), PHP_URL_PATH));
+            $this->assertMatchesRegularExpression('/\A[a-f0-9]{32}\z/', $manualToken);
+
+            session()->remove('isLoggedIn');
+            $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09998887777',
+                'consent_code' => $newCode,
+            ])->lookup()->getStatusCode());
+            $this->assertSame(200, $this->controller($public, 'guardian-consent/' . $manualToken)->form($manualToken)->getStatusCode());
+        } finally {
+            \App\Libraries\GuardianConsent::clearTokens(12);
             $_ENV = $savedEnv;
         }
     }

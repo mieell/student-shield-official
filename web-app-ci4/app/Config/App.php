@@ -24,8 +24,10 @@ class App extends BaseConfig
         
         // Dynamically detect Ngrok or other external domains to prevent phone redirect errors
         if (isset($_SERVER['HTTP_HOST'])) {
-            $protocol = (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') 
-                || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https://' : 'http://';
+            $isHttps = stripos((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''), 'https') !== false
+                || str_contains(strtolower((string) ($_SERVER['HTTP_CF_VISITOR'] ?? '')), '"https"')
+                || (isset($_SERVER['HTTPS']) && !in_array(strtolower((string) $_SERVER['HTTPS']), ['', 'off', '0'], true));
+            $protocol = $isHttps ? 'https://' : 'http://';
             $this->baseURL = $protocol . $_SERVER['HTTP_HOST'] . '/';
             $this->forceGlobalSecureRequests = false; // Prevent endless HTTPS redirect loops on Ngrok
         }

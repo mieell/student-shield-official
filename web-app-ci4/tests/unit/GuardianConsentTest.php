@@ -252,4 +252,107 @@ final class GuardianConsentTest extends CIUnitTestCase
             session()->remove(['isLoggedIn', 'role', 'user_id']);
         }
     }
+
+    public function testPhoneAndCodeNormalizationHandlesMobileCopyPasteUnicodeCharacters(): void
+    {
+        self::assertSame('RAXBFRGS', GuardianConsent::normalizeCode("\u{200B} raxb\u{00A0}\u{2013}\u{00AD}frgs \u{200F}"));
+        self::assertSame('RAXBFRGS', GuardianConsent::normalizeCode("RAXB\u{2014}FRGS"));
+        self::assertSame('RAXBFRGS', GuardianConsent::normalizeCode("RAXB\u{2212}FRGS"));
+        self::assertSame('+639669742070', GuardianConsent::phone("(+63) 966\u{00A0}974\u{2013}2070\u{200B}"));
+        self::assertSame('+639669742070', GuardianConsent::phone('0966-974-2070'));
+
+        $html = view('guardian_consent', [
+            'message' => '',
+            'notice' => null,
+            'token' => null,
+            'showLookup' => true,
+            'lookupPhone' => '09669742070',
+            'lookupCode' => 'RAXB-FRGS',
+        ]);
+        self::assertStringContainsString('id="consent-code"', $html);
+        self::assertStringContainsString('maxlength="32"', $html);
+        self::assertStringContainsString('autocapitalize="characters"', $html);
+        self::assertStringContainsString('spellcheck="false"', $html);
+    }
+
+    public function testTokenStoreRetainsActiveSmsCodesAcrossResendAndBackupLinkAndClearsOnPhoneChangeOrClear(): void
+    {
+        $userId = 900123;
+        $now = time();
+        $expSoon = date('Y-m-d H:i:s', $now + 3600);
+        $expLater = date('Y-m-d H:i:s', $now + 7200);
+        $sms1 = hash('sha256', 'RAXBFRGS');
+        $sms2 = hash('sha256', 'KLMN2345');
+        $manual1 = hash('sha256', 'manual-link-1');
+        $manual2 = hash('sha256', 'manual-link-2');
+        $smsNewPhone = hash('sha256', 'PQRS6789');
+
+        GuardianConsent::clearTokens($userId);
+        try {
+            // Generating a manual backup link preserves the prior active SMS code from DB state.
+            GuardianConsent::syncTokenStore($userId, '+639669742070', $manual1, $expLater, 'manual', [
+                'token_hash' => $sms1,
+                'phone' => '09669742070',
+                'sms_state' => 'Queued',
+                'expires_at' => $expSoon,
+                'response' => null,
+            ], $now);
+            self::assertTrue(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms1, $now));
+            self::assertFalse(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $manual1, $now));
+
+            // Resending SMS keeps prior active SMS codes usable for the same phone until expiry.
+            GuardianConsent::syncTokenStore($userId, '+639669742070', $sms2, $expLater, 'sms', [
+                'token_hash' => $manual1,
+                'phone' => '+639669742070',
+                'sms_state' => 'Manual',
+                'expires_at' => $expLater,
+                'response' => null,
+            ], $now);
+            self::assertTrue(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms1, $now));
+            self::assertTrue(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms2, $now));
+            self::assertFalse(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms1, $now + 3601));
+            self::assertTrue(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms2, $now + 3601));
+
+            // Replacement manual link leaves prior active SMS codes intact for that same phone.
+            GuardianConsent::syncTokenStore($userId, '+639669742070', $manual2, $expLater, 'manual', null, $now);
+            self::assertTrue(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms1, $now));
+            self::assertTrue(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms2, $now));
+
+            // Updating to a different verified phone purges all prior-phone SMS tokens immediately.
+            GuardianConsent::syncTokenStore($userId, '+639171234567', $smsNewPhone, $expLater, 'sms', [
+                'token_hash' => $sms2,
+                'phone' => '+639669742070',
+                'sms_state' => 'Queued',
+                'expires_at' => $expLater,
+                'response' => null,
+            ], $now);
+            self::assertFalse(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms1, $now));
+            self::assertFalse(GuardianConsent::hasActiveSmsToken($userId, '+639669742070', $sms2, $now));
+            self::assertFalse(GuardianConsent::hasActiveSmsToken($userId, '+639171234567', $sms1, $now));
+            self::assertTrue(GuardianConsent::hasActiveSmsToken($userId, '+639171234567', $smsNewPhone, $now));
+
+            GuardianConsent::clearTokens($userId);
+            self::assertFalse(GuardianConsent::hasActiveSmsToken($userId, '+639171234567', $smsNewPhone, $now));
+            self::assertFileDoesNotExist(WRITEPATH . 'consent-tokens' . DIRECTORY_SEPARATOR . $userId . '.json');
+        } finally {
+            GuardianConsent::clearTokens($userId);
+        }
+    }
+
+    public function testConfigAppDetectsCloudflareHttpsAndIgnoresFalsyHttpsValues(): void
+    {
+        $savedServer = $_SERVER;
+        try {
+            $_SERVER['HTTP_HOST'] = 'studentshield.app';
+            unset($_SERVER['HTTP_X_FORWARDED_PROTO'], $_SERVER['HTTPS']);
+            $_SERVER['HTTP_CF_VISITOR'] = '{"scheme":"https"}';
+            self::assertSame('https://studentshield.app/', (new \Config\App())->baseURL);
+
+            $_SERVER['HTTP_CF_VISITOR'] = '{"scheme":"http"}';
+            $_SERVER['HTTPS'] = '';
+            self::assertSame('http://studentshield.app/', (new \Config\App())->baseURL);
+        } finally {
+            $_SERVER = $savedServer;
+        }
+    }
 }

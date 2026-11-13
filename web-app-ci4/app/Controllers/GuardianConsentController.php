@@ -87,6 +87,7 @@ class GuardianConsentController extends BaseController
             return $back->with('error', 'The consent request could not be saved. Check that the database update is installed.');
         }
 
+        GuardianConsent::syncTokenStore($id, (string) $phone, $hash, $data['expires_at'], $manual ? 'manual' : 'sms', $prior);
         $this->logAudit('GUARDIAN_CONTACT_VERIFIED', 'user', $id);
         if ($manual) {
             $this->logAudit('GUARDIAN_CONSENT_LINK_GENERATED', 'user', $id);
@@ -227,20 +228,34 @@ class GuardianConsentController extends BaseController
                 $db->transRollback();
                 return $this->page('This registration is no longer pending.', 409);
             }
+            $nowStr = date('Y-m-d H:i:s');
             $query = $db->table('guardian_consents')->where('user_id', $consent['user_id'])
-                ->where('token_hash', $tokenHash)->where('response', null)
-                ->where('expires_at >', date('Y-m-d H:i:s'));
-            if ($token === null && $lookupPhone !== null) {
+                ->where('response', null)->where('expires_at >', $nowStr);
+            if ($token !== null) {
+                $query->where('token_hash', $tokenHash);
+            } else {
+                $lockedConsent = $db->table('guardian_consents')->where('user_id', $consent['user_id'])
+                    ->where('phone', $lookupPhone)->where('response', null)->where('expires_at >', $nowStr)
+                    ->get()->getRowArray();
+                $validCode = $lockedConsent && (
+                    hash_equals((string) ($lockedConsent['token_hash'] ?? ''), $tokenHash)
+                    || GuardianConsent::hasActiveSmsToken((int) $consent['user_id'], (string) $lookupPhone, $tokenHash, time())
+                );
+                if (!$validCode) {
+                    $db->transRollback();
+                    return $this->page('The response could not be recorded. Check whether the consent request is still active.', 409);
+                }
                 $query->where('phone', $lookupPhone);
             }
             $query->update([
                 'token_hash' => null, 'guardian_name' => trim($name), 'response' => $choice,
-                'responded_at' => date('Y-m-d H:i:s'),
+                'responded_at' => $nowStr,
             ]);
             if ($db->affectedRows() !== 1 || !$db->transStatus() || !$db->transCommit()) {
                 $db->transRollback();
                 return $this->page('The response could not be recorded. Check whether the consent request is still active.', 409);
             }
+            GuardianConsent::clearTokens((int) $consent['user_id']);
         } catch (\Throwable $e) {
             $db->transRollback();
             log_message('error', 'Guardian consent response could not be saved.');
@@ -260,11 +275,30 @@ class GuardianConsentController extends BaseController
 
     private function activeCodeRequest(string $phone, string $canonicalCode): ?array
     {
-        return Database::connect()->table('guardian_consents g')->select('g.user_id, g.notice')
+        $hash = hash('sha256', $canonicalCode);
+        $nowStr = date('Y-m-d H:i:s');
+        $db = Database::connect();
+        $row = $db->table('guardian_consents g')->select('g.user_id, g.notice')
             ->join('users u', 'u.id = g.user_id')->where('u.role', 0)->where('u.registration_status', 'pending')
             ->where('g.phone', $phone)
-            ->where('g.token_hash', hash('sha256', $canonicalCode))->where('g.response', null)
-            ->where('g.expires_at >', date('Y-m-d H:i:s'))->get()->getRowArray();
+            ->where('g.token_hash', $hash)->where('g.response', null)
+            ->where('g.expires_at >', $nowStr)->get()->getRowArray();
+        if ($row) {
+            return $row;
+        }
+
+        // Preserve unexpired prior SMS codes sent to the same verified phone if a resend or backup link updated token_hash.
+        $candidates = $db->table('guardian_consents g')->select('g.user_id, g.notice')
+            ->join('users u', 'u.id = g.user_id')->where('u.role', 0)->where('u.registration_status', 'pending')
+            ->where('g.phone', $phone)->where('g.response', null)
+            ->where('g.expires_at >', $nowStr)->get()->getResultArray();
+        $now = time();
+        foreach ($candidates as $candidate) {
+            if (GuardianConsent::hasActiveSmsToken((int) $candidate['user_id'], $phone, $hash, $now)) {
+                return $candidate;
+            }
+        }
+        return null;
     }
 
     private function page(

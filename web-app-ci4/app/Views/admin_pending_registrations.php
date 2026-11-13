@@ -384,8 +384,8 @@
                                             <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="mb-2">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="use_verified" value="1">
-                                                <button type="submit" name="delivery" value="sms" class="approve-btn consent-action font-semibold" onclick="return confirm('Resend a new consent SMS to the verified guardian number? Any previous link and code will stop working.')">Resend consent SMS</button>
-                                                <p class="text-xs mt-1">Sends a fresh SMS code and invalidates the previous code.</p>
+                                                <button type="submit" name="delivery" value="sms" class="approve-btn consent-action font-semibold" onclick="return confirm('Resend a new consent SMS to the verified guardian number? Any prior unexpired SMS codes for this number stay active until a response is submitted.')">Resend consent SMS</button>
+                                                <p class="text-xs mt-1">Sends a fresh SMS code while keeping prior active SMS codes usable for this number.</p>
                                             </form>
                                         <?php else:
                                             $smsStateNow = (string) ($student['sms_state'] ?? '');
@@ -409,8 +409,8 @@
                                         <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="use_verified" value="1">
-                                            <button type="submit" name="delivery" value="manual" class="approve-btn consent-action font-semibold" onclick="return confirm('Generate a new consent link? Any previous link will stop working.')">Generate replacement link</button>
-                                            <p class="text-xs mt-1">Share privately if SMS delivery is uncertain.</p>
+                                            <button type="submit" name="delivery" value="manual" class="approve-btn consent-action font-semibold" onclick="return confirm('Generate a new replacement consent link? Any older replacement link will stop working, while active SMS codes for this number stay usable.')">Generate replacement link</button>
+                                            <p class="text-xs mt-1">Share privately if SMS delivery is uncertain; active SMS codes remain usable.</p>
                                         </form>
                                     <?php endif; ?>
 

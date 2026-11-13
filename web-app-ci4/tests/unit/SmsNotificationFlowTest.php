@@ -77,6 +77,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
 
     protected function tearDown(): void
     {
+        \App\Libraries\GuardianConsent::clearTokens(99);
         foreach ($this->saved as $key => [$env, $server, $process]) {
             unset($_ENV[$key], $_SERVER[$key]);
             if ($env !== null) $_ENV[$key] = $env;

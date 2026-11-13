@@ -63,6 +63,9 @@ writable/uploads/*
 writable/debugbar/*
 !writable/debugbar/index.html
 
+writable/consent-tokens/*
+!writable/consent-tokens/index.html
+
 php_errors.log
 
 #-------------------------

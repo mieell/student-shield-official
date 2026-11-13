@@ -37,7 +37,7 @@
             <label for="guardian-phone">Guardian mobile number</label>
             <input type="tel" id="guardian-phone" name="guardian_phone" value="<?= esc($lookupPhone ?? '', 'attr') ?>" placeholder="09123456789" autocomplete="tel" maxlength="32" required>
             <label for="consent-code">Consent code</label>
-            <input type="text" id="consent-code" name="consent_code" class="code-input" value="<?= esc($lookupCode ?? '', 'attr') ?>" placeholder="ABCD-EFGH" autocomplete="one-time-code" maxlength="16" required>
+            <input type="text" id="consent-code" name="consent_code" class="code-input" value="<?= esc($lookupCode ?? '', 'attr') ?>" placeholder="ABCD-EFGH" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="32" required>
             <div class="actions">
                 <button type="submit">View consent form</button>
             </div>
