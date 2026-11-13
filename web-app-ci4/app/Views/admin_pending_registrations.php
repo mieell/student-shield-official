@@ -90,12 +90,9 @@
         .registration-contact > div { max-width: 16rem; overflow-wrap: anywhere; }
         .registration-contact svg { flex-shrink: 0; }
         .guardian-verification { min-width: 18rem; max-width: 28rem; margin: 0 auto; padding: 1rem; background: #f7fbf8; border: 1px solid #cfe2d4; border-radius: 12px; text-align: left; }
-        .registration-manage { min-width: 200px; text-align: left; }
-        .registration-manage > summary { display: flex; align-items: center; justify-content: space-between; gap: .75rem; list-style: none; border: 1px solid #d4e1d8; border-radius: 8px; background: #fff; }
-        .registration-manage > summary::-webkit-details-marker { display: none; }
-        .registration-manage > summary strong::after { content: " +"; }
-        .registration-manage[open] > summary strong::after { content: " −"; }
-        .registration-manage > summary:focus-visible { outline: 2px solid #096328; outline-offset: 2px; }
+        .registration-manage { text-align: center; }
+        .registration-dialog { position: fixed; inset: 0; margin: auto; width: min(32rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; padding: 1rem; border: 1px solid #d4e1d8; border-radius: 12px; background: #fff; text-align: left; }
+        .registration-dialog::backdrop { background: #142c2099; }
         .registration-panel { margin-top: .5rem; padding: .85rem; border: 1px solid #d4e1d8; border-radius: 8px; background: #f6faf7; }
         .registration-actions .consent-action { display: inline-flex; align-items: center; min-height: 40px; padding: .5rem .85rem; border-radius: 8px; font-size: .8rem; }
         .registration-actions .archive-action { margin-top: .65rem; color: #41584b; border: 1px solid #becfc3; background: #fff; }
@@ -357,8 +354,14 @@
                                                 },
                                             }; ?>
                                     <?php if ($registrationStatus === 'pending'): ?>
-                                    <details class="registration-manage">
-                                        <summary><span><?= esc($consentStatus) ?></span><strong>Manage</strong></summary>
+                                    <div class="registration-manage">
+                                        <button type="button" class="consent-action" aria-haspopup="dialog" aria-controls="registration-dialog-<?= $uid ?>" onclick="document.getElementById(this.getAttribute('aria-controls')).showModal()">Manage</button>
+                                        <dialog class="registration-dialog" id="registration-dialog-<?= $uid ?>" aria-labelledby="registration-title-<?= $uid ?>">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <h2 class="font-semibold" id="registration-title-<?= $uid ?>">Manage registration · <?= esc($student['name']) ?></h2>
+                                                <button type="button" class="consent-action" autofocus onclick="this.closest('dialog').close()">Close</button>
+                                            </div>
+                                            <p class="mt-2 text-xs"><?= esc($consentStatus) ?></p>
                                         <div class="registration-panel">
                                     <?php endif; ?>
                                     <?php if (!empty($student['verified_phone'])): ?>
@@ -468,7 +471,8 @@
                                     <?php else: ?><span class="text-sm text-gray-500">Decision recorded</span><?php endif; ?>
                                     <?php if ($registrationStatus === 'pending'): ?>
                                         </div>
-                                    </details>
+                                        </dialog>
+                                    </div>
                                     <?php endif; ?>
                                 </td>
                             </tr>
