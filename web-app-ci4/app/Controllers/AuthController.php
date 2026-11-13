@@ -133,22 +133,6 @@ class AuthController extends BaseController
         if ($user && $passwordValid && \App\Libraries\RoleAccess::enabled($user)) {
             $roleNames = [1 => 'counselor', 2 => 'super_admin', 3 => 'principal'];
 
-            if ($this->demoOtpBypassAllowed($user)) {
-                $this->clearOtpSession();
-                session()->regenerate();
-                session()->set([
-                    'user_id'       => $user['id'],
-                    'name'          => $user['name'],
-                    'role'          => (int) $user['role'],
-                    'role_name'     => $roleNames[(int) $user['role']] ?? 'counselor',
-                    'auth_version'  => (int) ($user['auth_version'] ?? 1),
-                    'isLoggedIn'    => true,
-                    'last_activity' => time(),
-                ]);
-                $this->logAudit('DEMO_LOGIN_OTP_BYPASS', 'system', $user['id']);
-                return redirect()->to(\App\Libraries\RoleAccess::home((int) $user['role']));
-            }
-
             // ── LAYER 5: TRUSTED DEVICE BYPASS ──
             if (isset($_COOKIE['admin_trusted_device'])) {
                 $cookieData = base64_decode($_COOKIE['admin_trusted_device']);
@@ -218,21 +202,6 @@ class AuthController extends BaseController
         }
 
         return redirect()->back()->with('error', 'Invalid credentials provided.');
-    }
-
-    protected function demoOtpBypassAllowed(array $user, ?int $now = null): bool
-    {
-        // Temporary testing exception; passwords and account-status checks run first.
-        $demoRoles = ['Principal' => 3, 'Counselor' => 1, 'Superadmin' => 2];
-        $accountName = (string) ($user['name'] ?? '');
-        // MySQL may accept Superadmin while returning the stored spelling SuperAdmin.
-        if ((int) ($user['role'] ?? -1) === 2 && strcasecmp($accountName, 'Superadmin') === 0) {
-            $accountName = 'Superadmin';
-        }
-        return env('staffLogin.demoOtpBypassEnabled', true) === true
-            && ($now ?? time()) < strtotime('2026-11-15T01:26:00+08:00')
-            && isset($demoRoles[$accountName])
-            && $demoRoles[$accountName] === (int) ($user['role'] ?? -1);
     }
 
     public function otpView()
