@@ -17,6 +17,8 @@ body.student-login.login-illustrated .login-identity img { filter: drop-shadow(0
 body.student-login.login-illustrated .login-security { background: #06401e; border-color: #c7dba033; box-shadow: none; }
 body.student-login.login-illustrated .input-dark { background: #064923; border-color: #b9d8c1; color: #fff; box-shadow: inset 0 2px 3px #05341826; }
 body.student-login.login-illustrated .input-dark::placeholder { color: #edf7f0; opacity: 1; }
+body.student-login.login-illustrated .login-form :is(.fa-user, .fa-lock) { color: #edf7f0; }
+body.student-login.login-illustrated .login-form .relative:has(> .input-dark:is(:autofill, :-webkit-autofill)) :is(.fa-user, .fa-lock) { color: #164c2c; }
 body.student-login.login-illustrated .input-dark:focus { background: #064b25; border-color: #fff4c7; box-shadow: 0 0 0 3px #fff4c72e; }
 body.student-login.login-illustrated .login-form .submit-btn {
     background: #eac255;
