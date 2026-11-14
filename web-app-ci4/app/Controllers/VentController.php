@@ -103,34 +103,18 @@ class VentController extends BaseController
             $payload = json_encode($payloadData);
         }
 
-        $response = false;
-        $httpCode = 0;
-        if ($mlApiKey !== '') {
-            $ch = curl_init($mlApiBase . '/analyze-text');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Content-Type: application/json',
-                'X-API-KEY: ' . $mlApiKey
-            ]);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-            curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-        } else {
-            log_message('error', 'ML_API_KEY is not configured; checking vent fallback.');
-        }
-
-        $mlResult = is_string($response) ? json_decode($response, true) : null;
+        $primary = $this->callPrimaryMlService($mlApiBase, $mlApiKey, $payload);
+        $mlResult = $primary['data'] ?? null;
+        $httpCode = (int) ($primary['httpCode'] ?? 0);
         if ($httpCode < 200 || $httpCode >= 300 || !VentRiskAnalyzer::valid($mlResult)) {
             log_message('warning', 'Primary vent analysis unavailable (HTTP {status}); checking configured fallback.', ['status' => $httpCode]);
+            $geminiResult = $this->callGeminiFallback($text);
+            if (\App\Libraries\VentRiskAnalyzer::valid($geminiResult)) {
+                $mlResult = $geminiResult;
+                $httpCode = 200;
+            }
         }
-        $assessment = VentRiskAnalyzer::resolve($text, $mlResult, (int) $httpCode,
+        $assessment = VentRiskAnalyzer::resolve($text, $mlResult, $httpCode,
             fn (string $entry) => $this->localKeywordFallback($entry));
         $riskLevel = $assessment['risk_level'];
         $sentimentScore = $assessment['risk_percent'];
@@ -812,5 +796,46 @@ class VentController extends BaseController
         }
 
         return ['risk_level' => 'LOW', 'risk_percent' => 10];
+    }
+
+    /**
+     * Invoke primary ML microservice endpoint and return HTTP code + decoded body.
+     */
+    protected function callPrimaryMlService(string $mlApiBase, string $mlApiKey, string $payload): array
+    {
+        if ($mlApiKey === '') {
+            log_message('error', 'ML_API_KEY is not configured; checking vent fallback.');
+            return ['httpCode' => 0, 'data' => null];
+        }
+
+        $ch = curl_init($mlApiBase . '/analyze-text');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'X-API-KEY: ' . $mlApiKey,
+        ]);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        $response = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return [
+            'httpCode' => $httpCode,
+            'data' => is_string($response) ? json_decode($response, true) : null,
+        ];
+    }
+
+    /**
+     * Secondary PII-free Gemini REST fallback used only when primary ML service fails.
+     */
+    protected function callGeminiFallback(string $text): ?array
+    {
+        return \App\Libraries\GeminiVentClient::analyze($text);
     }
 }

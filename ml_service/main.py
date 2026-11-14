@@ -20,6 +20,7 @@ from risk_history import evaluate_risk_history
 from violent_threats import detect_violent_threat
 from translation_gate import TranslationGate
 from crisis_context import current_disclosure_text
+from gemini_triage import evaluate_vent_with_gemini, merge_gemini_assessment
 
 translation_gate = TranslationGate()
 
@@ -1833,11 +1834,29 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
         risk_score, distress_conf, neg_emo_conf, pos_emo_conf, scan_text,
         flags, violent_threat, expert_reasoning, signal_count,
     )
+    pre_history_risk = risk
     risk, risk_score, reason, trajectory, escalation_prob = _apply_risk_history_escalation(
         student_id, risk_history, risk, risk_score, reason,
     )
+    history_escalated = risk != pre_history_risk
     raw_severity = _compute_raw_severity(base_score, flags, risk_score, violent_threat)
     risk_percent = _band_risk_score(risk, risk_score, raw_severity)
+
+    gemini_result = evaluate_vent_with_gemini(text)
+    if gemini_result is not None:
+        risk, risk_percent, reason = merge_gemini_assessment(
+            risk,
+            risk_percent,
+            reason,
+            gemini_result,
+            flags=flags,
+            violent_threat=violent_threat,
+            history_escalated=history_escalated,
+            distress_conf=distress_conf,
+            neg_emo_conf=neg_emo_conf,
+            base_score=base_score,
+            signal_count=signal_count,
+        )
 
     return {
         "risk_score": float(risk_percent),

@@ -11,7 +11,12 @@ function showScreeningExplanation(vent) {
     title.className = 'font-semibold text-[#164a36] mb-3';
     title.textContent = 'Screening analysis';
     panel.append(title);
-    const sources = {model: 'ML service with PHP safety rules', local: 'Local keyword fallback', unknown: 'Source unavailable for this entry'};
+    const sources = {
+        model: 'ML service with PHP safety rules',
+        gemini: 'Gemini AI fallback with PHP safety rules',
+        local: 'Local keyword fallback',
+        unknown: 'Source unavailable for this entry',
+    };
     const rows = [
         ['Review priority', `${vent.risk_level || 'Unavailable'} · Recorded score ${vent.risk_percent ?? '—'}%`],
         ['Analysis source', sources[vent.analysis_source] || sources.unknown],

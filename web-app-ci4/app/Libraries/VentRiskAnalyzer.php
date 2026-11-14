@@ -21,7 +21,7 @@ final class VentRiskAnalyzer
         $probability = 0.0;
         if ($httpCode >= 200 && $httpCode < 300 && self::valid($primary)) {
             $result = $primary;
-            $source = 'model';
+            $source = ($primary['source'] ?? null) === 'gemini' ? 'gemini' : 'model';
             if (in_array($primary['trajectory'] ?? null, ['INSUFFICIENT_DATA', 'ESCALATING', 'IMPROVING', 'STABLE'], true)) {
                 $trajectory = $primary['trajectory'];
             }
@@ -39,10 +39,14 @@ final class VentRiskAnalyzer
             'risk_percent' => (float) ($result['risk_score'] ?? $result['risk_percent']),
         ]);
         $classification = ViolentThreats::enforce($text, $classification);
-        $reasoning = $source === 'model' && is_string($result['reasoning'] ?? $result['flag_reason'] ?? null)
+        $hasModelReason = in_array($source, ['model', 'gemini'], true) && is_string($result['reasoning'] ?? $result['flag_reason'] ?? null);
+        $reasoning = $hasModelReason
             ? ($result['reasoning'] ?? $result['flag_reason'])
-            : ($source === 'model' ? 'The ML service did not return a detailed explanation for this entry.'
-                : 'Local keyword rules determined this review priority. Review the full entry and ask the student about its context.');
+            : ($source === 'gemini'
+                ? 'Gemini AI fallback analyzed this entry while the ML service was unavailable.'
+                : ($source === 'model'
+                    ? 'The ML service did not return a detailed explanation for this entry.'
+                    : 'Local keyword rules determined this review priority. Review the full entry and ask the student about its context.'));
         if ($classification['risk_level'] !== $result['risk_level']) {
             $reasoning .= ' The PHP safety rules raised the final review priority after the initial analysis.';
         }
