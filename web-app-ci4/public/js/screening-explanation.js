@@ -13,7 +13,8 @@ function showScreeningExplanation(vent) {
     panel.append(title);
     const sources = {
         model: 'ML service with PHP safety rules',
-        gemini: 'Gemini AI fallback with PHP safety rules',
+        groq: 'Groq AI fallback with PHP safety rules',
+        gemini: 'Legacy Gemini AI fallback with PHP safety rules',
         local: 'Local keyword fallback',
         unknown: 'Source unavailable for this entry',
     };

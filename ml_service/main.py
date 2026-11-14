@@ -20,7 +20,7 @@ from risk_history import evaluate_risk_history
 from violent_threats import detect_violent_threat
 from translation_gate import TranslationGate
 from crisis_context import current_disclosure_text
-from gemini_triage import evaluate_vent_with_gemini, merge_gemini_assessment
+from groq_triage import evaluate_vent_with_groq, merge_groq_assessment
 
 translation_gate = TranslationGate()
 
@@ -1842,13 +1842,13 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
     raw_severity = _compute_raw_severity(base_score, flags, risk_score, violent_threat)
     risk_percent = _band_risk_score(risk, risk_score, raw_severity)
 
-    gemini_result = evaluate_vent_with_gemini(text)
-    if gemini_result is not None:
-        risk, risk_percent, reason = merge_gemini_assessment(
+    groq_result = evaluate_vent_with_groq(text)
+    if groq_result is not None:
+        risk, risk_percent, reason = merge_groq_assessment(
             risk,
             risk_percent,
             reason,
-            gemini_result,
+            groq_result,
             flags=flags,
             violent_threat=violent_threat,
             history_escalated=history_escalated,

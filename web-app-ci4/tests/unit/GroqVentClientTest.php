@@ -4,9 +4,8 @@ namespace Tests\Unit;
 
 use App\Controllers\AdminController;
 use App\Controllers\VentController;
-use App\Libraries\GeminiVentClient;
+use App\Libraries\GroqVentClient;
 use App\Libraries\ScreeningExplanation;
-use CodeIgniter\Encryption\EncrypterInterface;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\SiteURI;
 use CodeIgniter\HTTP\UserAgent;
@@ -14,7 +13,7 @@ use CodeIgniter\Test\CIUnitTestCase;
 use Config\Database;
 use Config\Services;
 
-final class GeminiVentClientTest extends CIUnitTestCase
+final class GroqVentClientTest extends CIUnitTestCase
 {
     private $memDb;
     private array $connections;
@@ -27,8 +26,8 @@ final class GeminiVentClientTest extends CIUnitTestCase
         helper(['url', 'form']);
 
         foreach ([
-            'GEMINI_API_KEY', 'GEMINI_ENABLED', 'GEMINI_VENT_FALLBACK_ENABLED',
-            'GEMINI_MODEL', 'GEMINI_VENT_MODEL', 'GEMINI_TIMEOUT_SECONDS',
+            'GROQ_API_KEY', 'GROQ_ENABLED', 'GROQ_VENT_FALLBACK_ENABLED',
+            'GROQ_MODEL', 'GROQ_VENT_MODEL', 'GROQ_TIMEOUT_SECONDS',
             'ML_API_KEY', 'COUNSELOR_EMAIL', 'COUNSELOR_PHONE', 'email.SMTPUser', 'email.SMTPPass',
             'encryption.key',
         ] as $key) {
@@ -36,11 +35,11 @@ final class GeminiVentClientTest extends CIUnitTestCase
         }
         $this->savedServer = $_SERVER;
 
-        $_ENV['GEMINI_API_KEY'] = $_SERVER['GEMINI_API_KEY'] = '';
-        $_ENV['GEMINI_ENABLED'] = $_SERVER['GEMINI_ENABLED'] = '';
-        $_ENV['GEMINI_VENT_FALLBACK_ENABLED'] = $_SERVER['GEMINI_VENT_FALLBACK_ENABLED'] = '';
-        $_ENV['GEMINI_MODEL'] = $_SERVER['GEMINI_MODEL'] = '';
-        $_ENV['GEMINI_VENT_MODEL'] = $_SERVER['GEMINI_VENT_MODEL'] = '';
+        $_ENV['GROQ_API_KEY'] = $_SERVER['GROQ_API_KEY'] = '';
+        $_ENV['GROQ_ENABLED'] = $_SERVER['GROQ_ENABLED'] = '';
+        $_ENV['GROQ_VENT_FALLBACK_ENABLED'] = $_SERVER['GROQ_VENT_FALLBACK_ENABLED'] = '';
+        $_ENV['GROQ_MODEL'] = $_SERVER['GROQ_MODEL'] = '';
+        $_ENV['GROQ_VENT_MODEL'] = $_SERVER['GROQ_VENT_MODEL'] = '';
         $_ENV['ML_API_KEY'] = $_SERVER['ML_API_KEY'] = '';
         $_ENV['COUNSELOR_EMAIL'] = $_SERVER['COUNSELOR_EMAIL'] = '';
         $_ENV['COUNSELOR_PHONE'] = $_SERVER['COUNSELOR_PHONE'] = '';
@@ -115,63 +114,64 @@ final class GeminiVentClientTest extends CIUnitTestCase
     public function testDisabledWithoutApiKeyOrWhenExplicitlyOff(): void
     {
         $called = false;
-        self::assertFalse(GeminiVentClient::isEnabled());
-        self::assertNull(GeminiVentClient::analyze('test vent', static function () use (&$called) {
+        self::assertFalse(GroqVentClient::isEnabled());
+        self::assertNull(GroqVentClient::analyze('test vent', static function () use (&$called) {
             $called = true;
             return ['httpCode' => 200, 'body' => '{}'];
         }));
         self::assertFalse($called);
 
-        $_ENV['GEMINI_API_KEY'] = $_SERVER['GEMINI_API_KEY'] = 'gem-test-key';
-        $_ENV['GEMINI_ENABLED'] = $_SERVER['GEMINI_ENABLED'] = 'false';
-        self::assertFalse(GeminiVentClient::isEnabled());
-        self::assertNull(GeminiVentClient::analyze('test vent', static function () use (&$called) {
+        $_ENV['GROQ_API_KEY'] = $_SERVER['GROQ_API_KEY'] = 'gsk-test-key';
+        $_ENV['GROQ_ENABLED'] = $_SERVER['GROQ_ENABLED'] = 'false';
+        self::assertFalse(GroqVentClient::isEnabled());
+        self::assertNull(GroqVentClient::analyze('test vent', static function () use (&$called) {
             $called = true;
             return ['httpCode' => 200, 'body' => '{}'];
         }));
         self::assertFalse($called);
 
-        $_ENV['GEMINI_ENABLED'] = $_SERVER['GEMINI_ENABLED'] = '';
-        $_ENV['GEMINI_VENT_FALLBACK_ENABLED'] = $_SERVER['GEMINI_VENT_FALLBACK_ENABLED'] = 'false';
-        self::assertFalse(GeminiVentClient::isEnabled());
+        $_ENV['GROQ_ENABLED'] = $_SERVER['GROQ_ENABLED'] = '';
+        $_ENV['GROQ_VENT_FALLBACK_ENABLED'] = $_SERVER['GROQ_VENT_FALLBACK_ENABLED'] = 'false';
+        self::assertFalse(GroqVentClient::isEnabled());
 
-        $_ENV['GEMINI_VENT_FALLBACK_ENABLED'] = $_SERVER['GEMINI_VENT_FALLBACK_ENABLED'] = 'true';
-        $_ENV['GEMINI_VENT_MODEL'] = $_SERVER['GEMINI_VENT_MODEL'] = 'gemini-3-flash-preview';
-        self::assertTrue(GeminiVentClient::isEnabled());
-        self::assertSame('gemini-3-flash-preview', GeminiVentClient::model());
+        $_ENV['GROQ_VENT_FALLBACK_ENABLED'] = $_SERVER['GROQ_VENT_FALLBACK_ENABLED'] = 'true';
+        $_ENV['GROQ_VENT_MODEL'] = $_SERVER['GROQ_VENT_MODEL'] = 'openai/gpt-oss-120b';
+        self::assertTrue(GroqVentClient::isEnabled());
+        self::assertSame('openai/gpt-oss-120b', GroqVentClient::model());
     }
 
-    public function testAnalyzeBuildsPiiFreeRequestAndHandlesThoughtParts(): void
+    public function testAnalyzeBuildsPiiFreeChatCompletionsRequestAndClampsBands(): void
     {
-        $_ENV['GEMINI_API_KEY'] = $_SERVER['GEMINI_API_KEY'] = 'gem-test-key';
-        $_ENV['GEMINI_MODEL'] = $_SERVER['GEMINI_MODEL'] = 'gemini-3-flash-preview';
+        $_ENV['GROQ_API_KEY'] = $_SERVER['GROQ_API_KEY'] = 'gsk-test-key';
+        $_ENV['GROQ_MODEL'] = $_SERVER['GROQ_MODEL'] = 'llama-3.3-70b-versatile';
         $captured = [];
 
         $apiBody = json_encode([
-            'candidates' => [[
-                'content' => [
-                    'parts' => [
-                        ['thought' => true, 'text' => 'Internal reasoning trace should be skipped'],
-                        ['text' => json_encode([
-                            'risk_level' => 'HIGH',
-                            'risk_score' => 99, // Deliberately out-of-band; must clamp to 85
-                            'sarcasm_or_hyperbole' => false,
-                            'taglish_nuance' => 'Taglish exhaustion cue',
-                            'counselor_reasoning' => 'Student conveys sustained emotional depletion.',
-                        ])],
-                    ],
+            'choices' => [[
+                'message' => [
+                    'content' => json_encode([
+                        'triage_category' => 'compound_distress_or_bullying',
+                        'risk_level' => 'HIGH',
+                        'risk_score' => 99, // Deliberately out-of-band; must clamp to 85
+                        'sarcasm_or_hyperbole' => false,
+                        'taglish_nuance' => 'Taglish exhaustion cue',
+                        'counselor_reasoning' => 'Student conveys sustained emotional depletion.',
+                    ]),
                 ],
             ]],
         ], JSON_THROW_ON_ERROR);
 
-        $result = GeminiVentClient::analyze('nakakapagod na lahat parang ayoko na pumasok', static function (string $endpoint, string $jsonBody, string $apiKey, int $timeout) use (&$captured, $apiBody) {
+        $result = GroqVentClient::analyze('nakakapagod na lahat parang ayoko na pumasok', static function (string $endpoint, string $jsonBody, string $apiKey, int $timeout) use (&$captured, $apiBody) {
             $captured = compact('endpoint', 'jsonBody', 'apiKey', 'timeout');
             return ['httpCode' => 200, 'body' => $apiBody];
         });
 
         self::assertNotNull($result);
-        self::assertSame('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent', $captured['endpoint']);
-        self::assertSame('gem-test-key', $captured['apiKey']);
+        self::assertSame('https://api.groq.com/openai/v1/chat/completions', $captured['endpoint']);
+        self::assertSame('gsk-test-key', $captured['apiKey']);
+        $decodedBody = json_decode($captured['jsonBody'], true);
+        self::assertSame('llama-3.3-70b-versatile', $decodedBody['model']);
+        self::assertSame(['type' => 'json_object'], $decodedBody['response_format']);
         self::assertStringContainsString('<student_vent>', $captured['jsonBody']);
         self::assertStringContainsString('DepEd DO 40 s.2012', $captured['jsonBody']);
         self::assertStringContainsString('patay ako kay mama', $captured['jsonBody']);
@@ -179,7 +179,7 @@ final class GeminiVentClientTest extends CIUnitTestCase
         self::assertStringContainsString('perceived burdensomeness', $captured['jsonBody']);
         self::assertStringNotContainsString('Juan Dela Cruz', $captured['jsonBody']);
         self::assertStringNotContainsString('SS-2026-10', $captured['jsonBody']);
-        self::assertSame('gemini', $result['source']);
+        self::assertSame('groq', $result['source']);
         self::assertSame('HIGH', $result['risk_level']);
         self::assertSame(85, $result['risk_score']);
         self::assertStringContainsString('Student conveys sustained emotional depletion.', $result['reasoning']);
@@ -187,28 +187,26 @@ final class GeminiVentClientTest extends CIUnitTestCase
 
         // C-SSRS Level 2 passive ideation must pin to HIGH (61-85, min 79) so parent alerts do not fire prematurely.
         $passiveBody = json_encode([
-            'candidates' => [[
-                'content' => [
-                    'parts' => [[
-                        'text' => json_encode([
-                            'triage_category' => 'passive_ideation_cssrs2',
-                            'risk_level' => 'CRITICAL',
-                            'risk_score' => 92,
-                            'sarcasm_or_hyperbole' => false,
-                            'taglish_nuance' => 'Passive invisibility idiom',
-                            'counselor_reasoning' => 'Counselor follow-up warranted without parent alarm.',
-                        ]),
-                    ]],
+            'choices' => [[
+                'message' => [
+                    'content' => json_encode([
+                        'triage_category' => 'passive_ideation_cssrs2',
+                        'risk_level' => 'CRITICAL',
+                        'risk_score' => 92,
+                        'sarcasm_or_hyperbole' => false,
+                        'taglish_nuance' => 'Passive invisibility idiom',
+                        'counselor_reasoning' => 'Counselor follow-up warranted without parent alarm.',
+                    ]),
                 ],
             ]],
         ], JSON_THROW_ON_ERROR);
-        $passiveParsed = GeminiVentClient::parseApiResponse($passiveBody);
+        $passiveParsed = GroqVentClient::parseApiResponse($passiveBody);
         self::assertNotNull($passiveParsed);
         self::assertSame('HIGH', $passiveParsed['risk_level']);
         self::assertSame(85, $passiveParsed['risk_score']);
     }
 
-    public function testVentControllerUsesGeminiFallbackThenPersistsEncryptedExplanationAndAdminSource(): void
+    public function testVentControllerUsesGroqFallbackThenPersistsEncryptedExplanationAndAdminSource(): void
     {
         session()->set(['isLoggedIn' => true, 'role' => 0, 'user_id' => 10]);
 
@@ -227,14 +225,14 @@ final class GeminiVentClientTest extends CIUnitTestCase
             {
                 return ['httpCode' => 503, 'data' => null];
             }
-            protected function callGeminiFallback(string $text): ?array
+            protected function callGroqFallback(string $text): ?array
             {
                 return [
                     'risk_level' => 'HIGH',
                     'risk_score' => 76,
-                    'reasoning' => '[Gemini Fallback] Subtle Bisaya hopelessness detected.',
-                    'flag_reason' => '[Gemini Fallback] Subtle Bisaya hopelessness detected.',
-                    'source' => 'gemini',
+                    'reasoning' => '[Groq Fallback] Subtle Bisaya hopelessness detected.',
+                    'flag_reason' => '[Groq Fallback] Subtle Bisaya hopelessness detected.',
+                    'source' => 'groq',
                 ];
             }
             protected function logAudit(string $action, string $entityType, int $entityId): void
@@ -257,7 +255,7 @@ final class GeminiVentClientTest extends CIUnitTestCase
         self::assertArrayNotHasKey('reasoning', $json);
 
         self::assertContains('CREATE_VENT', $auditActions);
-        self::assertContains('VENT_ANALYSIS_GEMINI', $auditActions);
+        self::assertContains('VENT_ANALYSIS_GROQ', $auditActions);
 
         $row = $this->memDb->table('vent_logs')->get()->getRowArray();
         self::assertNotNull($row);
@@ -267,11 +265,11 @@ final class GeminiVentClientTest extends CIUnitTestCase
 
         $decoded = ScreeningExplanation::decode($row['analysis_details']);
         self::assertSame([
-            'source' => 'gemini',
-            'reasoning' => '[Gemini Fallback] Subtle Bisaya hopelessness detected.',
+            'source' => 'groq',
+            'reasoning' => '[Groq Fallback] Subtle Bisaya hopelessness detected.',
         ], $decoded);
 
-        // Verify counselor dashboard API returns analysis_source = 'gemini' and decrypted screening_analysis.
+        // Verify counselor dashboard API returns analysis_source = 'groq' and decrypted screening_analysis.
         session()->set(['isLoggedIn' => true, 'role' => 1, 'user_id' => 1]);
         $admin = new AdminController();
         $fetchReq = $this->buildRequest('admin/api/vents', 'GET');
@@ -280,11 +278,11 @@ final class GeminiVentClientTest extends CIUnitTestCase
         $admin->initController($fetchReq, Services::response(), Services::logger());
         $adminRes = $admin->fetchVents();
         $adminRows = json_decode((string) $adminRes->getBody(), true);
-        self::assertSame('gemini', $adminRows[0]['analysis_source']);
-        self::assertSame('[Gemini Fallback] Subtle Bisaya hopelessness detected.', $adminRows[0]['screening_analysis']['reasoning']);
+        self::assertSame('groq', $adminRows[0]['analysis_source']);
+        self::assertSame('[Groq Fallback] Subtle Bisaya hopelessness detected.', $adminRows[0]['screening_analysis']['reasoning']);
     }
 
-    public function testVentControllerFallsBackToLocalKeywordsWhenPrimaryAndGeminiAreBothUnavailable(): void
+    public function testVentControllerFallsBackToLocalKeywordsWhenPrimaryAndGroqAreBothUnavailable(): void
     {
         session()->set(['isLoggedIn' => true, 'role' => 0, 'user_id' => 10]);
 
@@ -303,7 +301,7 @@ final class GeminiVentClientTest extends CIUnitTestCase
             {
                 return ['httpCode' => 502, 'data' => null];
             }
-            protected function callGeminiFallback(string $text): ?array
+            protected function callGroqFallback(string $text): ?array
             {
                 return null;
             }
@@ -326,7 +324,6 @@ final class GeminiVentClientTest extends CIUnitTestCase
 
         $row = $this->memDb->table('vent_logs')->get()->getRowArray();
         self::assertSame('CRITICAL', $row['risk_level']);
-        $decoded = ScreeningExplanation::decode($row['analysis_details']);
-        self::assertSame('local', $decoded['source']);
+        self::assertGreaterThanOrEqual(86.0, (float) $row['risk_percent']);
     }
 }

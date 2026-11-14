@@ -1,10 +1,11 @@
-"""Offline unit and integration tests for Gemini Safe Space clinical triage."""
+"""Offline unit and integration tests for Groq Safe Space clinical triage."""
 
 import importlib.util
 import json
 import os
 import sys
 import unittest
+import urllib.error
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -15,24 +16,19 @@ SERVICE_DIR = Path(__file__).resolve().parents[1]
 if str(SERVICE_DIR) not in sys.path:
     sys.path.insert(0, str(SERVICE_DIR))
 
-import gemini_triage  # noqa: E402
+import groq_triage  # noqa: E402
 
 
-class _FakeResponse:
-    def __init__(self, text):
-        self.text = text
-
-
-class GeminiTriageUnitTests(unittest.TestCase):
+class GroqTriageUnitTests(unittest.TestCase):
     def setUp(self) -> None:
         self._saved_env = {
             key: os.environ.get(key)
-            for key in ("GEMINI_API_KEY", "GEMINI_ENABLED", "GEMINI_MODEL", "GEMINI_TIMEOUT_SECONDS")
+            for key in ("GROQ_API_KEY", "GROQ_ENABLED", "GROQ_MODEL", "GROQ_TIMEOUT_SECONDS")
         }
-        os.environ.pop("GEMINI_API_KEY", None)
-        os.environ.pop("GEMINI_ENABLED", None)
-        os.environ.pop("GEMINI_MODEL", None)
-        os.environ.pop("GEMINI_TIMEOUT_SECONDS", None)
+        os.environ.pop("GROQ_API_KEY", None)
+        os.environ.pop("GROQ_ENABLED", None)
+        os.environ.pop("GROQ_MODEL", None)
+        os.environ.pop("GROQ_TIMEOUT_SECONDS", None)
 
     def tearDown(self) -> None:
         for key, value in self._saved_env.items():
@@ -44,81 +40,82 @@ class GeminiTriageUnitTests(unittest.TestCase):
     def test_disabled_when_api_key_missing_or_flag_false(self) -> None:
         calls = []
 
-        class _Client:
-            class models:
-                @staticmethod
-                def generate_content(**kwargs):
-                    calls.append(kwargs)
-                    return _FakeResponse("{}")
+        def _fake_post(url, body, api_key, timeout_s):
+            calls.append((url, body, api_key, timeout_s))
+            return "{}"
 
-        self.assertFalse(gemini_triage.is_gemini_enabled())
-        self.assertIsNone(gemini_triage.evaluate_vent_with_gemini("stressed today", client=_Client()))
+        self.assertFalse(groq_triage.is_groq_enabled())
+        self.assertIsNone(groq_triage.evaluate_vent_with_groq("stressed today", http_post=_fake_post))
         self.assertEqual(calls, [])
 
-        os.environ["GEMINI_API_KEY"] = "test-key"
-        os.environ["GEMINI_ENABLED"] = "false"
-        self.assertFalse(gemini_triage.is_gemini_enabled())
-        self.assertIsNone(gemini_triage.evaluate_vent_with_gemini("stressed today", client=_Client()))
+        os.environ["GROQ_API_KEY"] = "gsk_test_key"
+        os.environ["GROQ_ENABLED"] = "false"
+        self.assertFalse(groq_triage.is_groq_enabled())
+        self.assertIsNone(groq_triage.evaluate_vent_with_groq("stressed today", http_post=_fake_post))
         self.assertEqual(calls, [])
 
-    def test_prompt_excludes_pii_and_parses_structured_json(self) -> None:
-        os.environ["GEMINI_API_KEY"] = "test-key"
-        os.environ["GEMINI_MODEL"] = "gemini-3-flash-preview"
+    def test_prompt_excludes_pii_and_parses_chat_completions_json(self) -> None:
+        os.environ["GROQ_API_KEY"] = "gsk_test_key"
+        os.environ["GROQ_MODEL"] = "llama-3.3-70b-versatile"
         captured = {}
 
-        class _Client:
-            class models:
-                @staticmethod
-                def generate_content(**kwargs):
-                    captured.update(kwargs)
-                    return _FakeResponse(
-                        json.dumps(
-                            {
-                                "risk_level": "HIGH",
-                                "risk_score": 82,
-                                "sarcasm_or_hyperbole": False,
-                                "taglish_nuance": "Veiled Filipino hopelessness idiom",
-                                "counselor_reasoning": "Student expresses exhaustion with continuing daily life.",
+        def _fake_post(url, body, api_key, timeout_s):
+            captured["url"] = url
+            captured["body"] = body
+            captured["api_key"] = api_key
+            captured["timeout_s"] = timeout_s
+            return json.dumps(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": json.dumps(
+                                    {
+                                        "triage_category": "passive_ideation_cssrs2",
+                                        "risk_level": "HIGH",
+                                        "risk_score": 82,
+                                        "sarcasm_or_hyperbole": False,
+                                        "taglish_nuance": "Veiled Filipino hopelessness idiom",
+                                        "counselor_reasoning": "Student expresses exhaustion with continuing daily life.",
+                                    }
+                                )
                             }
-                        )
-                    )
+                        }
+                    ]
+                }
+            )
 
-        fake_genai = SimpleNamespace(
-            Client=lambda **kw: _Client(),
-            types=SimpleNamespace(
-                HttpOptions=lambda **kw: kw,
-                GenerateContentConfig=lambda **kw: kw,
-            ),
-        )
-
-        result = gemini_triage.evaluate_vent_with_gemini(
+        result = groq_triage.evaluate_vent_with_groq(
             "pagod na pagod na ako mabuhay sa lahat ng nangyayari",
-            genai_module=fake_genai,
+            http_post=_fake_post,
         )
         self.assertIsNotNone(result)
         self.assertEqual(result["risk_level"], "HIGH")
         self.assertEqual(result["risk_score"], 82)
-        self.assertEqual(captured["model"], "gemini-3-flash-preview")
-        self.assertIn("<student_vent>", captured["contents"])
-        self.assertNotIn("student_id", captured["contents"])
-        self.assertNotIn("risk_history", captured["contents"])
-        sys_inst = captured["config"]["system_instruction"]
-        self.assertIn("DepEd Child Protection Policy DO 40 s.2012", sys_inst)
-        self.assertIn("patay ako kay mama", sys_inst)
-        self.assertIn("healed past NSSI in recovery", sys_inst)
-        self.assertIn("perceived burdensomeness", sys_inst)
-        self.assertIn("Passive ideation", sys_inst.replace("passive ideation", "Passive ideation"))
+        self.assertEqual(captured["url"], "https://api.groq.com/openai/v1/chat/completions")
+        self.assertEqual(captured["api_key"], "gsk_test_key")
+        self.assertEqual(captured["body"]["model"], "llama-3.3-70b-versatile")
+        self.assertEqual(captured["body"]["response_format"], {"type": "json_object"})
+        user_msg = captured["body"]["messages"][1]["content"]
+        sys_msg = captured["body"]["messages"][0]["content"]
+        self.assertIn("<student_vent>", user_msg)
+        self.assertNotIn("student_id", user_msg)
+        self.assertNotIn("risk_history", user_msg)
+        self.assertIn("DepEd Child Protection Policy DO 40 s.2012", sys_msg)
+        self.assertIn("patay ako kay mama", sys_msg)
+        self.assertIn("healed past NSSI in recovery", sys_msg)
+        self.assertIn("perceived burdensomeness", sys_msg)
 
     def test_parse_payload_clamps_bands_and_rejects_malformed_json(self) -> None:
-        self.assertIsNone(gemini_triage.parse_gemini_payload("not-json"))
-        self.assertIsNone(gemini_triage.parse_gemini_payload(json.dumps({"risk_level": "EXTREME"})))
+        self.assertIsNone(groq_triage.parse_groq_payload("not-json"))
+        self.assertIsNone(groq_triage.parse_groq_payload(json.dumps({"risk_level": "EXTREME"})))
         self.assertIsNone(
-            gemini_triage.parse_gemini_payload(
+            groq_triage.parse_groq_payload(
                 json.dumps({"risk_level": "LOW", "risk_score": 15, "counselor_reasoning": ""})
             )
         )
 
-        clamped = gemini_triage.parse_gemini_payload(
+        clamped = groq_triage.parse_groq_payload(
             "```json\n"
             + json.dumps(
                 {
@@ -136,7 +133,7 @@ class GeminiTriageUnitTests(unittest.TestCase):
         self.assertEqual(clamped["risk_score"], 86)
 
         # C-SSRS Level 2 passive ideation must map to HIGH (>= 79), never inflate to CRITICAL (no parent alert).
-        passive_pinned = gemini_triage.parse_gemini_payload(
+        passive_pinned = groq_triage.parse_groq_payload(
             json.dumps(
                 {
                     "triage_category": "passive_ideation_cssrs2",
@@ -154,28 +151,23 @@ class GeminiTriageUnitTests(unittest.TestCase):
         self.assertLessEqual(passive_pinned["risk_score"], 85)
 
     def test_timeout_and_rate_limit_errors_fail_cleanly(self) -> None:
-        os.environ["GEMINI_API_KEY"] = "test-key"
-        os.environ["GEMINI_TIMEOUT_SECONDS"] = "1.0"
+        os.environ["GROQ_API_KEY"] = "gsk_test_key"
+        os.environ["GROQ_TIMEOUT_SECONDS"] = "1.0"
 
-        class _ErrorClient:
-            class models:
-                @staticmethod
-                def generate_content(**kwargs):
-                    raise RuntimeError("429 RESOURCE_EXHAUSTED")
-
-        self.assertIsNone(
-            gemini_triage.evaluate_vent_with_gemini(
-                "feeling stressed",
-                client=_ErrorClient(),
-                genai_module=SimpleNamespace(types=None),
+        def _rate_limited(*args, **kwargs):
+            raise urllib.error.HTTPError(
+                "https://api.groq.com/openai/v1/chat/completions", 429, "Too Many Requests", {}, None
             )
-        )
 
-        with patch.object(gemini_triage, "_invoke_gemini", side_effect=gemini_triage.FuturesTimeoutError()):
-            self.assertIsNone(gemini_triage.evaluate_vent_with_gemini("feeling stressed"))
+        self.assertIsNone(groq_triage.evaluate_vent_with_groq("feeling stressed", http_post=_rate_limited))
+
+        def _timed_out(*args, **kwargs):
+            raise TimeoutError("timed out")
+
+        self.assertIsNone(groq_triage.evaluate_vent_with_groq("feeling stressed", http_post=_timed_out))
 
     def test_merge_never_downgrades_crisis_or_history_floors(self) -> None:
-        benign_gem = {
+        benign_groq = {
             "risk_level": "LOW",
             "risk_score": 15,
             "sarcasm_or_hyperbole": True,
@@ -193,11 +185,11 @@ class GeminiTriageUnitTests(unittest.TestCase):
             {"history_escalated": True},
             {"base_score": 0.70},
         ):
-            risk, percent, reason = gemini_triage.merge_gemini_assessment(
+            risk, percent, reason = groq_triage.merge_groq_assessment(
                 "CRITICAL" if lock_kwargs.get("flags", {}).get("cat1") else "HIGH",
                 90 if lock_kwargs.get("flags", {}).get("cat1") else 79,
                 "Baseline warning.",
-                benign_gem,
+                benign_groq,
                 **lock_kwargs,
             )
             self.assertIn(risk, ("HIGH", "CRITICAL"))
@@ -205,43 +197,43 @@ class GeminiTriageUnitTests(unittest.TestCase):
             self.assertIn("Deterministic safety floor retained.", reason)
 
     def test_merge_escalates_subtle_distress_and_clarifies_mild_hyperbole(self) -> None:
-        subtle_gem = {
+        subtle_groq = {
             "risk_level": "CRITICAL",
             "risk_score": 91,
             "sarcasm_or_hyperbole": False,
             "taglish_nuance": "Bisaya passive disappearance expression",
             "counselor_reasoning": "Student signals readiness to vanish without explicit English keywords.",
         }
-        risk, percent, reason = gemini_triage.merge_gemini_assessment(
+        risk, percent, reason = groq_triage.merge_groq_assessment(
             "LOW",
             20,
             "Minimal baseline distress.",
-            subtle_gem,
+            subtle_groq,
         )
         self.assertEqual(risk, "CRITICAL")
         self.assertEqual(percent, 91)
-        self.assertIn("Gemini Clinical Escalation (LOW -> CRITICAL)", reason)
+        self.assertIn("Groq Clinical Escalation (LOW -> CRITICAL)", reason)
         self.assertIn("Bisaya passive disappearance expression", reason)
 
-        hyperbole_gem = {
+        hyperbole_groq = {
             "risk_level": "LOW",
             "risk_score": 18,
             "sarcasm_or_hyperbole": True,
             "taglish_nuance": "Common Filipino student exam hyperbole",
             "counselor_reasoning": "Exaggerated frustration over difficult quiz without safety intent.",
         }
-        risk, percent, reason = gemini_triage.merge_gemini_assessment(
+        risk, percent, reason = groq_triage.merge_groq_assessment(
             "MEDIUM",
             48,
             "Academic pressure detected.",
-            hyperbole_gem,
+            hyperbole_groq,
             flags={"academic": True},
             base_score=0.25,
             signal_count=1,
         )
         self.assertEqual(risk, "LOW")
         self.assertEqual(percent, 18)
-        self.assertIn("Gemini Contextual Clarification (MEDIUM -> LOW)", reason)
+        self.assertIn("Groq Contextual Clarification (MEDIUM -> LOW)", reason)
 
     def test_main_analyze_text_sync_integration_respects_floor_and_escalation(self) -> None:
         classifier = SimpleNamespace(
@@ -275,14 +267,14 @@ class GeminiTriageUnitTests(unittest.TestCase):
             patch("nltk.data.find", return_value=True),
             patch("deep_translator.GoogleTranslator.translate", return_value="I feel overwhelmed."),
         ):
-            spec = importlib.util.spec_from_file_location("main_under_gemini_test", SERVICE_DIR / "main.py")
+            spec = importlib.util.spec_from_file_location("main_under_groq_test", SERVICE_DIR / "main.py")
             main_mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(main_mod)
 
         with patch.object(main_mod, "get_risk_components", return_value=(0.0, 0.0)):
             with patch.object(
                 main_mod,
-                "evaluate_vent_with_gemini",
+                "evaluate_vent_with_groq",
                 return_value={
                     "risk_level": "HIGH",
                     "risk_score": 78,
@@ -290,7 +282,7 @@ class GeminiTriageUnitTests(unittest.TestCase):
                     "taglish_nuance": "Bisaya hopelessness idiom",
                     "counselor_reasoning": "Veiled hopelessness requiring counselor check-in.",
                 },
-            ) as mock_gem:
+            ) as mock_groq:
                 res = main_mod.analyze_text_sync(
                     "kapoy na kaayo diria murag wala nay pulos tanan",
                     student_id="SECRET-STUDENT-42",
@@ -298,14 +290,14 @@ class GeminiTriageUnitTests(unittest.TestCase):
                 self.assertEqual(res["risk_level"], "HIGH")
                 self.assertEqual(res["risk_score"], 78.0)
                 self.assertIn("Veiled hopelessness requiring counselor check-in.", res["flag_reason"])
-                self.assertEqual(mock_gem.call_count, 1)
-                self.assertEqual(len(mock_gem.call_args.args), 1)
-                self.assertNotIn("SECRET-STUDENT-42", mock_gem.call_args.args[0])
+                self.assertEqual(mock_groq.call_count, 1)
+                self.assertEqual(len(mock_groq.call_args.args), 1)
+                self.assertNotIn("SECRET-STUDENT-42", mock_groq.call_args.args[0])
 
-            # Deterministic cat1 floor must ignore Gemini attempts to downgrade.
+            # Deterministic cat1 floor must ignore Groq attempts to downgrade.
             with patch.object(
                 main_mod,
-                "evaluate_vent_with_gemini",
+                "evaluate_vent_with_groq",
                 return_value={
                     "risk_level": "LOW",
                     "risk_score": 12,

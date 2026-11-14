@@ -108,9 +108,9 @@ class VentController extends BaseController
         $httpCode = (int) ($primary['httpCode'] ?? 0);
         if ($httpCode < 200 || $httpCode >= 300 || !VentRiskAnalyzer::valid($mlResult)) {
             log_message('warning', 'Primary vent analysis unavailable (HTTP {status}); checking configured fallback.', ['status' => $httpCode]);
-            $geminiResult = $this->callGeminiFallback($text);
-            if (\App\Libraries\VentRiskAnalyzer::valid($geminiResult)) {
-                $mlResult = $geminiResult;
+            $groqResult = $this->callGroqFallback($text);
+            if (\App\Libraries\VentRiskAnalyzer::valid($groqResult)) {
+                $mlResult = $groqResult;
                 $httpCode = 200;
             }
         }
@@ -832,10 +832,10 @@ class VentController extends BaseController
     }
 
     /**
-     * Secondary PII-free Gemini REST fallback used only when primary ML service fails.
+     * Secondary PII-free Groq REST fallback used only when primary ML service fails.
      */
-    protected function callGeminiFallback(string $text): ?array
+    protected function callGroqFallback(string $text): ?array
     {
-        return \App\Libraries\GeminiVentClient::analyze($text);
+        return \App\Libraries\GroqVentClient::analyze($text);
     }
 }

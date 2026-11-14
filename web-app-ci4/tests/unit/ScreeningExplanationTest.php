@@ -18,11 +18,11 @@ final class ScreeningExplanationTest extends CIUnitTestCase
             self::assertStringNotContainsString('A recorded explanation.', $encoded);
             self::assertSame(['source' => 'model', 'reasoning' => 'A recorded explanation.'], ScreeningExplanation::decode($encoded));
 
-            $geminiEncoded = ScreeningExplanation::encode(['source' => 'gemini', 'reasoning' => '[Gemini Fallback] Veiled hopelessness noted.']);
-            self::assertStringNotContainsString('Veiled hopelessness noted.', $geminiEncoded);
+            $groqEncoded = ScreeningExplanation::encode(['source' => 'groq', 'reasoning' => '[Groq Fallback] Veiled hopelessness noted.']);
+            self::assertStringNotContainsString('Veiled hopelessness noted.', $groqEncoded);
             self::assertSame(
-                ['source' => 'gemini', 'reasoning' => '[Gemini Fallback] Veiled hopelessness noted.'],
-                ScreeningExplanation::decode($geminiEncoded)
+                ['source' => 'groq', 'reasoning' => '[Groq Fallback] Veiled hopelessness noted.'],
+                ScreeningExplanation::decode($groqEncoded)
             );
 
             self::assertNull(ScreeningExplanation::decode(substr($encoded, 1)));
@@ -46,32 +46,32 @@ final class ScreeningExplanationTest extends CIUnitTestCase
         self::assertSame('The ML service did not return a detailed explanation for this entry.', $result['reasoning']);
     }
 
-    public function testPreservesGeminiSourceAndReasoningThroughSafetyFloors(): void
+    public function testPreservesGroqSourceAndReasoningThroughSafetyFloors(): void
     {
-        $geminiPrimary = [
+        $groqPrimary = [
             'risk_level' => 'HIGH',
             'risk_score' => 77,
-            'reasoning' => '[Gemini Fallback] Veiled Taglish hopelessness noted.',
-            'source' => 'gemini',
+            'reasoning' => '[Groq Fallback] Veiled Taglish hopelessness noted.',
+            'source' => 'groq',
         ];
-        $result = VentRiskAnalyzer::resolve('pagod na ko sa lahat', $geminiPrimary, 200, static function () {
-            throw new \LogicException('Local fallback should not run when Gemini succeeded.');
+        $result = VentRiskAnalyzer::resolve('pagod na ko sa lahat', $groqPrimary, 200, static function () {
+            throw new \LogicException('Local fallback should not run when Groq succeeded.');
         });
 
-        self::assertSame('gemini', $result['source']);
+        self::assertSame('groq', $result['source']);
         self::assertSame('HIGH', $result['risk_level']);
         self::assertSame(77.0, $result['risk_percent']);
-        self::assertSame('[Gemini Fallback] Veiled Taglish hopelessness noted.', $result['reasoning']);
+        self::assertSame('[Groq Fallback] Veiled Taglish hopelessness noted.', $result['reasoning']);
 
-        // Even if Gemini returns LOW on an explicit self-harm entry, PHP safety rules must raise to CRITICAL.
-        $underestimatedGemini = [
+        // Even if Groq returns LOW on an explicit self-harm entry, PHP safety rules must raise to CRITICAL.
+        $underestimatedGroq = [
             'risk_level' => 'LOW',
             'risk_score' => 15,
-            'reasoning' => '[Gemini Fallback] Casual phrasing.',
-            'source' => 'gemini',
+            'reasoning' => '[Groq Fallback] Casual phrasing.',
+            'source' => 'groq',
         ];
-        $enforced = VentRiskAnalyzer::resolve('I will kill myself tonight', $underestimatedGemini, 200, static fn () => []);
-        self::assertSame('gemini', $enforced['source']);
+        $enforced = VentRiskAnalyzer::resolve('I will kill myself tonight', $underestimatedGroq, 200, static fn () => []);
+        self::assertSame('groq', $enforced['source']);
         self::assertSame('CRITICAL', $enforced['risk_level']);
         self::assertGreaterThanOrEqual(86.0, $enforced['risk_percent']);
         self::assertStringContainsString('PHP safety rules raised the final review priority', $enforced['reasoning']);

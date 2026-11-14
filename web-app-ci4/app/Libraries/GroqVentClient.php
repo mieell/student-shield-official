@@ -3,15 +3,15 @@
 namespace App\Libraries;
 
 /**
- * PII-free Gemini REST (v1beta) clinical triage client used strictly as a
- * secondary fallback in PHP when the Hugging Face ML microservice is unavailable.
+ * PII-free Groq REST (OpenAI-compatible chat/completions) clinical triage client used strictly as a
+ * secondary fallback when the primary Hugging Face ML service is unavailable.
  */
-final class GeminiVentClient
+final class GroqVentClient
 {
-    public const DEFAULT_MODEL = 'gemini-3-flash-preview';
-    public const DEFAULT_TIMEOUT_SECONDS = 5;
-    public const MAX_VENT_CHARS = 5000;
-
+    public const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+    private const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+    private const DEFAULT_TIMEOUT_SECONDS = 5;
+    private const MAX_VENT_CHARS = 1500;
     private const CATEGORY_BAND_MAP = [
         'positive_or_banter' => 'LOW',
         'mild_or_single_distress' => 'MEDIUM',
@@ -41,27 +41,30 @@ final class GeminiVentClient
         "   - mild_or_single_distress: Single-domain distress, burnout, isolation, heartbreak, academic overwhelm, healed past NSSI, or verbal insults without crisis cues.\n" .
         "4. LOW (1-30) [Safe check-in]:\n" .
         "   - positive_or_banter: Positive update, regulated venting with coping, ordinary stress, figurative idioms, or gaming/academic banter.\n\n" .
-        "Return JSON only matching the schema. Write counselor_reasoning in 1-2 short, objective, trauma-informed clinical sentences for a counselor (note stressor/risk vs. protective/idiom context; never address the student, never diagnose disorders, never include PII).";
+        "Return ONLY valid JSON matching these exact keys:\n" .
+        '{"triage_category": "<positive_or_banter|mild_or_single_distress|passive_ideation_cssrs2|compound_distress_or_bullying|explicit_self_harm_or_suicide|violent_threat|sexual_abuse_or_harassment>", ' .
+        '"risk_level": "<LOW|MEDIUM|HIGH|CRITICAL>", "risk_score": <integer 1-100>, "sarcasm_or_hyperbole": <true|false>, ' .
+        '"taglish_nuance": "<short string or empty>", "counselor_reasoning": "<1-2 short, objective, trauma-informed clinical sentences for a counselor noting stressor/risk vs. protective/idiom context; never address the student, never diagnose disorders, never include PII>"}.';
 
     public static function isEnabled(): bool
     {
-        $flag = self::readEnv('GEMINI_ENABLED');
+        $flag = self::readEnv('GROQ_ENABLED');
         if ($flag === '') {
-            $flag = self::readEnv('GEMINI_VENT_FALLBACK_ENABLED', 'true');
+            $flag = self::readEnv('GROQ_VENT_FALLBACK_ENABLED', 'true');
         }
         if (in_array(strtolower($flag), ['0', 'false', 'no', 'off'], true)) {
             return false;
         }
-        return self::readEnv('GEMINI_API_KEY') !== '';
+        return self::readEnv('GROQ_API_KEY') !== '';
     }
 
     public static function model(): string
     {
-        $configured = self::readEnv('GEMINI_MODEL');
+        $configured = self::readEnv('GROQ_MODEL');
         if ($configured === '') {
-            $configured = self::readEnv('GEMINI_VENT_MODEL', self::DEFAULT_MODEL);
+            $configured = self::readEnv('GROQ_VENT_MODEL', self::DEFAULT_MODEL);
         }
-        if ($configured !== '' && preg_match('/^[a-zA-Z0-9._-]+$/', $configured) === 1) {
+        if ($configured !== '' && preg_match('/^[a-zA-Z0-9._\/-]+$/', $configured) === 1) {
             return $configured;
         }
         return self::DEFAULT_MODEL;
@@ -69,7 +72,7 @@ final class GeminiVentClient
 
     public static function timeoutSeconds(): int
     {
-        $raw = self::readEnv('GEMINI_TIMEOUT_SECONDS');
+        $raw = self::readEnv('GROQ_TIMEOUT_SECONDS');
         if ($raw !== '' && is_numeric($raw)) {
             return max(2, min(10, (int) $raw));
         }
@@ -77,7 +80,7 @@ final class GeminiVentClient
     }
 
     /**
-     * Request a PII-free clinical triage assessment from Gemini.
+     * Request a PII-free clinical triage assessment from Groq.
      *
      * Returns null cleanly when disabled, unconfigured, rate-limited, timed out,
      * or if the response fails strict schema validation.
@@ -95,57 +98,26 @@ final class GeminiVentClient
             return null;
         }
 
-        $apiKey = self::readEnv('GEMINI_API_KEY');
+        $apiKey = self::readEnv('GROQ_API_KEY');
         $model = self::model();
         $timeout = self::timeoutSeconds();
-        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent';
+        $endpoint = self::ENDPOINT;
 
         $bodyPayload = [
-            'system_instruction' => [
-                'parts' => [
-                    ['text' => self::SYSTEM_INSTRUCTION],
+            'model' => $model,
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => self::SYSTEM_INSTRUCTION,
                 ],
-            ],
-            'contents' => [
                 [
                     'role' => 'user',
-                    'parts' => [
-                        [
-                            'text' => "Analyze ONLY the single student check-in below for counselor clinical triage. Do not expect or output student names, IDs, or external metadata.\n\n<student_vent>\n{$cleaned}\n</student_vent>",
-                        ],
-                    ],
+                    'content' => "Analyze ONLY the single student check-in below for counselor clinical triage. Do not expect or output student names, IDs, or external metadata.\n\n<student_vent>\n{$cleaned}\n</student_vent>",
                 ],
             ],
-            'generationConfig' => [
-                'temperature' => 0.1,
-                'maxOutputTokens' => 1200,
-                'responseMimeType' => 'application/json',
-                'responseSchema' => [
-                    'type' => 'OBJECT',
-                    'properties' => [
-                        'triage_category' => [
-                            'type' => 'STRING',
-                            'enum' => array_keys(self::CATEGORY_BAND_MAP),
-                        ],
-                        'risk_level' => [
-                            'type' => 'STRING',
-                            'enum' => ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
-                        ],
-                        'risk_score' => ['type' => 'INTEGER'],
-                        'sarcasm_or_hyperbole' => ['type' => 'BOOLEAN'],
-                        'taglish_nuance' => ['type' => 'STRING'],
-                        'counselor_reasoning' => ['type' => 'STRING'],
-                    ],
-                    'required' => [
-                        'triage_category',
-                        'risk_level',
-                        'risk_score',
-                        'sarcasm_or_hyperbole',
-                        'taglish_nuance',
-                        'counselor_reasoning',
-                    ],
-                ],
-            ],
+            'temperature' => 0.1,
+            'max_tokens' => 450,
+            'response_format' => ['type' => 'json_object'],
         ];
 
         $jsonBody = json_encode($bodyPayload, JSON_INVALID_UTF8_SUBSTITUTE);
@@ -162,7 +134,8 @@ final class GeminiVentClient
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Content-Type: application/json',
-                'x-goog-api-key: ' . $apiKey,
+                'Authorization: Bearer ' . $apiKey,
+                'User-Agent: StudentShield/1.0',
             ]);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonBody);
@@ -178,7 +151,7 @@ final class GeminiVentClient
 
         if ($httpCode < 200 || $httpCode >= 300 || !is_string($rawResponse) || $rawResponse === '') {
             if (function_exists('log_message')) {
-                log_message('warning', 'Gemini fallback unavailable (HTTP {status}); using local safety fallback.', ['status' => $httpCode]);
+                log_message('warning', 'Groq fallback unavailable (HTTP {status}); using local safety fallback.', ['status' => $httpCode]);
             }
             return null;
         }
@@ -193,28 +166,7 @@ final class GeminiVentClient
             return null;
         }
 
-        $parts = $outer['candidates'][0]['content']['parts'] ?? null;
-        if (!is_array($parts) || $parts === []) {
-            return null;
-        }
-
-        $candidateText = null;
-        foreach ($parts as $part) {
-            if (!is_array($part) || !is_string($part['text'] ?? null)) {
-                continue;
-            }
-            if (!empty($part['thought'])) {
-                continue;
-            }
-            $candidateText = $part['text'];
-        }
-        if ($candidateText === null) {
-            foreach ($parts as $part) {
-                if (is_array($part) && is_string($part['text'] ?? null)) {
-                    $candidateText = $part['text'];
-                }
-            }
-        }
+        $candidateText = $outer['choices'][0]['message']['content'] ?? null;
         if (!is_string($candidateText)) {
             return null;
         }
@@ -252,7 +204,7 @@ final class GeminiVentClient
             $score = max(79, $score);
         }
 
-        $formattedReasoning = '[Gemini Fallback] ' . $reasoning;
+        $formattedReasoning = '[Groq Fallback] ' . $reasoning;
         if ($nuance !== '') {
             $formattedReasoning .= ' Language/cultural nuance: ' . $nuance . '.';
         }
@@ -265,7 +217,7 @@ final class GeminiVentClient
             'risk_score' => $score,
             'reasoning' => $formattedReasoning,
             'flag_reason' => $formattedReasoning,
-            'source' => 'gemini',
+            'source' => 'groq',
         ];
     }
 

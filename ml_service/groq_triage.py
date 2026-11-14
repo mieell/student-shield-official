@@ -1,15 +1,21 @@
-"""PII-free Gemini clinical triage and counselor explanation module for Safe Space vents."""
+"""PII-free Groq clinical triage and counselor explanation module for Safe Space vents."""
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import json
 import logging
 import os
 import re
+import urllib.error
+import urllib.request
 from typing import Any
 
 logger = logging.getLogger("ML_Service")
+
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
+DEFAULT_TIMEOUT_SECONDS = 4.5
+MAX_VENT_CHARS = 1500
 
 RISK_BANDS: dict[str, tuple[int, int]] = {
     "LOW": (1, 30),
@@ -17,16 +23,7 @@ RISK_BANDS: dict[str, tuple[int, int]] = {
     "HIGH": (61, 85),
     "CRITICAL": (86, 100),
 }
-RISK_RANK: dict[str, int] = {
-    "LOW": 0,
-    "MEDIUM": 1,
-    "HIGH": 2,
-    "CRITICAL": 3,
-}
-
-DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
-DEFAULT_TIMEOUT_SECONDS = 6.0
-MAX_VENT_CHARS = 5000
+RISK_RANK: dict[str, int] = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 
 _CATEGORY_BAND_MAP: dict[str, str] = {
     "positive_or_banter": "LOW",
@@ -79,58 +76,24 @@ _SYSTEM_INSTRUCTION = (
     "4. LOW (1-30) [Safe check-in — no alert]:\n"
     "   - positive_or_banter: Positive/grateful update, regulated venting with coping, ordinary daily stress, "
     "figurative Filipino idioms, or clear gaming/academic banter.\n\n"
-    "Return ONLY valid JSON matching the schema. Write counselor_reasoning in 1-2 short, "
-    "objective, trauma-informed clinical sentences for a school guidance counselor (identify stressor/risk vs. "
-    "protective/idiom context and urgency; never address the student, never diagnose disorders, never include PII)."
+    "Return ONLY valid JSON matching these exact keys and value types:\n"
+    '{"triage_category": "<positive_or_banter|mild_or_single_distress|passive_ideation_cssrs2|compound_distress_or_bullying|explicit_self_harm_or_suicide|violent_threat|sexual_abuse_or_harassment>", '
+    '"risk_level": "<LOW|MEDIUM|HIGH|CRITICAL>", "risk_score": <integer 1-100>, '
+    '"sarcasm_or_hyperbole": <true|false>, "taglish_nuance": "<short phrase or empty string>", '
+    '"counselor_reasoning": "<1-2 short, objective, trauma-informed clinical sentences for a school counselor identifying stressor/risk vs. protective/idiom context and urgency; never address the student, never diagnose disorders, never include PII>"}.'
 )
 
-_RESPONSE_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "triage_category": {
-            "type": "string",
-            "enum": list(_CATEGORY_BAND_MAP.keys()),
-        },
-        "risk_level": {
-            "type": "string",
-            "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
-        },
-        "risk_score": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100,
-        },
-        "sarcasm_or_hyperbole": {
-            "type": "boolean",
-        },
-        "taglish_nuance": {
-            "type": "string",
-        },
-        "counselor_reasoning": {
-            "type": "string",
-        },
-    },
-    "required": [
-        "triage_category",
-        "risk_level",
-        "risk_score",
-        "sarcasm_or_hyperbole",
-        "taglish_nuance",
-        "counselor_reasoning",
-    ],
-}
 
-
-def is_gemini_enabled() -> bool:
-    """Return True when Gemini fallback/triage is configured and not explicitly disabled."""
-    flag = os.environ.get("GEMINI_ENABLED", "true").strip().lower()
+def is_groq_enabled() -> bool:
+    """Return True when Groq clinical triage is configured and not explicitly disabled."""
+    flag = os.environ.get("GROQ_ENABLED", "true").strip().lower()
     if flag in {"0", "false", "no", "off"}:
         return False
-    return bool(os.environ.get("GEMINI_API_KEY", "").strip())
+    return bool(os.environ.get("GROQ_API_KEY", "").strip())
 
 
 def _get_timeout_seconds() -> float:
-    raw = os.environ.get("GEMINI_TIMEOUT_SECONDS", "").strip()
+    raw = os.environ.get("GROQ_TIMEOUT_SECONDS", "").strip()
     if not raw:
         return DEFAULT_TIMEOUT_SECONDS
     try:
@@ -140,8 +103,8 @@ def _get_timeout_seconds() -> float:
 
 
 def _get_model_name() -> str:
-    configured = os.environ.get("GEMINI_MODEL", "").strip()
-    return configured or DEFAULT_GEMINI_MODEL
+    configured = os.environ.get("GROQ_MODEL", "").strip()
+    return configured or DEFAULT_GROQ_MODEL
 
 
 def _clean_note(value: Any, max_len: int) -> str:
@@ -162,11 +125,18 @@ def clamp_score_to_band(level: str, score: Any) -> int:
     return max(lo, min(hi, numeric))
 
 
-def parse_gemini_payload(raw_payload: str | dict[str, Any] | None) -> dict[str, Any] | None:
-    """Validate and normalize structured JSON output from Gemini into a canonical dict."""
+def parse_groq_payload(raw_payload: str | dict[str, Any] | None) -> dict[str, Any] | None:
+    """Validate and normalize structured JSON output from Groq into a canonical dict."""
     if raw_payload is None:
         return None
     if isinstance(raw_payload, dict):
+        # Support passing either the direct parsed assessment dict or the outer Chat Completions envelope.
+        if "choices" in raw_payload and isinstance(raw_payload.get("choices"), list):
+            choices = raw_payload["choices"]
+            if not choices or not isinstance(choices[0], dict):
+                return None
+            content = choices[0].get("message", {}).get("content")
+            return parse_groq_payload(content)
         data = raw_payload
     elif isinstance(raw_payload, str):
         text = raw_payload.strip()
@@ -209,86 +179,78 @@ def parse_gemini_payload(raw_payload: str | dict[str, Any] | None) -> dict[str, 
     }
 
 
-def _build_prompt(vent_text: str) -> str:
-    """Construct the PII-free triage prompt wrapping only the single current vent text."""
-    return (
-        "Analyze the single student check-in below for counselor clinical triage. "
-        "Do NOT expect or output student names, IDs, or external metadata.\n\n"
-        f"<student_vent>\n{vent_text}\n</student_vent>"
+def _build_messages(vent_text: str) -> list[dict[str, str]]:
+    """Construct PII-free Chat Completions messages wrapping only the single current vent text."""
+    return [
+        {"role": "system", "content": _SYSTEM_INSTRUCTION},
+        {
+            "role": "user",
+            "content": (
+                "Analyze the single student check-in below for counselor clinical triage. "
+                "Do NOT expect or output student names, IDs, or external metadata.\n\n"
+                f"<student_vent>\n{vent_text}\n</student_vent>"
+            ),
+        },
+    ]
+
+
+def _default_http_post(url: str, body: dict[str, Any], api_key: str, timeout_s: float) -> str:
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "StudentShield/1.0",
+        },
+        method="POST",
     )
+    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+        return resp.read().decode("utf-8")
 
 
-def _invoke_gemini(
+def _invoke_groq(
     vent_text: str,
     api_key: str,
     model_name: str,
     timeout_s: float,
     *,
-    client: Any = None,
-    genai_module: Any = None,
-) -> str | None:
-    """Execute generate_content using the official google-genai SDK."""
-    if genai_module is None:
-        from google import genai  # type: ignore
-        from google.genai import types  # type: ignore
-    else:
-        genai = genai_module
-        types = getattr(genai_module, "types", None)
-
-    active_client = client
-    if active_client is None:
-        client_kwargs: dict[str, Any] = {"api_key": api_key}
-        if types is not None and hasattr(types, "HttpOptions"):
-            client_kwargs["http_options"] = types.HttpOptions(timeout=int(timeout_s * 1000))
-        active_client = genai.Client(**client_kwargs)
-
-    prompt = _build_prompt(vent_text)
-    if types is not None and hasattr(types, "GenerateContentConfig"):
-        config: Any = types.GenerateContentConfig(
-            system_instruction=_SYSTEM_INSTRUCTION,
-            temperature=0.1,
-            max_output_tokens=1200,
-            response_mime_type="application/json",
-            response_schema=_RESPONSE_SCHEMA,
-        )
-    else:
-        config = {
-            "system_instruction": _SYSTEM_INSTRUCTION,
-            "temperature": 0.1,
-            "max_output_tokens": 1200,
-            "response_mime_type": "application/json",
-            "response_schema": _RESPONSE_SCHEMA,
-        }
-
-    def _call() -> str | None:
-        response = active_client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=config,
-        )
-        return getattr(response, "text", None)
-
-    executor = ThreadPoolExecutor(max_workers=1)
-    try:
-        future = executor.submit(_call)
-        return future.result(timeout=timeout_s + 0.5)
-    finally:
-        executor.shutdown(wait=False, cancel_futures=True)
+    http_post: Any = None,
+) -> dict[str, Any] | str | None:
+    payload = {
+        "model": model_name,
+        "messages": _build_messages(vent_text),
+        "temperature": 0.1,
+        "max_tokens": 450,
+        "response_format": {"type": "json_object"},
+    }
+    sender = http_post or _default_http_post
+    raw_resp = sender(GROQ_ENDPOINT, payload, api_key, timeout_s)
+    if isinstance(raw_resp, dict):
+        return raw_resp
+    if isinstance(raw_resp, str):
+        stripped = raw_resp.strip()
+        if not stripped:
+            return None
+        outer = json.loads(stripped)
+        if isinstance(outer, dict) and "choices" in outer:
+            return outer
+        return stripped
+    return None
 
 
-def evaluate_vent_with_gemini(
+def evaluate_vent_with_groq(
     text: str,
     *,
-    client: Any = None,
-    genai_module: Any = None,
+    http_post: Any = None,
 ) -> dict[str, Any] | None:
     """
-    Request a PII-free clinical triage assessment from Gemini.
+    Request a PII-free clinical triage assessment from Groq.
 
-    Returns None silently when disabled, unconfigured, timed out, rate-limited,
-    or if google-genai is unavailable so deterministic local/ML triage always succeeds.
+    Returns None silently when disabled, unconfigured, timed out, or rate-limited
+    so deterministic local/ML triage always succeeds.
     """
-    if not is_gemini_enabled():
+    if not is_groq_enabled():
         return None
     if not isinstance(text, str):
         return None
@@ -296,39 +258,38 @@ def evaluate_vent_with_gemini(
     if not cleaned_text:
         return None
 
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    api_key = os.environ.get("GROQ_API_KEY", "").strip()
     model_name = _get_model_name()
     timeout_s = _get_timeout_seconds()
 
     try:
-        raw_text = _invoke_gemini(
+        raw_outer = _invoke_groq(
             cleaned_text,
             api_key,
             model_name,
             timeout_s,
-            client=client,
-            genai_module=genai_module,
+            http_post=http_post,
         )
-        parsed = parse_gemini_payload(raw_text)
+        parsed = parse_groq_payload(raw_outer)
         if parsed is None:
-            logger.warning("Gemini returned unparseable or incomplete triage payload; retaining baseline score.")
+            logger.warning("Groq returned unparseable or incomplete triage payload; retaining baseline score.")
         return parsed
-    except FuturesTimeoutError:
-        logger.warning("Gemini clinical triage timed out after %.1fs; retaining baseline score.", timeout_s)
+    except TimeoutError:
+        logger.warning("Groq clinical triage timed out after %.1fs; retaining baseline score.", timeout_s)
         return None
-    except ImportError:
-        logger.info("google-genai package is not installed; skipping Gemini triage.")
+    except urllib.error.HTTPError as exc:
+        logger.warning("Groq clinical triage HTTP %s; retaining baseline score.", exc.code)
         return None
     except Exception as exc:
-        logger.warning("Gemini clinical triage skipped (%s); retaining baseline score.", type(exc).__name__)
+        logger.warning("Groq clinical triage skipped (%s); retaining baseline score.", type(exc).__name__)
         return None
 
 
-def merge_gemini_assessment(
+def merge_groq_assessment(
     baseline_risk: str,
     baseline_percent: int,
     baseline_reason: str,
-    gemini_result: dict[str, Any] | None,
+    groq_result: dict[str, Any] | None,
     *,
     flags: dict[str, bool] | None = None,
     violent_threat: Any = False,
@@ -339,17 +300,17 @@ def merge_gemini_assessment(
     signal_count: int = 0,
 ) -> tuple[str, int, str]:
     """
-    Combine Gemini clinical triage with deterministic ML/rule safety floors.
+    Combine Groq clinical triage with deterministic ML/rule safety floors.
 
     Safety policy:
     - Never downgrades explicit/implicit self-harm (cat1, cat2, passive_ideation, final),
       sexual abuse, violent threats, 14-day history escalations, school-avoidance/multi-signal
       compounds, or strong neural distress (base_score >= 0.65 / distress>=0.85 & neg>=0.80).
-    - Allows upward escalation when Gemini identifies subtle Filipino/Taglish/Bisaya/Gen-Z distress.
+    - Allows upward escalation when Groq identifies subtle Filipino/Taglish/Bisaya/Gen-Z distress.
     - Allows cautious contextual de-escalation ONLY for ambiguous mild/moderate entries that
-      Gemini confirms as casual hyperbole/sarcasm without severe or elevated distress signals.
+      Groq confirms as casual hyperbole/sarcasm without severe or elevated distress signals.
     """
-    if not gemini_result or baseline_risk not in RISK_BANDS:
+    if not groq_result or baseline_risk not in RISK_BANDS:
         return baseline_risk, baseline_percent, baseline_reason
 
     active_flags = flags or {}
@@ -370,27 +331,27 @@ def merge_gemini_assessment(
         or base_score >= 0.65
     )
 
-    gem_level = gemini_result["risk_level"]
-    gem_score = int(gemini_result["risk_score"])
-    nuance = gemini_result.get("taglish_nuance", "")
-    gem_note = gemini_result["counselor_reasoning"]
-    suffix_parts = [gem_note]
+    groq_level = groq_result["risk_level"]
+    groq_score = int(groq_result["risk_score"])
+    nuance = groq_result.get("taglish_nuance", "")
+    groq_note = groq_result["counselor_reasoning"]
+    suffix_parts = [groq_note]
     if nuance:
         suffix_parts.append(f"Language/cultural nuance: {nuance}.")
 
     final_risk = baseline_risk
     final_percent = int(baseline_percent)
-    tag = "Gemini Clinical Context"
+    tag = "Groq Clinical Context"
 
-    if RISK_RANK[gem_level] > RISK_RANK[baseline_risk]:
-        final_risk = gem_level
-        final_percent = clamp_score_to_band(final_risk, gem_score)
-        tag = f"Gemini Clinical Escalation ({baseline_risk} -> {final_risk})"
-    elif RISK_RANK[gem_level] < RISK_RANK[baseline_risk]:
-        if allow_downgrade and gemini_result.get("sarcasm_or_hyperbole", False):
-            final_risk = gem_level
-            final_percent = clamp_score_to_band(final_risk, gem_score)
-            tag = f"Gemini Contextual Clarification ({baseline_risk} -> {final_risk})"
+    if RISK_RANK[groq_level] > RISK_RANK[baseline_risk]:
+        final_risk = groq_level
+        final_percent = clamp_score_to_band(final_risk, groq_score)
+        tag = f"Groq Clinical Escalation ({baseline_risk} -> {final_risk})"
+    elif RISK_RANK[groq_level] < RISK_RANK[baseline_risk]:
+        if allow_downgrade and groq_result.get("sarcasm_or_hyperbole", False):
+            final_risk = groq_level
+            final_percent = clamp_score_to_band(final_risk, groq_score)
+            tag = f"Groq Contextual Clarification ({baseline_risk} -> {final_risk})"
         else:
             suffix_parts.append("Deterministic safety floor retained.")
 

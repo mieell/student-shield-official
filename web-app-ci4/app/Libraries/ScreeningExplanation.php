@@ -4,7 +4,7 @@ namespace App\Libraries;
 
 final class ScreeningExplanation
 {
-    private const ALLOWED_SOURCES = ['model', 'gemini', 'local'];
+    private const ALLOWED_SOURCES = ['model', 'groq', 'gemini', 'local'];
 
     public static function encode(array $assessment): string
     {

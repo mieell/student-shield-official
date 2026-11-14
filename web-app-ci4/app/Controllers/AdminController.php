@@ -172,11 +172,12 @@ class AdminController extends BaseController
         if ($vents) {
             $events = $db->table('audit_logs')->select('entity_id, action')->where('entity_type', 'vent')
                 ->whereIn('entity_id', array_column($vents, 'id'))
-                ->whereIn('action', ['VENT_ANALYSIS_MODEL', 'VENT_ANALYSIS_GEMINI', 'VENT_ANALYSIS_LOCAL'])
+                ->whereIn('action', ['VENT_ANALYSIS_MODEL', 'VENT_ANALYSIS_GROQ', 'VENT_ANALYSIS_GEMINI', 'VENT_ANALYSIS_LOCAL'])
                 ->orderBy('id', 'ASC')->get()->getResultArray();
             foreach ($events as $event) {
                 $sources[$event['entity_id']] = match ($event['action']) {
                     'VENT_ANALYSIS_MODEL' => 'model',
+                    'VENT_ANALYSIS_GROQ' => 'groq',
                     'VENT_ANALYSIS_GEMINI' => 'gemini',
                     default => 'local',
                 };
