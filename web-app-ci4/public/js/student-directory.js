@@ -3,6 +3,7 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
     const section = picker.querySelector('.directory-section');
     const search = picker.querySelector('.directory-search');
     const choice = picker.querySelector('.directory-choice');
+    const unlisted = picker.querySelector('.directory-unlisted');
     const description = picker.querySelector('.directory-description');
     const descriptionLabel = picker.querySelector('.directory-description-label');
     const status = picker.querySelector('.directory-status');
@@ -15,7 +16,8 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
         clearTimeout(timer);
         matches.replaceChildren();
         popup.hidden = true;
-        choice.replaceChildren(new Option('Select a student', ''), new Option("I don't know / not listed", 'unknown'));
+        choice.value = '';
+        unlisted.setAttribute('aria-pressed', 'false');
         description.value = '';
         description.hidden = true;
         description.disabled = true;
@@ -57,16 +59,16 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
                 if (version !== requestVersion) return;
                 result.students.forEach((student) => {
                     const id = String(student.id);
-                    choice.add(new Option(student.name, id));
 
                     const button = document.createElement('button');
                     button.type = 'button';
                     button.className = 'directory-match';
                     button.textContent = student.name;
                     button.addEventListener('click', () => {
+                        search.value = student.name;
                         choice.value = id;
                         choice.dispatchEvent(new Event('change'));
-                        choice.focus();
+                        search.focus();
                     });
                     matches.append(button);
                 });
@@ -77,14 +79,28 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
             }
         }, 150);
     });
+    unlisted.addEventListener('click', () => {
+        if (choice.value === 'unknown') {
+            description.focus();
+            return;
+        }
+        choice.value = 'unknown';
+        choice.dispatchEvent(new Event('change'));
+    });
+
     choice.addEventListener('change', () => {
+        clearTimeout(timer);
+        requestVersion++;
         popup.hidden = true;
         const unknown = choice.value === 'unknown';
+        unlisted.setAttribute('aria-pressed', String(unknown));
         descriptionLabel.hidden = !unknown;
         description.hidden = !unknown;
         description.disabled = !choice.value;
         description.required = unknown;
-        description.value = unknown ? '' : (choice.value ? choice.selectedOptions[0].textContent : '');
+        description.value = unknown ? '' : search.value;
+        if (unknown) search.value = '';
+        status.textContent = unknown ? '' : 'Selected: ' + search.value;
         if (unknown) description.focus();
     });
 });

@@ -24,11 +24,8 @@ $inputName = $kind === 'victim' ? 'victim_name' : 'bully_name';
             <div class="directory-matches" role="group" aria-label="Matching students"></div>
         </div>
     </div>
-    <label for="<?= $kind ?>-student" class="sr-only">Select student or choose not listed</label>
-    <select id="<?= $kind ?>-student" name="<?= $kind ?>_student_id" class="directory-choice w-full border rounded-xl px-3 py-3 bg-white" <?= $kind === 'bully' ? 'required' : '' ?>>
-        <option value="">Select a student</option>
-        <option value="unknown">I don't know / not listed</option>
-    </select>
+    <input type="hidden" id="<?= $kind ?>-student" name="<?= $kind ?>_student_id" class="directory-choice">
+    <button type="button" class="directory-unlisted text-sm font-semibold text-calm-700 underline" aria-pressed="false">I don't know / not listed</button>
     <p class="directory-status text-xs text-gray-600 mt-1" aria-live="polite">Choose a grade and section to search, or select “not listed”.</p>
     <label class="directory-description-label text-xs block mt-2" for="<?= $inputId ?>" hidden>Name or description of the person</label>
     <input id="<?= $inputId ?>" name="<?= $inputName ?>" type="text" maxlength="160" class="directory-description w-full border rounded-xl px-3 py-3 mt-1" hidden disabled placeholder="What do you know about this person?">

@@ -124,11 +124,11 @@
                         <!-- Who is involved? -->
                         <div class="report-people grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div id="victimNameBox" class="hidden" style="display:none;">
-                                <label for="victim-student" class="block text-xs font-semibold text-gray-800 mb-2">Who is being bullied? <span class="text-red-400">*</span></label>
+                                <label for="victim-search" class="block text-xs font-semibold text-gray-800 mb-2">Who is being bullied? <span class="text-red-400">*</span></label>
                                 <?= view('reports/partials/student_picker', ['kind' => 'victim']) ?>
                             </div>
                             <div id="aggressorNameBox" class="md:col-span-2">
-                                <label for="bully-student" class="block text-xs font-semibold text-gray-800 mb-2">Who is doing the bullying? <span class="text-red-400">*</span></label>
+                                <label for="bully-search" class="block text-xs font-semibold text-gray-800 mb-2">Who is doing the bullying? <span class="text-red-400">*</span></label>
                                 <?= view('reports/partials/student_picker', ['kind' => 'bully']) ?>
                             </div>
                         </div>
@@ -303,13 +303,11 @@
                 victimBox.classList.remove('hidden');
                 victimBox.style.display = 'block';
                 aggBox.className = ''; // remove col-span-2 so it takes 1 column
-                document.getElementById('victim-student').required = true;
                 victimInput.required = document.getElementById('victim-student').value === 'unknown';
             } else {
                 victimBox.classList.add('hidden');
                 victimBox.style.display = 'none';
                 aggBox.className = 'md:col-span-2';
-                document.getElementById('victim-student').required = false;
                 victimInput.required = false;
                 victimInput.value = ''; // clear if self
             }
@@ -347,9 +345,9 @@
             const role = document.getElementById('roleInput').value;
             const victimName = document.getElementById('victim_name').value.trim();
 
-            if (!document.getElementById('bully-student').value || (document.getElementById('bully-student').value === 'unknown' && !aggressor)) { e.preventDefault(); alert("Please tell us who is doing the bullying."); document.getElementById('aggressor_name').focus(); return; }
+            if (!document.getElementById('bully-student').value || (document.getElementById('bully-student').value === 'unknown' && !aggressor)) { e.preventDefault(); alert("Please tell us who is doing the bullying."); const picker = document.querySelector('.student-picker[data-person=bully]'); (picker.querySelector('.directory-description:not([hidden])') || picker.querySelector('.directory-search:not(:disabled)') || picker.querySelector('.directory-grade')).focus(); return; }
             if (!details) { e.preventDefault(); alert('Please describe what happened.'); document.getElementById('incident_details').focus(); return; }
-            if (role === 'bystander' && (!document.getElementById('victim-student').value || (document.getElementById('victim-student').value === 'unknown' && !victimName))) { e.preventDefault(); alert("Please enter the victim's name."); document.getElementById('victim_name').focus(); return; }
+            if (role === 'bystander' && (!document.getElementById('victim-student').value || (document.getElementById('victim-student').value === 'unknown' && !victimName))) { e.preventDefault(); alert("Please enter the victim's name."); const picker = document.querySelector('.student-picker[data-person=victim]'); (picker.querySelector('.directory-description:not([hidden])') || picker.querySelector('.directory-search:not(:disabled)') || picker.querySelector('.directory-grade')).focus(); return; }
 
             // Show loading state — form will submit natively via POST redirect
             btn.disabled = true;
