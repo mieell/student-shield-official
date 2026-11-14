@@ -86,8 +86,18 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #c8dac8; border-radius: 10px; }
         .live-dot { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
-        .registration-table { min-width: 64rem; }
-        .registration-contact > div { max-width: 16rem; overflow-wrap: anywhere; }
+        .registration-table { width: 100%; }
+        @media (min-width: 768px) {
+            .registration-table th, .registration-table td { padding-left: .75rem; padding-right: .75rem; }
+            .registration-table th:first-child, .registration-table td:first-child { padding-left: 1rem; padding-right: .5rem; }
+            .registration-table th:last-child, .registration-table td:last-child { padding-right: 1rem; }
+        }
+        @media (max-width: 768px) {
+            .staff-layout #staffMain .staff-filter-bar.registration-filter-bar { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
+            .staff-layout #staffMain .registration-filter-bar form,
+            .staff-layout #staffMain .registration-filter-bar > div { width: 100%; max-width: none; margin-left: 0; }
+        }
+        .registration-contact > div { max-width: 15rem; overflow-wrap: break-word; }
         .registration-contact svg { flex-shrink: 0; }
         .guardian-verification { min-width: 0; max-width: none; margin: 0; padding: 1rem; background: #f8faf6; border: 1px solid #e3ebe3; border-radius: 12px; text-align: left; }
         .registration-manage { display: inline-flex; flex-direction: column; align-items: center; gap: .375rem; text-align: center; }
@@ -239,19 +249,19 @@
                 <span class="text-xs text-gray-500 font-medium">Accounts are inactive until approved</span>
             </div>
 
-            <div class="staff-filter-bar px-6 py-3 flex justify-between items-center bg-white border-b border-gray-100 flex-wrap gap-3">
-                <form method="get" class="flex gap-2.5 items-center flex-wrap">
-                    <label for="registrationStatus" class="text-xs font-semibold text-gray-600">Status:</label>
-                    <select id="registrationStatus" name="status" class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 bg-white font-medium cursor-pointer transition-all">
+            <div class="staff-filter-bar registration-filter-bar px-4 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-white border-b border-gray-100 gap-3">
+                <form method="get" class="flex gap-2.5 items-center flex-wrap w-full sm:w-auto">
+                    <label for="registrationStatus" class="text-xs font-semibold text-gray-600 shrink-0">Status:</label>
+                    <select id="registrationStatus" name="status" class="flex-1 sm:flex-initial min-w-[160px] min-h-[40px] text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 bg-white font-medium cursor-pointer transition-all">
                         <?php foreach (['pending' => 'Pending Review', 'approved' => 'Approved Accounts', 'rejected' => 'Rejected Requests', 'archived' => 'Archived Requests'] as $statusVal => $statusLabel): ?>
                             <option value="<?= $statusVal ?>" <?= $registrationStatus === $statusVal ? 'selected' : '' ?>><?= esc($statusLabel) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <noscript><button type="submit" class="text-xs font-semibold text-white bg-[#096328] px-3.5 py-1.5 min-h-[36px] rounded-lg">View</button></noscript>
                 </form>
-                <div class="flex items-center gap-2 flex-1 min-w-[200px] max-w-xs relative ml-auto">
+                <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-[220px] sm:max-w-xs relative sm:ml-auto">
                     <svg class="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <input type="text" id="searchRegistrations" aria-label="Search registrations" placeholder="Filter by name, ID, section..." class="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 transition-all">
+                    <input type="text" id="searchRegistrations" aria-label="Search registrations" placeholder="Filter by name, ID, section..." class="w-full min-h-[40px] pl-9 pr-4 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 transition-all">
                 </div>
             </div>
             <div class="overflow-x-auto custom-scrollbar">
@@ -320,9 +330,9 @@
                                             </div>
                                         <?php endif; ?>
                                         <?php if (!empty($student['parent_email'])): ?>
-                                            <div class="flex items-center gap-1">
+                                            <div class="flex items-center gap-1.5 min-w-0">
                                                 <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                                <span class="text-xs"><?= esc($student['parent_email']) ?></span>
+                                                <span class="text-xs break-words min-w-0"><?= esc($student['parent_email']) ?></span>
                                             </div>
                                         <?php endif; ?>
                                         <?php if ($displayPhone === '' && empty($student['parent_email'])): ?>
@@ -330,7 +340,7 @@
                                         <?php endif; ?>
                                     </div>
                                 </td>
-                                <td data-label="Registered On" class="px-6 py-4">
+                                <td data-label="Registered On" class="px-6 py-4 whitespace-nowrap">
                                     <span class="text-sm text-gray-600">
                                         <?= date('M d, Y', strtotime($student['created_at'])) ?>
                                     </span>

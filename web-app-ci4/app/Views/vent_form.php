@@ -174,6 +174,7 @@
                     <section class="vent-session-support" aria-labelledby="ventTalkHeading">
                         <h2 id="ventTalkHeading">Prefer to talk?</h2>
                         <?= view('partials/student_meet_card', ['ventStyle' => true]) ?>
+                    </section>
                     <section class="vent-urgent-support" aria-labelledby="ventUrgentHeading">
                         <h2 id="ventUrgentHeading">Need urgent support?</h2>
                         <p>Find immediate support through the crisis helpline.</p>
@@ -317,7 +318,7 @@
                 // Session expired: server returned a non-JSON redirect or 401
                 if (r.status === 401) {
                     btn.classList.remove('opacity-90', 'cursor-wait');
-                    text.innerText = 'Submit Securely';
+                    text.innerText = 'Submit securely';
                     spinner.classList.add('hidden');
                     icon.classList.remove('hidden');
                     const errToast = document.createElement('div');
@@ -336,7 +337,7 @@
                 // QA BUG FIX: Do not clear textarea or show 'Success' if backend returns error/rate-limit!
                 if (data.status === 'error') {
                     btn.classList.remove('opacity-90', 'cursor-wait');
-                    text.innerText = 'Submit Securely';
+                    text.innerText = 'Submit securely';
                     spinner.classList.add('hidden');
                     icon.classList.remove('hidden');
                     
@@ -379,12 +380,12 @@
                     document.body.appendChild(toast);
                     setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.5s'; setTimeout(() => toast.remove(), 500); }, 3500);
                 }
-                setTimeout(() => { btn.style.background = ''; text.innerText = 'Submit Securely'; icon.classList.remove('hidden'); }, 3000);
+                setTimeout(() => { btn.style.background = ''; text.innerText = 'Submit securely'; icon.classList.remove('hidden'); }, 3000);
             })
             .catch(err => {
                 if (err.message === 'session_expired') return; // already handled above
                 console.error('Vent submission error:', err);
-                text.innerText = 'Submit Securely'; spinner.classList.add('hidden'); icon.classList.remove('hidden');
+                text.innerText = 'Submit securely'; spinner.classList.add('hidden'); icon.classList.remove('hidden');
                 btn.classList.remove('opacity-90', 'cursor-wait');
                 // Distinguish: SyntaxError = response wasn't JSON (unexpected server crash)
                 // err.message starts with 'Server error' = we got an HTTP error back

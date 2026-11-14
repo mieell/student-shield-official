@@ -13,8 +13,9 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
 .staff-brand strong { display: block; font-size: 19px; letter-spacing: -.5px; }
 .staff-sidebar-scroll { overflow-y: auto; min-height: 0; flex: 1; padding-bottom: 24px; }
 .staff-nav-label { font-size: 11px; font-weight: 600; color: #f1f8f2; margin: 18px 12px 10px; }
+.staff-sidebar nav { display: flex; flex-direction: column; gap: 4px; }
 .staff-sidebar nav + .staff-nav-label { padding-top: 22px; border-top: 1px solid #ffffff30; margin-top: 24px; }
-.staff-nav-link { display: flex; gap: 12px; align-items: center; min-height: 48px; padding: 11px 16px; margin: 3px 0; border-radius: 7px; position: relative; color: #fff; font-size: 14px; font-weight: 500; text-decoration: none; }
+.staff-nav-link { display: flex; gap: 12px; align-items: center; min-height: 48px; padding: 11px 16px; margin: 0; border-radius: 7px; position: relative; color: #fff; font-size: 14px; font-weight: 500; text-decoration: none; }
 .staff-nav-link:hover { background: #ffffff15; }
 .staff-nav-link[aria-current="page"] { background: #ffffff20; color: white; }
 .staff-nav-link[aria-current="page"]::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: #f4ce55; }
@@ -298,6 +299,7 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
 .staff-account-name { display:flex; flex-direction:column; min-width:0; flex:1; }
 .staff-account-name strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .staff-account-chevron { width:18px; height:18px; flex-shrink:0; }
+.staff-account-menu:not([open]) > .staff-account-popover { display: none; }
 .staff-account-menu[open] .staff-account-chevron { transform:rotate(180deg); }
 .staff-account-popover { position:absolute; bottom:calc(100% + 8px); left:0; right:0; padding:6px; background:#fff; color:#173e25; border:1px solid #d8e3db; border-radius:10px; box-shadow:0 8px 24px #133b2326; z-index:2; }
 .staff-account-popover .staff-utility-link, .staff-account-popover .staff-signout button { color:#173e25; width:100%; min-height:44px; display:flex; align-items:center; gap:12px; padding:10px 12px; border:0; background:transparent; font-size:13px; border-radius:6px; }

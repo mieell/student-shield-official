@@ -49,8 +49,9 @@
 .student-workspace-page .mood-toggle > svg { width: 18px; height: 18px; flex-shrink: 0; transition: none; }
 .mood-disclosure[open] > summary > svg { transform: rotate(180deg); }
 .mood-count { margin-left: auto; color: var(--form-muted); font-size: 12px; white-space: nowrap; }
-.student-workspace-page .mood-panel { margin-top: 8px; padding: 12px; border: 1px solid var(--form-divider); border-radius: 8px; background: white; }
-.student-workspace-page #moodSelect { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-height: 200px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 4px; }
+.student-workspace-page details:not([open]) > :not(summary) { display: none !important; }
+.student-workspace-page .mood-panel { margin-top: 10px; padding: 12px; border: 1px solid var(--form-divider); border-radius: 10px; background: white; }
+.student-workspace-page #moodSelect { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 2px; }
 .student-workspace-page .mood-btn { justify-content: flex-start; min-width: 0; min-height: 44px; padding: 8px 10px; gap: 7px; border-radius: 6px; box-shadow: none; font-size: 13px; transition: none; }
 .student-workspace-page .mood-btn:hover, .student-workspace-page .mood-btn:hover .mood-emoji, .student-workspace-page .mood-btn.active .mood-emoji { transform: none; box-shadow: none; }
 .student-workspace-page .mood-btn.active { box-shadow: inset 0 0 0 1px var(--form-primary); }
@@ -179,8 +180,8 @@
     .student-workspace-page .char-count { font-size: 11px; padding: 3px 6px; }
     .student-workspace-page .textarea-field { min-height: 190px; padding: 12px; }
     .student-workspace-page .mood-toggle { padding-inline: 12px; gap: 6px; }
-    .student-workspace-page .mood-panel { padding: 8px; }
-    .student-workspace-page #moodSelect { max-height: 192px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .student-workspace-page .mood-panel { padding: 10px; }
+    .student-workspace-page #moodSelect { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .student-workspace-page .mood-btn { font-size: 12px; padding-inline: 6px; gap: 5px; overflow-wrap: anywhere; }
     .student-workspace-page .mood-emoji { flex-shrink: 0; }
     .mood-selection-chip, .mood-selection-more { font-size: 12px; padding-inline: 10px; }

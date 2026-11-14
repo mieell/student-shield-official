@@ -3,7 +3,7 @@ $inputId = $kind === 'victim' ? 'victim_name' : 'aggressor_name';
 $inputName = $kind === 'victim' ? 'victim_name' : 'bully_name';
 ?>
 <div class="student-picker" data-person="<?= esc($kind, 'attr') ?>">
-    <div class="grid grid-cols-2 gap-2 mb-2">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
             <label for="<?= $kind ?>-grade" class="text-xs block mb-1">Grade level</label>
             <select id="<?= $kind ?>-grade" name="<?= $kind ?>_grade" class="directory-grade w-full border rounded-xl px-3 py-3 bg-white">
@@ -17,7 +17,7 @@ $inputName = $kind === 'victim' ? 'victim_name' : 'bully_name';
         </div>
     </div>
     <label for="<?= $kind ?>-search" class="text-xs block mb-1">Search student name</label>
-    <input id="<?= $kind ?>-search" type="search" maxlength="80" autocomplete="off" class="directory-search w-full border rounded-xl px-3 py-3 mb-2" placeholder="Type at least 2 letters" disabled>
+    <input id="<?= $kind ?>-search" type="search" maxlength="80" autocomplete="off" class="directory-search w-full border rounded-xl px-3 py-3 mb-3" placeholder="Type at least 2 letters" disabled>
     <label for="<?= $kind ?>-student" class="sr-only">Select student or choose not listed</label>
     <select id="<?= $kind ?>-student" name="<?= $kind ?>_student_id" class="directory-choice w-full border rounded-xl px-3 py-3 bg-white" <?= $kind === 'bully' ? 'required' : '' ?>>
         <option value="">Select a student</option>

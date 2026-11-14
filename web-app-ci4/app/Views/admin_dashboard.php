@@ -729,15 +729,15 @@ $pageDescriptions = [
                 <table class="w-full text-left border-collapse mobile-card-table">
                     <thead>
                         <tr class="thead-green text-xs uppercase tracking-wider">
-                            <th class="px-4 py-4 w-10 text-center"><input type="checkbox" id="selectAllIncidents"
+                            <th class="px-3 py-3.5 w-10 text-center"><input type="checkbox" id="selectAllIncidents"
                                     class="rounded border-white/40 text-[#F2C300]"></th>
-                            <th class="px-6 py-4">Date</th>
-                            <th class="px-6 py-4">Reporter</th>
-                            <th class="px-6 py-4">Person named</th>
-                            <th class="px-6 py-4">Type</th>
-                            <th class="px-6 py-4 w-1/3">Description</th>
-                            <th class="px-6 py-4 text-center">Status</th>
-                            <th class="px-6 py-4 text-center">Action</th>
+                            <th class="px-3 py-3.5 xl:px-4 whitespace-nowrap">Date</th>
+                            <th class="px-3 py-3.5 xl:px-4">Reporter</th>
+                            <th class="px-3 py-3.5 xl:px-4">Person named</th>
+                            <th class="px-3 py-3.5 xl:px-4 whitespace-nowrap">Type</th>
+                            <th class="px-3 py-3.5 xl:px-4 min-w-[160px] max-w-[240px]">Description</th>
+                            <th class="px-3 py-3.5 xl:px-4 text-center whitespace-nowrap">Status</th>
+                            <th class="px-3 py-3.5 xl:px-4 text-center min-w-[150px]">Action</th>
                         </tr>
                     </thead>
                     <tbody id="incidentsTableBody" class="divide-y divide-gray-100">
@@ -854,19 +854,19 @@ $pageDescriptions = [
             <form method="get" action="<?= esc(base_url('admin/reports/export'), 'attr') ?>" aria-label="Excel report dates" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                 <input type="hidden" name="period" value="custom">
                 <label class="text-sm text-gray-700">Start date
-                    <input type="date" name="start" value="<?= esc($exportToday->modify('-6 days')->format('Y-m-d'), 'attr') ?>" max="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" required class="block w-full mt-1 rounded-lg border border-gray-300 px-3 py-2.5 bg-white">
+                    <input type="date" name="start" value="<?= esc($exportToday->modify('-6 days')->format('Y-m-d'), 'attr') ?>" max="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" required class="block w-full mt-1.5 h-[44px] min-h-[44px] rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm">
                 </label>
                 <label class="text-sm text-gray-700">End date
-                    <input type="date" name="end" value="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" max="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" required class="block w-full mt-1 rounded-lg border border-gray-300 px-3 py-2.5 bg-white">
+                    <input type="date" name="end" value="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" max="<?= esc($exportToday->format('Y-m-d'), 'attr') ?>" required class="block w-full mt-1.5 h-[44px] min-h-[44px] rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm">
                 </label>
                 <label class="text-sm text-gray-700">Event type
-                    <select name="category" class="block w-full mt-1 rounded-lg border border-gray-300 px-3 py-2.5 bg-white">
+                    <select name="category" class="block w-full mt-1.5 h-[44px] min-h-[44px] rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm">
                         <option value="all">All event types</option>
                         <option value="Safe Space">Safe Space</option>
                         <option value="Bullying">Bullying reports</option>
                     </select>
                 </label>
-                <button type="submit" class="rounded-lg bg-[#235D3A] text-white font-semibold px-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#235D3A]">Export Excel</button>
+                <button type="submit" class="inline-flex items-center justify-center h-[44px] min-h-[44px] rounded-lg bg-[#235D3A] hover:bg-[#1b492d] text-white font-semibold px-4 py-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#235D3A]">Export Excel</button>
             </form>
         </section>
         <p class="text-sm text-gray-600 mb-3">Charts show up to 500 recent active Safe Space entries.</p>
@@ -915,7 +915,7 @@ $pageDescriptions = [
             onclick="closeDetailModal()"></div>
         <div
             class="bg-white max-w-2xl w-[96%] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] relative z-10 flex flex-col max-h-[90dvh] border border-[#e5ebe5] overflow-hidden">
-            <div class="p-5 sm:p-7 flex flex-col min-h-0 flex-1 overflow-y-auto custom-scrollbar"><div class="flex justify-between items-start mb-4 shrink-0">
+            <div class="p-5 sm:p-7 flex flex-col min-h-0 flex-1 overflow-y-auto custom-scrollbar"><div class="flex justify-between items-start gap-3 mb-4 shrink-0">
                 <div>
                     <div id="modalBadge"
                         class="inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-2 border">
@@ -1471,33 +1471,33 @@ $pageDescriptions = [
                             let evidenceBadge = incident.evidence_file ? `<span class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">📎 Evidence Attached</span>` : '';
 
                             const rawDate = dateObj.toISOString().split('T')[0]; const incidentStatus = isResolved ? "resolved" : "unresolved"; html += `<tr data-entry-id="${incident.id}" data-status="${incidentStatus}" data-date="${rawDate}" class="transition-colors duration-200 ${bgColor}">
-                            <td data-label="Select" class="px-4 py-4 whitespace-nowrap text-center">
+                            <td data-label="Select" class="px-3 py-3.5 text-center">
                                 <input type="checkbox" name="incident_ids[]" value="${incident.id}" class="incident-checkbox rounded border-gray-300 text-primary h-4 w-4">
                             </td>
-                            <td data-label="Date" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${dateStr}</td>
-                            <td data-label="Reporter" class="px-6 py-4 whitespace-nowrap">
+                            <td data-label="Date" class="px-3 py-3.5 xl:px-4 whitespace-nowrap text-sm text-gray-600">${dateStr}</td>
+                            <td data-label="Reporter" class="px-3 py-3.5 xl:px-4">
                                 <div ${incident.reporter_id ? `class="cursor-pointer group" onclick="event.stopPropagation(); openStudentProfile(${incident.reporter_id})"` : ''}>
                                     <span class="text-sm font-medium text-gray-900 block ${incident.reporter_id ? 'group-hover:text-primary transition-colors hover:underline' : ''}">${escapeHtml(reporterName)}</span>
-                                    ${incident.parent_phone ? `<span class="text-xs text-gray-600 block">📞 ${escapeHtml(incident.parent_phone)}</span>` : ''}
-                                    ${incident.parent_email ? `<span class="text-xs text-gray-600 block">✉️ ${escapeHtml(incident.parent_email)}</span>` : ''}
+                                    ${incident.parent_phone ? `<span class="text-xs text-gray-600 block whitespace-nowrap">📞 ${escapeHtml(incident.parent_phone)}</span>` : ''}
+                                    ${incident.parent_email ? `<span class="text-xs text-gray-600 block break-words">✉️ ${escapeHtml(incident.parent_email)}</span>` : ''}
                                 </div>
                             </td>
-                            <td data-label="Person named" class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${escapeHtml(perpetratorName)}</td>
-                            <td data-label="Type" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-semibold">
+                            <td data-label="Person named" class="px-3 py-3.5 xl:px-4 text-sm text-gray-800">${escapeHtml(perpetratorName)}</td>
+                            <td data-label="Type" class="px-3 py-3.5 xl:px-4 text-sm text-gray-600 font-semibold">
                                 Bullying Report
                                 ${evidenceBadge ? '<br>' + evidenceBadge : ''}
                             </td>
-                            <td data-label="Description" class="px-6 py-4 cursor-pointer group" onclick="openIncidentModal(${incident.id})">
+                            <td data-label="Description" class="px-3 py-3.5 xl:px-4 min-w-[160px] max-w-[240px] cursor-pointer group" onclick="openIncidentModal(${incident.id})">
                                 <p class="text-sm text-gray-600 italic line-clamp-2">"${escapeHtml(textSnippet)}"</p>
                                 <span class="text-[10px] text-[#2A5DB0] font-bold mt-1 inline-block opacity-0 group-hover:opacity-100 transition-opacity">READ FULL ↗</span>
                             </td>
-                            <td data-label="Status" class="px-6 py-4 whitespace-nowrap text-center">${statusBadge}</td>
-                            <td data-label="Action" class="px-6 py-4 whitespace-nowrap text-center">
-                                <div class="flex flex-col gap-2 min-w-[140px]">
+                            <td data-label="Status" class="px-3 py-3.5 xl:px-4 whitespace-nowrap text-center">${statusBadge}</td>
+                            <td data-label="Action" class="px-3 py-3.5 xl:px-4 text-center">
+                                <div class="flex flex-col gap-2 min-w-[150px]">
                                 ${isPending && !showArchivedIncidents ? `
                                     <form action="<?= base_url('admin/incident/verify/') ?>${incident.id}" method="POST">
                                         <?= csrf_field() ?>
-                                        <button type="submit" onclick="return confirm('VERIFY this report and send automated SMS & Email alerts to parents?');" class="w-full text-xs font-bold text-white bg-primary hover:bg-primary-darker px-3 py-2.5 rounded-lg transition-colors shadow-sm">
+                                        <button type="submit" onclick="return confirm('VERIFY this report and send automated SMS & Email alerts to parents?');" class="w-full text-xs font-bold leading-snug text-white bg-primary hover:bg-primary-darker px-3 py-2 rounded-lg transition-colors shadow-sm">
                                             ✓ Verify & Alert Parents
                                         </button>
                                     </form>

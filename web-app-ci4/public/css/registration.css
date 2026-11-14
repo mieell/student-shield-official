@@ -4,7 +4,7 @@ body.student-registration {
 }
 
 body.student-registration .registration-shell {
-    max-width: 880px;
+    max-width: 960px;
 }
 
 body.student-registration .student-card {
@@ -304,7 +304,7 @@ body.student-registration ::selection {
 
     body.student-registration .registration-school-fields {
         grid-column: auto;
-        grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+        grid-template-columns: minmax(175px, 0.95fr) minmax(195px, 1.05fr);
     }
 
     body.student-registration .registration-guardian {

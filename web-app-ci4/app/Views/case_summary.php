@@ -159,32 +159,32 @@
 <body class="school-staff-page font-sans antialiased text-gray-900 leading-normal">
 
     <!-- Header Navigation (Non-print) -->
-    <header class="glass-header no-print bg-primary border-b-4 border-[#EAB308] text-white py-3 px-4 sm:px-6 md:px-8 flex flex-wrap justify-between items-center gap-2 sm:gap-4 shadow-md">
-        <div class="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-            <a href="/admin/dashboard" class="text-white hover:text-[#EAB308] transition-colors flex items-center gap-2">
+    <header class="glass-header no-print bg-primary border-b-4 border-[#EAB308] text-white py-3 px-4 sm:px-6 md:px-8 flex flex-wrap justify-between items-center gap-3 shadow-md">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+            <a href="/admin/dashboard" class="text-white hover:text-[#EAB308] transition-colors flex items-center gap-2 shrink-0 min-h-[36px]">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
             </a>
-            <div class="flex items-center gap-3">
-                <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="h-9 w-9 object-contain">
-                <div>
+            <div class="flex items-center gap-2.5 min-w-0">
+                <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="h-9 w-9 object-contain shrink-0">
+                <div class="min-w-0">
                     <h1 class="font-heading font-extrabold text-xs sm:text-sm tracking-wider uppercase leading-tight">St. Vincent Blessed School of Manila</h1>
                     <p class="text-[9px] text-[#EAB308] font-bold uppercase tracking-widest mt-0.5">StudentShield Portal</p>
                 </div>
             </div>
         </div>
-        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button onclick="window.print()" class="bg-[#EAB308] hover:bg-[#D9AA2E] text-slate-900 font-bold px-3 sm:px-4 py-2 min-h-[40px] rounded-xl text-xs transition-all flex items-center gap-1.5 sm:gap-2 shadow cursor-pointer whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end shrink-0">
+            <button onclick="window.print()" class="bg-[#EAB308] hover:bg-[#D9AA2E] text-slate-900 font-bold px-3.5 py-2 min-h-[40px] rounded-xl text-xs transition-all flex items-center gap-2 shadow cursor-pointer whitespace-nowrap">
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
-                <span class="hidden sm:inline">Print / Export PDF</span><span class="sm:hidden">Print</span>
+                Print / Export PDF
             </button>
             <form action="<?= base_url('logout') ?>" method="POST" class="inline">
                 <?= csrf_field() ?>
                 <button type="submit" class="flex items-center gap-1.5 px-3 py-2 min-h-[40px] bg-red-500/20 hover:bg-red-500/30 text-red-200 hover:text-white rounded-xl border border-red-500/30 text-xs font-semibold transition-all cursor-pointer shadow whitespace-nowrap">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
                     Sign Out
@@ -367,22 +367,22 @@
             </div>
 
             <!-- Bullying Incidents Table -->
-            <div class="dashboard-card p-6 bg-white print-break">
+            <div class="dashboard-card p-4 sm:p-6 bg-white print-break">
                 <h3 class="text-lg font-bold font-heading text-emerald-950 mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     Bullying & Harassment Incident Record
                 </h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
+                <div class="overflow-x-auto -mx-1 px-1">
+                    <table class="w-full min-w-[540px] text-left border-collapse text-sm">
                         <thead>
                             <tr class="border-b border-gray-200 text-gray-400 uppercase tracking-wider text-[10px] font-bold">
-                                <th class="pb-3">Case ID</th>
-                                <th class="pb-3">Role</th>
-                                <th class="pb-3">Incident Details</th>
-                                <th class="pb-3">Verification Status</th>
-                                <th class="pb-3">Date Reported</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Case ID</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Role</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Incident Details</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Verification Status</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Date Reported</th>
                             </tr>
                         </thead>
                         <tbody id="incidentsTableBody" class="divide-y divide-gray-100 text-gray-700">
@@ -393,22 +393,22 @@
             </div>
 
             <!-- Combined Alerts & Notification Logs -->
-            <div class="dashboard-card p-6 bg-white">
+            <div class="dashboard-card p-4 sm:p-6 bg-white">
                 <h3 class="text-lg font-bold font-heading text-emerald-950 mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
                     Crisis Notification Logs (SMS & Email alerts)
                 </h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
+                <div class="overflow-x-auto -mx-1 px-1">
+                    <table class="w-full min-w-[540px] text-left border-collapse text-sm">
                         <thead>
                             <tr class="border-b border-gray-200 text-gray-400 uppercase tracking-wider text-[10px] font-bold">
-                                <th class="pb-3">Alert Type</th>
-                                <th class="pb-3">Channel</th>
-                                <th class="pb-3">Recipient</th>
-                                <th class="pb-3">Delivery Status</th>
-                                <th class="pb-3">Timestamp</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Alert Type</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Channel</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Recipient</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Delivery Status</th>
+                                <th class="pb-3 px-2.5 sm:px-3">Timestamp</th>
                             </tr>
                         </thead>
                         <tbody id="notificationsTableBody" class="divide-y divide-gray-100 text-gray-700">
@@ -795,7 +795,7 @@
             tbody.innerHTML = '';
 
             if (!reports || reports.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-400 text-xs">No incident involvement recorded.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="py-4 px-2.5 text-left sm:text-center text-gray-400 text-xs">No incident involvement recorded.</td></tr>';
                 return;
             }
 
@@ -828,11 +828,11 @@
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50/50 transition-colors">
-                        <td class="py-3.5 font-semibold text-emerald-950">#${r.id}</td>
-                        <td class="py-3.5"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${roleBadge}">${role}</span></td>
-                        <td class="py-3.5 max-w-xs truncate">${r.incident_details}</td>
-                        <td class="py-3.5 text-xs">${statusBadge}</td>
-                        <td class="py-3.5 text-gray-400">${dateStr}</td>
+                        <td class="py-3.5 px-2.5 sm:px-3 font-semibold text-emerald-950 whitespace-nowrap">#${r.id}</td>
+                        <td class="py-3.5 px-2.5 sm:px-3 whitespace-nowrap"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${roleBadge}">${role}</span></td>
+                        <td class="py-3.5 px-2.5 sm:px-3 max-w-[220px] sm:max-w-xs truncate">${r.incident_details}</td>
+                        <td class="py-3.5 px-2.5 sm:px-3 text-xs whitespace-nowrap">${statusBadge}</td>
+                        <td class="py-3.5 px-2.5 sm:px-3 text-gray-400 whitespace-nowrap">${dateStr}</td>
                     </tr>
                 `;
             });
@@ -850,7 +850,7 @@
             allNotifs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
             if (allNotifs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-400 text-xs">No alerts generated or sent.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="py-4 px-2.5 text-left sm:text-center text-gray-400 text-xs">No alerts generated or sent.</td></tr>';
                 return;
             }
 
@@ -859,11 +859,11 @@
                 const statusColor = n.sent_status === 'sent' || n.sent_status === 'delivered' || n.sent_status === 'success' ? 'text-emerald-600' : 'text-amber-500';
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50/50 transition-colors">
-                        <td class="py-3.5 font-semibold text-emerald-950">${n.alert_type || 'Critical Warning'}</td>
-                        <td class="py-3.5 font-medium">${n.type}</td>
-                        <td class="py-3.5 text-gray-500 font-mono text-xs">${n.recipient}</td>
-                        <td class="py-3.5"><span class="flex items-center gap-1.5 ${statusColor} font-bold text-xs uppercase">• ${n.sent_status}</span></td>
-                        <td class="py-3.5 text-gray-400">${dateStr}</td>
+                        <td class="py-3.5 px-2.5 sm:px-3 font-semibold text-emerald-950 whitespace-nowrap">${n.alert_type || 'Critical Warning'}</td>
+                        <td class="py-3.5 px-2.5 sm:px-3 font-medium whitespace-nowrap">${n.type}</td>
+                        <td class="py-3.5 px-2.5 sm:px-3 text-gray-500 font-mono text-xs">${n.recipient}</td>
+                        <td class="py-3.5 px-2.5 sm:px-3 whitespace-nowrap"><span class="flex items-center gap-1.5 ${statusColor} font-bold text-xs uppercase">• ${n.sent_status}</span></td>
+                        <td class="py-3.5 px-2.5 sm:px-3 text-gray-400 whitespace-nowrap">${dateStr}</td>
                     </tr>
                 `;
             });

@@ -55,11 +55,13 @@
         @media (max-width: 1024px) { html { font-size: 13px; } }
         @media (max-width: 768px) { html { font-size: 16px; } }
 
-        body { font-family: 'Inter', sans-serif; background-color: #0F8A3A; }
+        html, body { overflow-x: hidden; max-width: 100%; }
+        body { font-family: 'Inter', sans-serif; background-color: #0F8A3A; min-height: 100dvh; }
         h1, h2, h3, .font-heading { font-family: 'Nunito', sans-serif; }
 
         .bg-admin {
             background: var(--school-header-background);
+            background-attachment: fixed;
         }
 
         .bg-grid {
@@ -88,17 +90,20 @@
             height: 60px;
             text-align: center;
             font-size: 24px;
-            font-weight: 600;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1.5px solid rgba(255, 255, 255, 0.1);
-            color: #f1f5f9;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.11);
+            border: 1.5px solid rgba(255, 255, 255, 0.28);
+            color: #ffffff;
             border-radius: 12px;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
         
         /* Mobile responsive adjustments */
         @media (max-width: 640px) {
             .otp-input { width: 42px; height: 50px; font-size: 20px; }
+        }
+        @media (max-width: 400px) {
+            .otp-input { width: 38px; height: 46px; font-size: 18px; border-radius: 10px; }
         }
 
         .otp-input:focus {
@@ -129,11 +134,13 @@
     </style>
 <?= view('partials/ui_polish') ?>
 </head>
-<body class="bg-admin min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+<body class="bg-admin min-h-screen min-h-[100dvh] flex items-center justify-center p-4 sm:p-6 relative">
 
-<div class="bg-grid"></div>
-<div class="glow-blob bg-gold w-[500px] h-[500px] top-[-20%] right-[-10%]"></div>
-<div class="glow-blob bg-white w-[300px] h-[300px] bottom-[-10%] left-[10%]" style="animation-delay: 3s;"></div>
+<div class="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+    <div class="bg-grid"></div>
+    <div class="glow-blob bg-gold w-[500px] h-[500px] top-[-20%] right-[-10%]"></div>
+    <div class="glow-blob bg-white w-[300px] h-[300px] bottom-[-10%] left-[10%]" style="animation-delay: 3s;"></div>
+</div>
 
 <div class="w-full max-w-lg z-10 animate-[fadeInUp_0.7s_ease-out]">
     <div class="admin-card rounded-3xl p-8 sm:p-10 text-center">

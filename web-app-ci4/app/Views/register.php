@@ -229,7 +229,7 @@ $selectedSection = (string) set_value('section');
                             <div class="registration-input-icon pointer-events-none">
                                 <i class="fas fa-layer-group text-white/50 group-focus-within/input:text-gold transition-colors text-[15px]"></i>
                             </div>
-                            <select name="grade_level" id="grade_level" required class="w-full pl-11 pr-10 input-dark registration-control registration-select rounded-xl text-[15px] font-semibold outline-none" aria-controls="section">
+                            <select name="grade_level" id="grade_level" required class="w-full pl-10 pr-8 input-dark registration-control registration-select rounded-xl text-[14px] font-semibold outline-none" aria-controls="section">
                                 <option value="">Choose grade</option>
                                 <?php foreach (['7','8','9','10'] as $grade): ?><option value="<?= $grade ?>" <?= $selectedGrade === $grade ? 'selected' : '' ?>>Grade <?= $grade ?></option><?php endforeach; ?>
                             </select>
@@ -245,7 +245,7 @@ $selectedSection = (string) set_value('section');
                             <div class="registration-input-icon pointer-events-none">
                                 <i class="fas fa-chalkboard-teacher text-white/50 group-focus-within/input:text-gold transition-colors text-[15px]"></i>
                             </div>
-                            <select name="section" id="section" required aria-describedby="sectionHelp" class="w-full pl-11 pr-10 input-dark registration-control registration-select rounded-xl text-[15px] font-semibold outline-none">
+                            <select name="section" id="section" required aria-describedby="sectionHelp" class="w-full pl-10 pr-8 input-dark registration-control registration-select rounded-xl text-[14px] font-semibold outline-none">
                                 <option value="">Choose section</option>
                                 <?php foreach ($sectionsByGrade[$selectedGrade] ?? [] as $section): ?><option value="<?= esc($section, 'attr') ?>" <?= $selectedSection === $section ? 'selected' : '' ?>><?= esc($section) ?></option><?php endforeach; ?>
                             </select>

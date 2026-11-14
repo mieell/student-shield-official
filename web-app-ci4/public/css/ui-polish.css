@@ -163,14 +163,12 @@ body.staff-layout #staffMain.principal-workspace .risk-composition { height: 12p
 }
 @media (min-width: 1024px) {
     body.student-registration { padding-block: 16px; }
-    body.student-registration .registration-shell { max-width: 920px; }
+    body.student-registration .registration-shell { max-width: 960px; }
     body.student-registration .student-card { padding: 24px 28px; }
     body.student-registration .registration-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px 18px; }
     body.student-registration .registration-form > * { margin-block: 0; min-width: 0; }
     body.student-registration .registration-form > :is(.registration-password-fields,.registration-consent,button) { grid-column: 1 / -1; }
     body.student-registration .registration-password-fields { padding-top: 0; gap: 18px; }
-    body.student-registration #password-criteria { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px 8px; margin-top: 8px; color: #edf7f0; }
-    body.student-registration #password-criteria > div { font-size: 12px; white-space: nowrap; }
     body.student-registration .registration-form #submitBtn { margin-top: 0; min-height: 50px; height: 50px; }
     body.student-registration .student-card > div:last-child { margin-top: 10px; }
     body.student-workspace-page .vent-header-inner { max-width: 1600px; margin-inline: auto; min-height: 82px; }
@@ -218,8 +216,8 @@ body.staff-layout #staffMain.principal-workspace .risk-composition { height: 12p
     body.staff-layout #staffMain :is(.staff-page-heading, .staff-page-intro) { margin-bottom: 20px; }
     body.staff-layout #staffMain .section-header { padding: 16px; }
     body.staff-layout #staffMain .staff-filter-bar { padding: 12px 16px; }
-    body.staff-layout #staffMain .filter-quick { margin: 0 16px 12px; padding: 4px; max-width: calc(100% - 32px); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
-    body.staff-layout #staffMain .filter-quick button { white-space: nowrap; flex-shrink: 0; min-height: 44px; }
+    body.staff-layout #staffMain .filter-quick { margin: 0 16px 12px; padding: 4px; max-width: calc(100% - 32px); flex-wrap: wrap; gap: 4px; overflow-x: visible; }
+    body.staff-layout #staffMain .filter-quick button { flex: 1 1 calc(50% - 4px); justify-content: center; text-align: center; white-space: nowrap; min-height: 42px; }
     body.staff-layout #staffMain .staff-vents-table td { padding-block: 8px; }
     body.staff-layout #staffMain .staff-vents-table td[data-label=Action] { width: auto; }
     body.staff-layout #staffMain.accounts-workspace .directory-identity strong { font-size: 14px; }
@@ -280,8 +278,7 @@ body.student-home > nav > form { flex-shrink: 0; }
 body.student-home > nav > form button { min-height: 44px; white-space: nowrap; }
 body.student-home .student-home-intro > p { font-size: 17px; line-height: 1.6; max-width: 36em; }
 body.student-home .student-home-intro { margin-bottom: clamp(20px, 3.5vh, 36px); }
-body.student-registration :is(.text-xs, #password-criteria) { font-size: 13px; }
-body.student-registration #password-criteria > div { font-size: 13px; line-height: 1.4; }
+body.student-registration .text-xs { font-size: 13px; }
 
 /* Show/hide password on the sign-in form. */
 body.student-login #password { padding-right: 80px; }
@@ -427,9 +424,9 @@ body.staff-layout .staff-sidebar { box-shadow: 4px 0 18px -14px #05341840; }
 body.staff-layout .staff-sidebar .staff-nav-link[aria-current=page] { background: #fff; color: #235d3a; box-shadow: 0 3px 7px -5px #05341866; }
 body.staff-layout .staff-sidebar .staff-nav-link[aria-current=page] :is(svg,i) { color: #235d3a; }
 body.staff-layout .staff-sidebar .staff-nav-link[aria-current=page]::before { background: transparent; }
-body.staff-layout #staffMain .staff-metrics { gap: 0; border: 1px solid var(--finish-line); border-radius: 14px; overflow: hidden; background: #fff; }
-body.staff-layout #staffMain .staff-metrics .stat-card { padding: 18px 22px; border: 0; border-right: 1px solid var(--finish-line); border-radius: 0; background: #fff; }
-body.staff-layout #staffMain .staff-metrics .stat-card:last-child { border-right: 0; }
+body.staff-layout #staffMain .staff-metrics { gap: 12px; border: 0; border-radius: 0; overflow: visible; background: transparent; }
+body.staff-layout #staffMain .staff-metrics .stat-card { padding: 18px 22px; border: 1px solid var(--finish-line); border-radius: 14px; background: #fff; }
+body.staff-layout #staffMain .staff-metrics .stat-card:nth-child(2) { background: #fffaf0; border-color: #e8dba8; }
 body.staff-layout #staffMain .staff-metrics .stat-card > div:first-child { background: transparent; width: 28px; height: 28px; border: 0; }
 body.staff-layout #staffMain .staff-metrics .stat-card .uppercase { font-size: 13px; font-weight: 500; }
 body.staff-layout #staffMain .staff-metrics .stat-card [id^=stat-] { font-size: 30px; font-family: Nunito,sans-serif; font-weight: 800; letter-spacing: -.025em; }
