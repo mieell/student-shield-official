@@ -52,6 +52,12 @@ function showScreeningExplanation(vent) {
     });
     const note = document.createElement('p');
     note.className = 'text-xs text-[#435e51] border-t border-[#cfe0d5] pt-3';
-    note.textContent = 'The screening score supports counselor review. Confirm the meaning and context of the message with the student before deciding on follow-up.';
+    const reminderLabel = document.createElement('strong');
+    reminderLabel.className = 'font-semibold text-[#164a36]';
+    reminderLabel.textContent = 'Clinical reminder: ';
+    note.append(
+        reminderLabel,
+        'This automated screening is a triage aid only and does not replace a licensed psychologist, mental health professional, or clinical judgment. Always confirm meaning and context directly with the student before deciding on follow-up.'
+    );
     panel.append(note);
 }

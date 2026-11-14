@@ -83,4 +83,13 @@ final class ScreeningExplanationTest extends CIUnitTestCase
         self::assertGreaterThanOrEqual(86.0, $enforced['risk_percent']);
         self::assertStringContainsString('PHP safety rules raised the final review priority', $enforced['reasoning']);
     }
+
+    public function testCounselorModalIncludesPsychologistDisclaimerWithoutVendorLeak(): void
+    {
+        $jsPath = dirname(__DIR__, 2) . '/public/js/screening-explanation.js';
+        $js = (string) file_get_contents($jsPath);
+        self::assertStringContainsString('Clinical reminder:', $js);
+        self::assertStringContainsString('does not replace a licensed psychologist', $js);
+        self::assertStringNotContainsString('Groq AI fallback', $js);
+    }
 }
