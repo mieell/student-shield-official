@@ -172,7 +172,7 @@ final class GroqVentClientTest extends CIUnitTestCase
         $decodedBody = json_decode($captured['jsonBody'], true);
         self::assertSame('openai/gpt-oss-120b', $decodedBody['model']);
         self::assertSame(1200, $decodedBody['max_completion_tokens']);
-        self::assertSame('low', $decodedBody['reasoning_effort']);
+        self::assertSame('medium', $decodedBody['reasoning_effort']);
         self::assertSame(['type' => 'json_object'], $decodedBody['response_format']);
         self::assertStringContainsString('<student_vent>', $captured['jsonBody']);
         self::assertStringContainsString('DepEd DO 40 s.2012', $captured['jsonBody']);
@@ -184,8 +184,10 @@ final class GroqVentClientTest extends CIUnitTestCase
         self::assertSame('groq', $result['source']);
         self::assertSame('HIGH', $result['risk_level']);
         self::assertSame(85, $result['risk_score']);
-        self::assertStringContainsString('Student conveys sustained emotional depletion.', $result['reasoning']);
+        self::assertStringStartsWith('[Clinical Review] ', $result['reasoning']);
+        self::assertStringContainsString('Student conveys sustained emotional depletion', $result['reasoning']);
         self::assertStringContainsString('Taglish exhaustion cue', $result['reasoning']);
+        self::assertDoesNotMatchRegularExpression('/\bgroq\b/i', $result['reasoning']);
 
         // C-SSRS Level 2 passive ideation must pin to HIGH (61-85, min 79) so parent alerts do not fire prematurely.
         $passiveBody = json_encode([
@@ -232,8 +234,8 @@ final class GroqVentClientTest extends CIUnitTestCase
                 return [
                     'risk_level' => 'HIGH',
                     'risk_score' => 76,
-                    'reasoning' => '[Groq Fallback] Subtle Bisaya hopelessness detected.',
-                    'flag_reason' => '[Groq Fallback] Subtle Bisaya hopelessness detected.',
+                    'reasoning' => '[Clinical Review] Subtle Bisaya hopelessness detected.',
+                    'flag_reason' => '[Clinical Review] Subtle Bisaya hopelessness detected.',
                     'source' => 'groq',
                 ];
             }
@@ -268,7 +270,7 @@ final class GroqVentClientTest extends CIUnitTestCase
         $decoded = ScreeningExplanation::decode($row['analysis_details']);
         self::assertSame([
             'source' => 'groq',
-            'reasoning' => '[Groq Fallback] Subtle Bisaya hopelessness detected.',
+            'reasoning' => '[Clinical Review] Subtle Bisaya hopelessness detected.',
         ], $decoded);
 
         // Verify counselor dashboard API returns analysis_source = 'groq' and decrypted screening_analysis.
@@ -281,7 +283,7 @@ final class GroqVentClientTest extends CIUnitTestCase
         $adminRes = $admin->fetchVents();
         $adminRows = json_decode((string) $adminRes->getBody(), true);
         self::assertSame('groq', $adminRows[0]['analysis_source']);
-        self::assertSame('[Groq Fallback] Subtle Bisaya hopelessness detected.', $adminRows[0]['screening_analysis']['reasoning']);
+        self::assertSame('[Clinical Review] Subtle Bisaya hopelessness detected.', $adminRows[0]['screening_analysis']['reasoning']);
     }
 
     public function testVentControllerFallsBackToLocalKeywordsWhenPrimaryAndGroqAreBothUnavailable(): void

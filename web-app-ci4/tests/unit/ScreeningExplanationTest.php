@@ -18,10 +18,10 @@ final class ScreeningExplanationTest extends CIUnitTestCase
             self::assertStringNotContainsString('A recorded explanation.', $encoded);
             self::assertSame(['source' => 'model', 'reasoning' => 'A recorded explanation.'], ScreeningExplanation::decode($encoded));
 
-            $groqEncoded = ScreeningExplanation::encode(['source' => 'groq', 'reasoning' => '[Groq Fallback] Veiled hopelessness noted.']);
+            $groqEncoded = ScreeningExplanation::encode(['source' => 'groq', 'reasoning' => '[Clinical Review] Veiled hopelessness noted.']);
             self::assertStringNotContainsString('Veiled hopelessness noted.', $groqEncoded);
             self::assertSame(
-                ['source' => 'groq', 'reasoning' => '[Groq Fallback] Veiled hopelessness noted.'],
+                ['source' => 'groq', 'reasoning' => '[Clinical Review] Veiled hopelessness noted.'],
                 ScreeningExplanation::decode($groqEncoded)
             );
 
@@ -51,23 +51,30 @@ final class ScreeningExplanationTest extends CIUnitTestCase
         $groqPrimary = [
             'risk_level' => 'HIGH',
             'risk_score' => 77,
-            'reasoning' => '[Groq Fallback] Veiled Taglish hopelessness noted.',
+            'reasoning' => '[Clinical Review] Veiled Taglish hopelessness noted.',
             'source' => 'groq',
         ];
         $result = VentRiskAnalyzer::resolve('pagod na ko sa lahat', $groqPrimary, 200, static function () {
-            throw new \LogicException('Local fallback should not run when Groq succeeded.');
+            throw new \LogicException('Local fallback should not run when primary backup succeeded.');
         });
 
         self::assertSame('groq', $result['source']);
         self::assertSame('HIGH', $result['risk_level']);
         self::assertSame(77.0, $result['risk_percent']);
-        self::assertSame('[Groq Fallback] Veiled Taglish hopelessness noted.', $result['reasoning']);
+        self::assertSame('[Clinical Review] Veiled Taglish hopelessness noted.', $result['reasoning']);
 
-        // Even if Groq returns LOW on an explicit self-harm entry, PHP safety rules must raise to CRITICAL.
+        $noReasonFallback = VentRiskAnalyzer::resolve('mild worry', [
+            'risk_level' => 'MEDIUM',
+            'risk_score' => 45,
+            'source' => 'groq',
+        ], 200, static fn () => []);
+        self::assertDoesNotMatchRegularExpression('/\bgroq\b/i', $noReasonFallback['reasoning']);
+
+        // Even if clinical backup returns LOW on an explicit self-harm entry, PHP safety rules must raise to CRITICAL.
         $underestimatedGroq = [
             'risk_level' => 'LOW',
             'risk_score' => 15,
-            'reasoning' => '[Groq Fallback] Casual phrasing.',
+            'reasoning' => '[Clinical Review] Casual phrasing.',
             'source' => 'groq',
         ];
         $enforced = VentRiskAnalyzer::resolve('I will kill myself tonight', $underestimatedGroq, 200, static fn () => []);

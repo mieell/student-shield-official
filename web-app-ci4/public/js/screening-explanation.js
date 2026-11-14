@@ -1,3 +1,15 @@
+function cleanScreeningText(raw) {
+    if (typeof raw !== 'string') return '';
+    return raw
+        .replace(/\[Groq\s+Clinical\s+Context\]/gi, '[Clinical Review]')
+        .replace(/\[Groq\s+Clinical\s+Escalation\s*\(([^)]+)\)\]/gi, '[Clinical Escalation: $1]')
+        .replace(/\[Groq\s+Contextual\s+Clarification\s*\(([^)]+)\)\]/gi, '[Context Clarification: $1]')
+        .replace(/\[(?:Groq|Gemini)\s+Fallback\]/gi, '[Clinical Review]')
+        .replace(/\b(?:Groq|Gemini)(?:\s+AI)?\b/gi, 'Clinical AI')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
 function showScreeningExplanation(vent) {
     let panel = document.getElementById('screeningExplanation');
     if (!panel) {
@@ -12,16 +24,17 @@ function showScreeningExplanation(vent) {
     title.textContent = 'Screening analysis';
     panel.append(title);
     const sources = {
-        model: 'ML service with PHP safety rules',
-        groq: 'Groq AI fallback with PHP safety rules',
-        gemini: 'Legacy Gemini AI fallback with PHP safety rules',
+        model: 'ML + Clinical Assessment with PHP safety rules',
+        groq: 'Clinical Assessment with PHP safety rules',
+        gemini: 'Legacy Clinical Assessment with PHP safety rules',
         local: 'Local keyword fallback',
         unknown: 'Source unavailable for this entry',
     };
+    const cleanedReasoning = cleanScreeningText(vent.screening_analysis?.reasoning);
     const rows = [
         ['Review priority', `${vent.risk_level || 'Unavailable'} · Recorded score ${vent.risk_percent ?? '—'}%`],
         ['Analysis source', sources[vent.analysis_source] || sources.unknown],
-        ['Recorded explanation', vent.screening_analysis?.reasoning || 'An explanation was not recorded for this entry. Review the original message with the student.'],
+        ['Recorded explanation', cleanedReasoning || 'An explanation was not recorded for this entry. Review the original message with the student.'],
     ];
     const trajectories = {ESCALATING: 'Escalating', IMPROVING: 'Improving', STABLE: 'Stable'};
     if (trajectories[vent.trajectory]) rows.push(['Recorded recent pattern', trajectories[vent.trajectory]]);

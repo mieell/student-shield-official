@@ -44,9 +44,9 @@ final class VentRiskAnalyzer
         $reasoning = $hasModelReason
             ? ($result['reasoning'] ?? $result['flag_reason'])
             : ($source === 'groq'
-                ? 'Groq AI fallback analyzed this entry while the ML service was unavailable.'
+                ? 'Clinical backup screening analyzed this entry while the primary engine was unavailable.'
                 : ($source === 'gemini'
-                    ? 'Gemini AI fallback analyzed this entry while the ML service was unavailable.'
+                    ? 'Legacy backup screening analyzed this entry while the primary engine was unavailable.'
                     : ($source === 'model'
                         ? 'The ML service did not return a detailed explanation for this entry.'
                         : 'Local keyword rules determined this review priority. Review the full entry and ask the student about its context.')));

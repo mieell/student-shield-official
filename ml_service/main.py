@@ -22,7 +22,6 @@ from translation_gate import TranslationGate
 from crisis_context import current_disclosure_text
 from groq_triage import (
     evaluate_vent_with_groq,
-    get_active_model_name,
     get_last_groq_status,
     is_groq_enabled,
     merge_groq_assessment,
@@ -1300,9 +1299,8 @@ async def root_health_check():
         "service": "StudentShield AI Engine",
         "version": "7.3.0",
         "translation_policy": "english-skip-cache-retry-v2",
-        "groq_enabled": is_groq_enabled(),
-        "groq_model": get_active_model_name(),
-        "groq_last_status": get_last_groq_status(),
+        "clinical_triage_enabled": is_groq_enabled(),
+        "clinical_triage_status": get_last_groq_status(),
         "message": "Send POST requests to /analyze-text to classify vents.",
     }
 
@@ -1852,7 +1850,19 @@ def analyze_text_sync(text: str, student_id: str = None, risk_history: list[dict
     raw_severity = _compute_raw_severity(base_score, flags, risk_score, violent_threat)
     risk_percent = _band_risk_score(risk, risk_score, raw_severity)
 
-    groq_result = evaluate_vent_with_groq(text)
+    active_domains = [key for key, matched in flags.items() if matched]
+    if violent_threat:
+        active_domains.append("violent_threat")
+    ml_context = {
+        "ml_risk_level": risk,
+        "ml_risk_score": int(risk_percent),
+        "distress_confidence": round(float(distress_conf), 3),
+        "negative_emotion": round(float(neg_emo_conf), 3),
+        "positive_emotion": round(float(pos_emo_conf), 3),
+        "detected_cues": active_domains,
+        "trajectory": trajectory,
+    }
+    groq_result = evaluate_vent_with_groq(text, ml_context=ml_context)
     if groq_result is not None:
         risk, risk_percent, reason = merge_groq_assessment(
             risk,

@@ -96,7 +96,7 @@ class GroqTriageUnitTests(unittest.TestCase):
         self.assertEqual(captured["api_key"], "gsk_test_key")
         self.assertEqual(captured["body"]["model"], "openai/gpt-oss-120b")
         self.assertEqual(captured["body"]["max_completion_tokens"], 1200)
-        self.assertEqual(captured["body"]["reasoning_effort"], "low")
+        self.assertEqual(captured["body"]["reasoning_effort"], "medium")
         self.assertEqual(captured["body"]["response_format"], {"type": "json_object"})
         user_msg = captured["body"]["messages"][1]["content"]
         sys_msg = captured["body"]["messages"][0]["content"]
@@ -107,6 +107,25 @@ class GroqTriageUnitTests(unittest.TestCase):
         self.assertIn("patay ako kay mama", sys_msg)
         self.assertIn("healed past NSSI in recovery", sys_msg)
         self.assertIn("perceived burdensomeness", sys_msg)
+
+        # Vendor/provider names must be stripped if accidentally echoed in clinical text.
+        leaky_payload = groq_triage.parse_groq_payload(
+            json.dumps(
+                {
+                    "triage_category": "positive_or_banter",
+                    "risk_level": "LOW",
+                    "risk_score": 14,
+                    "sarcasm_or_hyperbole": True,
+                    "taglish_nuance": "Groq LLM idiom note",
+                    "counselor_reasoning": "Groq and OpenAI model detected ordinary school banter.",
+                }
+            )
+        )
+        self.assertIsNotNone(leaky_payload)
+        self.assertNotIn("groq", leaky_payload["counselor_reasoning"].lower())
+        self.assertNotIn("openai", leaky_payload["counselor_reasoning"].lower())
+        self.assertNotIn("groq", leaky_payload["taglish_nuance"].lower())
+        self.assertNotIn("llm", leaky_payload["taglish_nuance"].lower())
 
     def test_parse_payload_clamps_bands_and_rejects_malformed_json(self) -> None:
         self.assertIsNone(groq_triage.parse_groq_payload("not-json"))
@@ -243,8 +262,10 @@ class GroqTriageUnitTests(unittest.TestCase):
         )
         self.assertEqual(risk, "CRITICAL")
         self.assertEqual(percent, 91)
-        self.assertIn("Groq Clinical Escalation (LOW -> CRITICAL)", reason)
+        self.assertIn("Clinical Escalation: LOW -> CRITICAL", reason)
         self.assertIn("Bisaya passive disappearance expression", reason)
+        self.assertNotIn("Minimal baseline distress.", reason)
+        self.assertNotIn("groq", reason.lower())
 
         hyperbole_groq = {
             "risk_level": "LOW",
@@ -256,7 +277,7 @@ class GroqTriageUnitTests(unittest.TestCase):
         risk, percent, reason = groq_triage.merge_groq_assessment(
             "MEDIUM",
             48,
-            "Academic pressure detected.",
+            "[Predictive Recurrence Risk: 70%] Academic pressure detected.",
             hyperbole_groq,
             flags={"academic": True},
             base_score=0.25,
@@ -264,7 +285,30 @@ class GroqTriageUnitTests(unittest.TestCase):
         )
         self.assertEqual(risk, "LOW")
         self.assertEqual(percent, 18)
-        self.assertIn("Groq Contextual Clarification (MEDIUM -> LOW)", reason)
+        self.assertIn("[Predictive Recurrence Risk: 70%]", reason)
+        self.assertIn("Context Clarification: MEDIUM -> LOW", reason)
+        self.assertNotIn("Academic pressure detected.", reason)
+        self.assertNotIn("groq", reason.lower())
+
+        # Same-band ML + clinical consensus blends both scores cleanly and omits noisy NLP filler.
+        agree_risk, agree_pct, agree_reason = groq_triage.merge_groq_assessment(
+            "LOW",
+            28,
+            "NLP: Positive/grateful vent — no active distress indicators.",
+            {
+                "triage_category": "positive_or_banter",
+                "risk_level": "LOW",
+                "risk_score": 10,
+                "sarcasm_or_hyperbole": True,
+                "taglish_nuance": "lowkey natatakot",
+                "counselor_reasoning": "Playful academic worry buffered by active coping; no distress.",
+            },
+        )
+        self.assertEqual(agree_risk, "LOW")
+        self.assertEqual(agree_pct, 18)
+        self.assertTrue(agree_reason.startswith("[Clinical Review] "))
+        self.assertNotIn("NLP: Positive/grateful", agree_reason)
+        self.assertNotIn("groq", agree_reason.lower())
 
     def test_main_analyze_text_sync_integration_respects_floor_and_escalation(self) -> None:
         classifier = SimpleNamespace(
@@ -320,10 +364,17 @@ class GroqTriageUnitTests(unittest.TestCase):
                 )
                 self.assertEqual(res["risk_level"], "HIGH")
                 self.assertEqual(res["risk_score"], 78.0)
-                self.assertIn("Veiled hopelessness requiring counselor check-in.", res["flag_reason"])
+                self.assertIn("Veiled hopelessness requiring counselor check-in", res["flag_reason"])
+                self.assertIn("Bisaya hopelessness idiom", res["flag_reason"])
+                self.assertNotIn("groq", res["flag_reason"].lower())
                 self.assertEqual(mock_groq.call_count, 1)
                 self.assertEqual(len(mock_groq.call_args.args), 1)
                 self.assertNotIn("SECRET-STUDENT-42", mock_groq.call_args.args[0])
+                ml_ctx = mock_groq.call_args.kwargs.get("ml_context")
+                self.assertIsInstance(ml_ctx, dict)
+                self.assertIn("ml_risk_level", ml_ctx)
+                self.assertIn("distress_confidence", ml_ctx)
+                self.assertNotIn("SECRET-STUDENT-42", json.dumps(ml_ctx))
 
             # Deterministic cat1 floor must ignore Groq attempts to downgrade.
             with patch.object(
