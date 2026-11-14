@@ -12,7 +12,8 @@ from typing import Any
 
 logger = logging.getLogger("ML_Service")
 
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
+FALLBACK_GROQ_MODELS: tuple[str, ...] = ("openai/gpt-oss-120b", "openai/gpt-oss-20b")
 GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 DEFAULT_TIMEOUT_SECONDS = 8.0
 MAX_VENT_CHARS = 1500
@@ -115,6 +116,11 @@ def _get_timeout_seconds() -> float:
 
 def _get_model_name() -> str:
     return _clean_env("GROQ_MODEL", DEFAULT_GROQ_MODEL)
+
+
+def get_active_model_name() -> str:
+    """Return configured Groq model identifier (non-secret diagnostic helper)."""
+    return _get_model_name()
 
 
 def _clean_note(value: Any, max_len: int) -> str:
@@ -227,13 +233,15 @@ def _invoke_groq(
     *,
     http_post: Any = None,
 ) -> dict[str, Any] | str | None:
-    payload = {
+    payload: dict[str, Any] = {
         "model": model_name,
         "messages": _build_messages(vent_text),
         "temperature": 0.1,
-        "max_tokens": 450,
+        "max_completion_tokens": 1200,
         "response_format": {"type": "json_object"},
     }
+    if model_name.startswith("openai/gpt-oss"):
+        payload["reasoning_effort"] = "low"
     sender = http_post or _default_http_post
     raw_resp = sender(GROQ_ENDPOINT, payload, api_key, timeout_s)
     if isinstance(raw_resp, dict):
@@ -277,45 +285,50 @@ def evaluate_vent_with_groq(
         _LAST_GROQ_STATUS = "empty_text"
         return None
 
-    model_name = _get_model_name()
+    primary_model = _get_model_name()
     timeout_s = _get_timeout_seconds()
+    candidates = [primary_model] + [m for m in FALLBACK_GROQ_MODELS if m != primary_model]
 
-    try:
-        raw_outer = _invoke_groq(
-            cleaned_text,
-            api_key,
-            model_name,
-            timeout_s,
-            http_post=http_post,
-        )
-        parsed = parse_groq_payload(raw_outer)
-        if parsed is None:
-            _LAST_GROQ_STATUS = "parse_error"
-            logger.warning("Groq returned unparseable or incomplete triage payload; retaining baseline score.")
-        else:
-            _LAST_GROQ_STATUS = "ok"
-        return parsed
-    except TimeoutError:
-        _LAST_GROQ_STATUS = f"timeout_{timeout_s:.1f}s"
-        logger.warning("Groq clinical triage timed out after %.1fs; retaining baseline score.", timeout_s)
-        return None
-    except urllib.error.HTTPError as exc:
-        err_code = f"http_{exc.code}"
+    for idx, candidate_model in enumerate(candidates):
         try:
-            err_body = exc.read().decode("utf-8", errors="ignore")
-            err_json = json.loads(err_body)
-            detail = _clean_note(str(err_json.get("error", {}).get("code") or err_json.get("error", {}).get("type") or ""), 40)
-            if detail:
-                err_code = f"http_{exc.code}:{detail}"
-        except Exception:
-            pass
-        _LAST_GROQ_STATUS = err_code
-        logger.warning("Groq clinical triage %s; retaining baseline score.", err_code)
-        return None
-    except Exception as exc:
-        _LAST_GROQ_STATUS = f"error:{type(exc).__name__}"
-        logger.warning("Groq clinical triage skipped (%s); retaining baseline score.", type(exc).__name__)
-        return None
+            raw_outer = _invoke_groq(
+                cleaned_text,
+                api_key,
+                candidate_model,
+                timeout_s,
+                http_post=http_post,
+            )
+            parsed = parse_groq_payload(raw_outer)
+            if parsed is None:
+                _LAST_GROQ_STATUS = "parse_error"
+                logger.warning("Groq returned unparseable or incomplete triage payload; retaining baseline score.")
+            else:
+                _LAST_GROQ_STATUS = "ok"
+            return parsed
+        except TimeoutError:
+            _LAST_GROQ_STATUS = f"timeout_{timeout_s:.1f}s"
+            logger.warning("Groq clinical triage timed out after %.1fs; retaining baseline score.", timeout_s)
+            return None
+        except urllib.error.HTTPError as exc:
+            err_code = f"http_{exc.code}"
+            try:
+                err_body = exc.read().decode("utf-8", errors="ignore")
+                err_json = json.loads(err_body)
+                detail = _clean_note(str(err_json.get("error", {}).get("code") or err_json.get("error", {}).get("type") or ""), 40)
+                if detail:
+                    err_code = f"http_{exc.code}:{detail}"
+            except Exception:
+                pass
+            _LAST_GROQ_STATUS = err_code
+            logger.warning("Groq clinical triage %s on model %s.", err_code, candidate_model)
+            if exc.code == 404 and idx + 1 < len(candidates):
+                continue
+            return None
+        except Exception as exc:
+            _LAST_GROQ_STATUS = f"error:{type(exc).__name__}"
+            logger.warning("Groq clinical triage skipped (%s); retaining baseline score.", type(exc).__name__)
+            return None
+    return None
 
 
 def merge_groq_assessment(

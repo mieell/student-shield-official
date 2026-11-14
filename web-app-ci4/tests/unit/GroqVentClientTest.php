@@ -143,7 +143,7 @@ final class GroqVentClientTest extends CIUnitTestCase
     public function testAnalyzeBuildsPiiFreeChatCompletionsRequestAndClampsBands(): void
     {
         $_ENV['GROQ_API_KEY'] = $_SERVER['GROQ_API_KEY'] = 'gsk-test-key';
-        $_ENV['GROQ_MODEL'] = $_SERVER['GROQ_MODEL'] = 'llama-3.3-70b-versatile';
+        $_ENV['GROQ_MODEL'] = $_SERVER['GROQ_MODEL'] = 'openai/gpt-oss-120b';
         $captured = [];
 
         $apiBody = json_encode([
@@ -170,7 +170,9 @@ final class GroqVentClientTest extends CIUnitTestCase
         self::assertSame('https://api.groq.com/openai/v1/chat/completions', $captured['endpoint']);
         self::assertSame('gsk-test-key', $captured['apiKey']);
         $decodedBody = json_decode($captured['jsonBody'], true);
-        self::assertSame('llama-3.3-70b-versatile', $decodedBody['model']);
+        self::assertSame('openai/gpt-oss-120b', $decodedBody['model']);
+        self::assertSame(1200, $decodedBody['max_completion_tokens']);
+        self::assertSame('low', $decodedBody['reasoning_effort']);
         self::assertSame(['type' => 'json_object'], $decodedBody['response_format']);
         self::assertStringContainsString('<student_vent>', $captured['jsonBody']);
         self::assertStringContainsString('DepEd DO 40 s.2012', $captured['jsonBody']);

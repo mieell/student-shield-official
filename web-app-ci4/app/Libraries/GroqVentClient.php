@@ -8,7 +8,7 @@ namespace App\Libraries;
  */
 final class GroqVentClient
 {
-    public const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+    public const DEFAULT_MODEL = 'openai/gpt-oss-120b';
     private const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
     private const DEFAULT_TIMEOUT_SECONDS = 8;
     private const MAX_VENT_CHARS = 1500;
@@ -116,9 +116,12 @@ final class GroqVentClient
                 ],
             ],
             'temperature' => 0.1,
-            'max_tokens' => 450,
+            'max_completion_tokens' => 1200,
             'response_format' => ['type' => 'json_object'],
         ];
+        if (str_starts_with($model, 'openai/gpt-oss')) {
+            $bodyPayload['reasoning_effort'] = 'low';
+        }
 
         $jsonBody = json_encode($bodyPayload, JSON_INVALID_UTF8_SUBSTITUTE);
         if (!is_string($jsonBody)) {

@@ -22,6 +22,7 @@ from translation_gate import TranslationGate
 from crisis_context import current_disclosure_text
 from groq_triage import (
     evaluate_vent_with_groq,
+    get_active_model_name,
     get_last_groq_status,
     is_groq_enabled,
     merge_groq_assessment,
@@ -1300,6 +1301,7 @@ async def root_health_check():
         "version": "7.3.0",
         "translation_policy": "english-skip-cache-retry-v2",
         "groq_enabled": is_groq_enabled(),
+        "groq_model": get_active_model_name(),
         "groq_last_status": get_last_groq_status(),
         "message": "Send POST requests to /analyze-text to classify vents.",
     }

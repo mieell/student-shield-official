@@ -56,7 +56,7 @@ class GroqTriageUnitTests(unittest.TestCase):
 
     def test_prompt_excludes_pii_and_parses_chat_completions_json(self) -> None:
         os.environ["GROQ_API_KEY"] = ' "gsk_test_key" '
-        os.environ["GROQ_MODEL"] = "llama-3.3-70b-versatile"
+        os.environ["GROQ_MODEL"] = "openai/gpt-oss-120b"
         captured = {}
 
         def _fake_post(url, body, api_key, timeout_s):
@@ -94,7 +94,9 @@ class GroqTriageUnitTests(unittest.TestCase):
         self.assertEqual(result["risk_score"], 82)
         self.assertEqual(captured["url"], "https://api.groq.com/openai/v1/chat/completions")
         self.assertEqual(captured["api_key"], "gsk_test_key")
-        self.assertEqual(captured["body"]["model"], "llama-3.3-70b-versatile")
+        self.assertEqual(captured["body"]["model"], "openai/gpt-oss-120b")
+        self.assertEqual(captured["body"]["max_completion_tokens"], 1200)
+        self.assertEqual(captured["body"]["reasoning_effort"], "low")
         self.assertEqual(captured["body"]["response_format"], {"type": "json_object"})
         user_msg = captured["body"]["messages"][1]["content"]
         sys_msg = captured["body"]["messages"][0]["content"]
@@ -167,6 +169,33 @@ class GroqTriageUnitTests(unittest.TestCase):
 
         self.assertIsNone(groq_triage.evaluate_vent_with_groq("feeling stressed", http_post=_timed_out))
         self.assertEqual(groq_triage.get_last_groq_status(), "timeout_1.0s")
+
+        attempted_models = []
+
+        def _not_found_then_ok(url, body, api_key, timeout_s):
+            attempted_models.append(body["model"])
+            if len(attempted_models) == 1:
+                raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+            return json.dumps({
+                "choices": [{
+                    "message": {
+                        "content": json.dumps({
+                            "triage_category": "mild_or_single_distress",
+                            "risk_level": "MEDIUM",
+                            "risk_score": 45,
+                            "sarcasm_or_hyperbole": False,
+                            "taglish_nuance": "",
+                            "counselor_reasoning": "Fallback model resolved deprecated primary model.",
+                        })
+                    }
+                }]
+            })
+
+        os.environ["GROQ_MODEL"] = "retired-model-id"
+        fallback_res = groq_triage.evaluate_vent_with_groq("stressed with modules", http_post=_not_found_then_ok)
+        self.assertIsNotNone(fallback_res)
+        self.assertEqual(attempted_models, ["retired-model-id", "openai/gpt-oss-120b"])
+        self.assertEqual(groq_triage.get_last_groq_status(), "ok")
 
     def test_merge_never_downgrades_crisis_or_history_floors(self) -> None:
         benign_groq = {
