@@ -1,4 +1,8 @@
 /* Structured spacing, alignment, and control affordance for SVBSM Student Registration. */
+html:has(body.student-registration) {
+    background-color: #09682D;
+}
+
 body.student-registration {
     padding: 24px 16px;
 }
@@ -294,6 +298,99 @@ body.student-registration .student-card > .registration-footer {
 body.student-registration ::selection {
     background: #f0d06b;
     color: #123921;
+}
+
+body.student-registration .confirm-summary-list {
+    margin: 0;
+    border-radius: 14px;
+    background: rgba(5, 36, 17, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    overflow: hidden;
+}
+
+body.student-registration .confirm-summary-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+}
+
+body.student-registration .confirm-summary-row + .confirm-summary-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+body.student-registration .confirm-summary-row dt {
+    margin: 0;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #d6eadc;
+}
+
+body.student-registration .confirm-summary-row dd {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #ffffff;
+}
+
+@media (min-width: 480px) {
+    body.student-registration .confirm-summary-row {
+        flex-direction: row;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 11px 14px;
+    }
+
+    body.student-registration .confirm-summary-row dd {
+        text-align: right;
+        font-size: 14.5px;
+    }
+}
+
+body.student-registration .confirm-modal-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 11px;
+    border-radius: 12px;
+    background: rgba(255, 244, 199, 0.08);
+    border: 1px solid rgba(243, 217, 117, 0.28);
+    font-size: 12px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+@media (min-width: 640px) {
+    body.student-registration .confirm-modal-note {
+        gap: 9px;
+        padding: 10px 12px;
+        font-size: 12.5px;
+        line-height: 1.45;
+    }
+}
+
+body.student-registration .confirm-btn-secondary {
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+}
+
+body.student-registration .confirm-btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.42);
+}
+
+body.student-registration .confirm-btn-secondary:disabled,
+body.student-registration #confirmSubmitBtn:disabled {
+    opacity: 0.68;
+    cursor: wait;
+    transform: none;
 }
 
 @media (min-width: 1024px) {

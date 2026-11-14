@@ -385,12 +385,71 @@ $selectedSection = (string) set_value('section');
             </div>
         </div>
     </div>
+
+    <!-- Review Registration Details Confirmation Modal -->
+    <div id="confirmRegistrationModal" role="dialog" aria-modal="true" aria-labelledby="confirmRegistrationTitle" class="fixed inset-0 z-[105] hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity opacity-0" id="confirmRegistrationBackdrop"></div>
+
+        <div class="bg-[#0B7533] border border-white/30 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-lg max-h-[92dvh] flex flex-col relative z-10 transform scale-95 opacity-0 transition-all duration-200 overflow-hidden" id="confirmRegistrationBox">
+            <div class="p-3.5 sm:p-5 border-b border-white/20 flex items-center justify-between gap-3 sticky top-0 z-20 bg-[#0F8A3A] shrink-0">
+                <div class="min-w-0">
+                    <h2 id="confirmRegistrationTitle" class="text-[17px] sm:text-xl font-heading font-extrabold text-white flex items-center gap-2">
+                        <i class="fas fa-clipboard-check text-[#FFF4C7]" aria-hidden="true"></i>
+                        <span>Confirm Your Details</span>
+                    </h2>
+                    <p class="text-xs sm:text-[13px] text-white/85 mt-0.5 leading-snug">Double-check your school record and guardian mobile before submitting.</p>
+                </div>
+                <button type="button" id="confirmCloseBtn" aria-label="Close registration confirmation" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors min-h-[36px] min-w-[36px] shrink-0">
+                    <i class="fas fa-times text-base" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="p-3.5 sm:p-6 overflow-y-auto flex-1 custom-scrollbar text-white space-y-2.5 sm:space-y-4">
+                <dl class="confirm-summary-list" aria-label="Registration summary">
+                    <div class="confirm-summary-row">
+                        <dt>Full Name</dt>
+                        <dd id="confirmName">-</dd>
+                    </div>
+                    <div class="confirm-summary-row">
+                        <dt>12-Digit LRN</dt>
+                        <dd id="confirmLrn" class="tabular-nums font-bold tracking-wide text-[#FFF4C7]">-</dd>
+                    </div>
+                    <div class="confirm-summary-row">
+                        <dt>Grade &amp; Section</dt>
+                        <dd id="confirmPlacement">-</dd>
+                    </div>
+                    <div class="confirm-summary-row">
+                        <dt>Parent / Guardian Mobile</dt>
+                        <dd id="confirmParentContact" class="tabular-nums font-bold text-[#FFF4C7]">-</dd>
+                    </div>
+                </dl>
+
+                <p class="confirm-modal-note">
+                    <i class="fas fa-info-circle text-[#FFF4C7] shrink-0 mt-0.5" aria-hidden="true"></i>
+                    <span>Guardian consent SMS and Guidance Office approval will use these details. You can still edit them if anything looks wrong.</span>
+                </p>
+            </div>
+
+            <div class="confirm-modal-footer p-3 sm:p-5 border-t border-white/20 bg-[#09662C] sticky bottom-0 z-20 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 shrink-0">
+                <button type="button" id="confirmCancelBtn" class="confirm-btn-secondary font-bold py-2.5 px-5 rounded-xl transition-colors min-h-[44px] w-full sm:w-auto">
+                    Edit Details
+                </button>
+                <button type="button" id="confirmSubmitBtn" class="submit-btn font-extrabold py-2.5 px-6 rounded-xl flex items-center justify-center gap-2 min-h-[44px] w-full sm:w-auto text-[#0B2415]">
+                    <span>Confirm &amp; Submit</span>
+                    <i class="fas fa-check text-xs" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </div>
     
     <style>
         #termsContentBox h3 { color: #FFF4C7; }
-        #termsContentBox :is(button,a):focus-visible { outline:3px solid #FFF4C7; outline-offset:3px; }
-        #termsContentBox .custom-scrollbar { scrollbar-color:rgba(255,255,255,.5) #0B7533; }
-        #termsContentBox .custom-scrollbar::-webkit-scrollbar-thumb { background:rgba(255,255,255,.5); }
+        #termsContentBox :is(button,a):focus-visible,
+        #confirmRegistrationBox :is(button,a):focus-visible { outline:3px solid #FFF4C7; outline-offset:3px; }
+        #termsContentBox .custom-scrollbar,
+        #confirmRegistrationBox .custom-scrollbar { scrollbar-color:rgba(255,255,255,.5) #0B7533; }
+        #termsContentBox .custom-scrollbar::-webkit-scrollbar-thumb,
+        #confirmRegistrationBox .custom-scrollbar::-webkit-scrollbar-thumb { background:rgba(255,255,255,.5); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
@@ -452,13 +511,80 @@ $selectedSection = (string) set_value('section');
         }, 300);
     }
 
+    const registrationForm = document.querySelector('form.registration-form');
+    let registrationConfirmed = false;
+    let confirmModalTrigger = null;
+
+    function openConfirmRegistrationModal() {
+        const modal = document.getElementById('confirmRegistrationModal');
+        const backdrop = document.getElementById('confirmRegistrationBackdrop');
+        const box = document.getElementById('confirmRegistrationBox');
+        const gradeSelect = document.getElementById('grade_level');
+        const sectionSelect = document.getElementById('section');
+        const gradeLabel = gradeSelect.value ? ('Grade ' + gradeSelect.value) : '';
+        const sectionLabel = sectionSelect.value ? sectionSelect.options[sectionSelect.selectedIndex]?.text || sectionSelect.value : '';
+
+        document.getElementById('confirmName').textContent = document.getElementById('name').value.trim();
+        document.getElementById('confirmLrn').textContent = document.getElementById('lrn').value.trim();
+        document.getElementById('confirmPlacement').textContent = [gradeLabel, sectionLabel].filter(Boolean).join(' · ');
+        document.getElementById('confirmParentContact').textContent = document.getElementById('parent_contact').value.trim();
+
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+        const submitModalBtn = document.getElementById('confirmSubmitBtn');
+        const closeBtn = document.getElementById('confirmCloseBtn');
+        cancelBtn.disabled = false;
+        submitModalBtn.disabled = false;
+        closeBtn.disabled = false;
+
+        confirmModalTrigger = document.activeElement;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            box.classList.remove('opacity-0', 'scale-95');
+            box.classList.add('opacity-100', 'scale-100');
+            cancelBtn.focus();
+        }, 10);
+    }
+
+    function closeConfirmRegistrationModal(restoreFocus = true) {
+        const modal = document.getElementById('confirmRegistrationModal');
+        if (modal.classList.contains('hidden')) return;
+        const backdrop = document.getElementById('confirmRegistrationBackdrop');
+        const box = document.getElementById('confirmRegistrationBox');
+
+        backdrop.classList.add('opacity-0');
+        box.classList.remove('opacity-100', 'scale-100');
+        box.classList.add('opacity-0', 'scale-95');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            if (restoreFocus) {
+                (confirmModalTrigger && typeof confirmModalTrigger.focus === 'function'
+                    ? confirmModalTrigger
+                    : document.getElementById('submitBtn')).focus();
+            }
+        }, 200);
+    }
+
     window.addEventListener('pageshow', () => {
+        registrationConfirmed = false;
         const button = document.getElementById('submitBtn');
         button.disabled = false;
         button.classList.remove('opacity-80', 'cursor-wait', 'scale-[0.98]');
         document.getElementById('btnText').textContent = 'Submit Registration';
         document.getElementById('btnIcon').classList.remove('hidden');
         document.getElementById('btnSpinner').classList.add('hidden');
+        const confirmModal = document.getElementById('confirmRegistrationModal');
+        if (confirmModal && !confirmModal.classList.contains('hidden')) {
+            confirmModal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        document.getElementById('confirmCancelBtn').disabled = false;
+        document.getElementById('confirmSubmitBtn').disabled = false;
+        document.getElementById('confirmCloseBtn').disabled = false;
     });
 
     function updateSpotlight(e) {
@@ -476,6 +602,49 @@ $selectedSection = (string) set_value('section');
             else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
         }
     });
+
+    document.getElementById('confirmRegistrationBackdrop').addEventListener('click', () => closeConfirmRegistrationModal(true));
+    document.getElementById('confirmCloseBtn').addEventListener('click', () => closeConfirmRegistrationModal(true));
+    document.getElementById('confirmCancelBtn').addEventListener('click', () => closeConfirmRegistrationModal(true));
+    document.getElementById('confirmSubmitBtn').addEventListener('click', () => {
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+        const submitModalBtn = document.getElementById('confirmSubmitBtn');
+        const closeBtn = document.getElementById('confirmCloseBtn');
+        cancelBtn.disabled = true;
+        submitModalBtn.disabled = true;
+        closeBtn.disabled = true;
+        registrationConfirmed = true;
+
+        const modal = document.getElementById('confirmRegistrationModal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+
+        if (typeof registrationForm.requestSubmit === 'function') {
+            registrationForm.requestSubmit();
+        } else {
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-wait', 'scale-[0.98]');
+            document.getElementById('btnText').innerText = 'Processing...';
+            document.getElementById('btnIcon').classList.add('hidden');
+            document.getElementById('btnSpinner').classList.remove('hidden');
+            registrationForm.submit();
+        }
+    });
+    document.getElementById('confirmRegistrationModal').addEventListener('keydown', event => {
+        if (event.key === 'Escape') { closeConfirmRegistrationModal(true); return; }
+        if (event.key === 'Tab') {
+            const buttons = Array.from(event.currentTarget.querySelectorAll('button:not(:disabled)'));
+            if (buttons.length === 0) return;
+            const first = buttons[0], last = buttons[buttons.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+    });
+
+    registrationForm.addEventListener('input', () => { registrationConfirmed = false; });
+    registrationForm.addEventListener('change', () => { registrationConfirmed = false; });
+
     function passwordRequirements(value) {
         return {
             'req-length': value.length >= 8,
@@ -486,16 +655,25 @@ $selectedSection = (string) set_value('section');
         };
     }
 
-    document.querySelector('form').addEventListener('submit', function(e) {
+    registrationForm.addEventListener('submit', function(e) {
         const pass = document.getElementById('password').value;
         const confirmPass = document.getElementById('password_confirm').value;
-        
+        const feedback = document.getElementById('registrationFeedback');
+
         if (!Object.values(passwordRequirements(pass)).every(Boolean) || pass !== confirmPass) {
             e.preventDefault();
-            const feedback = document.getElementById('registrationFeedback');
+            registrationConfirmed = false;
             feedback.textContent = 'Check the password requirements and make sure both passwords match.';
             feedback.hidden = false;
             document.getElementById('password').focus();
+            return;
+        }
+
+        feedback.hidden = true;
+
+        if (!registrationConfirmed) {
+            e.preventDefault();
+            openConfirmRegistrationModal();
             return;
         }
 

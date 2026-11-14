@@ -74,6 +74,10 @@ final class StudentNavigationViewTest extends CIUnitTestCase
         }
         $this->assertCount(1, $xpath->query('//*[@id="termsModal"]'));
         $this->assertCount(1, $xpath->query('//*[@id="terms-section-privacy"]'));
+        $this->assertCount(1, $xpath->query('//*[@id="confirmRegistrationModal"][@role="dialog"][@aria-modal="true"]'));
+        foreach (['confirmName', 'confirmLrn', 'confirmPlacement', 'confirmParentContact', 'confirmCancelBtn', 'confirmSubmitBtn'] as $id) {
+            $this->assertCount(1, $xpath->query('//*[@id="' . $id . '"]'));
+        }
         $this->assertCount(1, $xpath->query($form . '//button[@type="submit"]'));
     }
 }
