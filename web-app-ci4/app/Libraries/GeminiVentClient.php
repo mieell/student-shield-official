@@ -173,7 +173,9 @@ final class GeminiVentClient
         }
 
         if ($httpCode < 200 || $httpCode >= 300 || !is_string($rawResponse) || $rawResponse === '') {
-            log_message('warning', 'Gemini fallback unavailable (HTTP {status}); using local safety fallback.', ['status' => $httpCode]);
+            if (function_exists('log_message')) {
+                log_message('warning', 'Gemini fallback unavailable (HTTP {status}); using local safety fallback.', ['status' => $httpCode]);
+            }
             return null;
         }
 
