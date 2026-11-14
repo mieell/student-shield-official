@@ -91,7 +91,7 @@ class CaseSummaryController extends BaseController
             $risk = strtoupper($v['risk_level'] ?? 'LOW');
             $y = $risk === 'CRITICAL' ? 100 : ($risk === 'HIGH' ? 75 : ($risk === 'MEDIUM' ? 50 : 25));
             $riskTimeline[] = [
-                'x'          => strtotime($v['created_at']) * 1000,
+                'x'          => (\App\Libraries\ManilaTime::unix($v['created_at'] ?? '') ?? 0) * 1000,
                 'y'          => $y,
                 'risk_label' => $risk,
                 'sentiment'  => $v['risk_percent'] ?? '0',
@@ -330,7 +330,7 @@ class CaseSummaryController extends BaseController
         }
 
         // Sort timeline descending
-        usort($timeline, fn($a, $b) => strtotime($b['date']) - strtotime($a['date']));
+        usort($timeline, fn($a, $b) => (\App\Libraries\ManilaTime::unix($b['date'] ?? '') ?? 0) <=> (\App\Libraries\ManilaTime::unix($a['date'] ?? '') ?? 0));
 
         return $this->response->setJSON([
             'student'        => $student,
@@ -351,7 +351,7 @@ class CaseSummaryController extends BaseController
             'timeline'       => $timeline,
             'totalVents'     => count($vents),
             'totalNotifications' => count($smsLogs) + count($emailLogs),
-            'generatedAt'    => date('Y-m-d H:i:s'),
+            'generatedAt'    => \App\Libraries\ManilaTime::now(),
         ]);
     }
 
@@ -377,7 +377,7 @@ class CaseSummaryController extends BaseController
             'counselor_id' => (int) session()->get('user_id'),
             'note_type'    => $noteType,
             'content'      => $content,
-            'created_at'   => date('Y-m-d H:i:s'),
+            'created_at'   => \App\Libraries\ManilaTime::now(),
         ]);
 
         $this->logAudit('ADD_NOTE', 'student', (int) $studentId);
@@ -412,7 +412,7 @@ class CaseSummaryController extends BaseController
             'status'     => $status,
             'remarks'    => $remarks,
             'changed_by' => (int) session()->get('user_id'),
-            'created_at' => date('Y-m-d H:i:s'),
+            'created_at' => \App\Libraries\ManilaTime::now(),
         ]);
 
         $this->logAudit('UPDATE_CASE_STATUS', 'student', (int) $studentId);
@@ -432,7 +432,7 @@ class CaseSummaryController extends BaseController
         $db = \Config\Database::connect();
         $db->table('counselor_notes')
             ->where('id', $noteId)
-            ->update(['deleted_at' => date('Y-m-d H:i:s')]);
+            ->update(['deleted_at' => \App\Libraries\ManilaTime::now()]);
 
         $this->logAudit('DELETE_NOTE', 'counselor_note', (int) $noteId);
 

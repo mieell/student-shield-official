@@ -34,8 +34,8 @@ $reportStatuses = [
                         <?php endforeach; ?>
                     </ol>
                     <?php endif; ?>
-                    <?php $submittedAt = strtotime((string) ($report['created_at'] ?? '')); ?>
-                    <span class="student-report-date" title="<?= esc((string) ($report['created_at'] ?? ''), 'attr') ?>">Submitted: <?= $submittedAt !== false ? esc(date('M j, Y \a\t g:i A', $submittedAt)) : esc((string) ($report['created_at'] ?? '')) ?></span>
+                    <?php $submittedDt = \App\Libraries\ManilaTime::parse($report['created_at'] ?? ''); ?>
+                    <span class="student-report-date" title="<?= esc((string) ($report['created_at'] ?? ''), 'attr') ?>">Submitted: <?= $submittedDt ? esc($submittedDt->format('M j, Y \a\t g:i A') . ' PHT') : esc((string) ($report['created_at'] ?? '')) ?></span>
                 </li>
                 <?php endforeach; ?>
             </ul>

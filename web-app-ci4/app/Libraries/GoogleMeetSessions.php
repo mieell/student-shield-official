@@ -34,9 +34,9 @@ class GoogleMeetSessions
         } catch (DomainException $e) {
             return false;
         }
-        $created = strtotime($row['created_at'] ?? '');
+        $created = ManilaTime::unix($row['created_at'] ?? '');
         $now = ($this->clock)();
-        return ($row['status'] ?? '') === 'active' && $created !== false
+        return ($row['status'] ?? '') === 'active' && $created !== null
             && $created <= $now && $created > $now - self::LIFETIME_SECONDS;
     }
 
@@ -57,7 +57,7 @@ class GoogleMeetSessions
             if ($state['active'] || $state['pending']) return;
             $this->db->table('virtual_meetings')->insert([
                 'student_id' => $studentId, 'counselor_id' => null, 'meet_link' => '',
-                'status' => 'requested', 'created_at' => date('Y-m-d H:i:s', ($this->clock)()),
+                'status' => 'requested', 'created_at' => ManilaTime::now('Y-m-d H:i:s', ($this->clock)()),
             ]);
         });
     }
@@ -86,7 +86,7 @@ class GoogleMeetSessions
                 throw new DomainException('This Meet link was already used. Create a new meeting for each counseling session.');
             }
             $data = ['student_id' => $studentId, 'counselor_id' => $hostId, 'meet_link' => $link,
-                'status' => 'active', 'created_at' => date('Y-m-d H:i:s', ($this->clock)())];
+                'status' => 'active', 'created_at' => ManilaTime::now('Y-m-d H:i:s', ($this->clock)())];
             if ($state['pending']) {
                 $id = (int) $state['pending']['id'];
                 $this->db->table('virtual_meetings')->where('id', $id)->update($data);

@@ -13,7 +13,10 @@ $staffLinks = [
 ];
 $staffAdminLinks = [];
 if ((int) session()->get('role') === 1) {
-    $staffAdminLinks['registrations'] = ['Registrations', 'admin/pending-registrations', 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M13 7a4 4 0 11-8 0 4 4 0 018 0M20 8v6M17 11h6'];
+    $staffAdminLinks = [
+        'registrations' => ['Registrations', 'admin/pending-registrations', 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M13 7a4 4 0 11-8 0 4 4 0 018 0M20 8v6M17 11h6'],
+        'audit-logs' => ['Audit Logs', 'admin/audit-logs', 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h6'],
+    ];
 } elseif ((int) session()->get('role') === 2) {
     $staffLinks = [
         'users' => ['Accounts', 'admin/users', 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M13 7a4 4 0 11-8 0 4 4 0 018 0M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75'],
@@ -86,7 +89,7 @@ if ((int) session()->get('role') === 1) {
             </a>
             <span id="registrationNotificationStatus" class="sr-only" role="status" aria-live="polite"></span>
             <?php endif; ?>
-            <div class="staff-clock"><span id="liveDayDate"><?= date('D, j M Y') ?></span><span id="liveTime"><?= date('g:i:s A') ?></span></div>
+            <div class="staff-clock"><span id="liveDayDate"><?= esc(\App\Libraries\ManilaTime::now('D, M j, Y')) ?></span><span id="liveTime"><?= esc(\App\Libraries\ManilaTime::now('g:i:s A')) ?></span></div>
         </div>
     </div>
 </header>

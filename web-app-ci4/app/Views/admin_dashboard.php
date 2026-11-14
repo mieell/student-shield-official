@@ -1129,44 +1129,30 @@ $pageDescriptions = [
             }
             if (!areaChart) return; // Update without full animation redraw
 
-            // Only calculate Date labels once per session to save CPU
+            // Compute exact Manila (UTC+8) 7-day calendar buckets cleanly regardless of browser timezone.
+            const manilaTodayIso = formatPHIsoDate(new Date());
+            const manilaTodayMidnight = parsePHDate(manilaTodayIso);
+            const msPerDay = 1000 * 60 * 60 * 24;
+
             if (!cachedDateLabels) {
                 cachedDateLabels = [];
-                let today = new Date();
-                today.setHours(0, 0, 0, 0);
                 for (let i = 6; i >= 0; i--) {
-                    let d = new Date(today);
-                    d.setDate(d.getDate() - i);
-                    let label = d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
-                    cachedDateLabels.push(label);
+                    const bucketDate = new Date(manilaTodayMidnight.getTime() - i * msPerDay);
+                    cachedDateLabels.push(formatPHDate(bucketDate, { month: 'short', day: 'numeric' }));
                 }
                 areaChart.updateOptions({ xaxis: { categories: cachedDateLabels } });
             }
 
             let daysData = [0, 0, 0, 0, 0, 0, 0];
-            let today = new Date();
-            today.setHours(0, 0, 0, 0);
-
             data.forEach(v => {
-                let vDate = parsePHDate(v.created_at);
-                vDate.setHours(0, 0, 0, 0);
-                let diffTime = Math.abs(today - vDate);
-                let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                const vMidnight = parsePHDate(formatPHIsoDate(v.created_at));
+                const diffDays = Math.round((manilaTodayMidnight.getTime() - vMidnight.getTime()) / msPerDay);
                 if (diffDays <= 6 && diffDays >= 0) {
                     daysData[6 - diffDays]++;
                 }
             });
 
             areaChart.updateSeries([{ data: daysData }]);
-        }
-
-        // Bulletproof Date parsing for Safari & mobile browsers turning PHT times into UTC
-        function parsePHDate(dateStr) {
-            if (!dateStr) return new Date();
-            if (typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.includes('+')) {
-                return new Date(dateStr.replace(' ', 'T') + '+08:00');
-            }
-            return new Date(dateStr);
         }
 
         function escapeHtml(unsafe) {
@@ -1241,7 +1227,7 @@ $pageDescriptions = [
                 success: function (data) {
                     if (requestVersion !== ventsRequestVersion || archived !== showArchivedVents) return;
                     const feedStatus = document.getElementById('feedUpdatedAt');
-                    if (feedStatus) feedStatus.textContent = 'Updated ' + new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+                    if (feedStatus) feedStatus.textContent = 'Updated ' + formatPHDate(new Date(), { hour: '2-digit', minute: '2-digit' });
                     let currentDataString = JSON.stringify(data);
                     if (currentDataString === previousVentsDataString) return;
                     previousVentsDataString = currentDataString;
@@ -1284,9 +1270,9 @@ $pageDescriptions = [
 
                             // Formatting dates with day name for Philippine context
                             const dateObj = parsePHDate(vent.created_at);
-                            const timeStr = dateObj.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
-                            const dayName = dateObj.toLocaleDateString('en-PH', { weekday: 'short' });
-                            const dateStr = dateObj.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+                            const timeStr = formatPHDate(dateObj, { hour: '2-digit', minute: '2-digit' });
+                            const dayName = formatPHDate(dateObj, { weekday: 'short' });
+                            const dateStr = formatPHDate(dateObj, { month: 'short', day: 'numeric' });
 
                             // Animation delay for new loads
                             const animDelay = isFirstLoadVents ? `style="animation-delay: ${index * 0.05}s"` : '';
@@ -1296,7 +1282,7 @@ $pageDescriptions = [
                                         ${vent.parent_phone ? `<span class="text-[10px] text-gray-500 block pt-0.5 border-t border-gray-200 mt-1">📞 ${escapeHtml(vent.parent_phone)}</span>` : ''}
                                         ${vent.parent_email ? `<span class="text-[10px] text-gray-500 block">✉️ ${escapeHtml(vent.parent_email)}</span>` : ''}`;
 
-                            const rawDate = dateObj.toISOString().split('T')[0]; const ventStatus = isResolved ? "resolved" : "unresolved"; html += `<tr data-entry-id="${vent.id}" data-status="${ventStatus}" data-date="${rawDate}" data-risk="${escapeHtml(vent.risk_level)}" class="transition-all duration-300 transform hover:-translate-y-[1px] ${bgColor} ${animClass}" ${animDelay}>
+                            const rawDate = formatPHIsoDate(dateObj); const ventStatus = isResolved ? "resolved" : "unresolved"; html += `<tr data-entry-id="${vent.id}" data-status="${ventStatus}" data-date="${rawDate}" data-risk="${escapeHtml(vent.risk_level)}" class="transition-all duration-300 transform hover:-translate-y-[1px] ${bgColor} ${animClass}" ${animDelay}>
                             ${vent.risk_level === 'CRITICAL' && !isResolved ? `` : ''}
                             <td data-label="Select" class="px-4 py-4 whitespace-nowrap text-center relative z-10">
                                 <label class="staff-entry-select"><input type="checkbox" name="vent_ids[]" value="${vent.id}" aria-label="Select entry by ${escapeHtml(vent.name)}" class="vent-checkbox rounded border-gray-300 text-primary h-4 w-4"></label>
@@ -1463,14 +1449,14 @@ $pageDescriptions = [
                             let perpetratorName = incident.perpetrator_name ? incident.perpetrator_name : 'Unknown';
 
                             const dateObj = parsePHDate(incident.created_at);
-                            const dayName = dateObj.toLocaleDateString('en-PH', { weekday: 'short' });
-                            const dateStr = dayName + ', ' + dateObj.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                            const dayName = formatPHDate(dateObj, { weekday: 'short' });
+                            const dateStr = dayName + ', ' + formatPHDate(dateObj, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
                             let bgColor = isPending ? 'bg-white hover:bg-gray-50 border-l-4 border-l-amber-400' : (isRejected ? 'bg-white hover:bg-gray-50 border-l-4 border-l-red-500' : 'bg-white hover:bg-gray-50 border-l-4 border-l-transparent');
 
                             let evidenceBadge = incident.evidence_file ? `<span class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">📎 Evidence Attached</span>` : '';
 
-                            const rawDate = dateObj.toISOString().split('T')[0]; const incidentStatus = isResolved ? "resolved" : "unresolved"; html += `<tr data-entry-id="${incident.id}" data-status="${incidentStatus}" data-date="${rawDate}" class="transition-colors duration-200 ${bgColor}">
+                            const rawDate = formatPHIsoDate(dateObj); const incidentStatus = isResolved ? "resolved" : "unresolved"; html += `<tr data-entry-id="${incident.id}" data-status="${incidentStatus}" data-date="${rawDate}" class="transition-colors duration-200 ${bgColor}">
                             <td data-label="Select" class="px-3 py-3.5 text-center">
                                 <input type="checkbox" name="incident_ids[]" value="${incident.id}" class="incident-checkbox rounded border-gray-300 text-primary h-4 w-4">
                             </td>
@@ -1664,8 +1650,8 @@ $pageDescriptions = [
                             }
 
                             const dateObj = parsePHDate(alert.timestamp);
-                            const dayName = dateObj.toLocaleDateString('en-PH', { weekday: 'short' });
-                            const dateStr = dayName + ', ' + dateObj.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                            const dayName = formatPHDate(dateObj, { weekday: 'short' });
+                            const dateStr = dayName + ', ' + formatPHDate(dateObj, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
                             html += `<tr class="transition-colors duration-200 bg-white hover:bg-gray-50">
                                 <td data-label="Timestamp" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">${dateStr}</td>
@@ -1735,8 +1721,8 @@ $pageDescriptions = [
             const vent = window.ventsDataMap[id];
             if (!vent) return;
             const dateObj = parsePHDate(vent.created_at);
-            const timeStr = dateObj.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
-            const dateStr = dateObj.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric' });
+            const timeStr = formatPHDate(dateObj, { hour: '2-digit', minute: '2-digit' });
+            const dateStr = formatPHDate(dateObj, { weekday: 'long', month: 'short', day: 'numeric' });
 
             let senderInfo = vent.name || 'Anonymous';
             if (vent.section) senderInfo += `\nSection: ${vent.section}`;
@@ -1759,7 +1745,7 @@ $pageDescriptions = [
             const reporter = inc.name || 'Anonymous';
             const perp = inc.perpetrator_name || 'Unknown';
             const dateObj = parsePHDate(inc.created_at);
-            const dateStr = dateObj.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const dateStr = formatPHDate(dateObj, { weekday: 'long', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             const isRes = inc.status === 'Resolved' || inc.status === 'resolved' || inc.status === 'verified';
             const badgeClass = isRes ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700 border-blue-200';
 
@@ -1797,7 +1783,7 @@ $pageDescriptions = [
             const alert = window.alertsDataMap[index];
             if (!alert) return;
             const dateObj = parsePHDate(alert.timestamp);
-            const dateStr = dateObj.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const dateStr = formatPHDate(dateObj, { weekday: 'long', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             const isSms = alert.type.includes('SMS');
             const badgeClass = isSms ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-purple-100 text-purple-700 border-purple-200';
             const icon = isSms ? '📱' : '✉️';
@@ -2011,12 +1997,7 @@ $pageDescriptions = [
             });
 
             function timeAgo(dateStr) {
-                if (!dateStr) return '';
-                const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-                if (diff < 60) return diff + 's ago';
-                if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-                if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-                return Math.floor(diff / 86400) + 'd ago';
+                return formatPHTimeAgo(dateStr);
             }
 
             function renderDropdownList(requests) {

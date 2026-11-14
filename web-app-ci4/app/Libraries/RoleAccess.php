@@ -21,9 +21,9 @@ final class RoleAccess
         $path = trim($path, '/');
         if (in_array($path, ['staff/profile', 'staff/settings'], true)) return in_array($role, [1, 2, 3], true);
         if ($path === 'admin/dashboard') return in_array($role, [1, 2, 3], true); // Dispatches to the role's home.
-        if ($path === 'admin/pending-registrations') return in_array($role, [1, 2], true);
+        if (in_array($path, ['admin/pending-registrations', 'admin/audit-logs'], true)) return in_array($role, [1, 2], true);
         if (preg_match('#^admin/registrations/[0-9]+/(?:send-consent|archive)$#', $path)) return $role === 2;
-        if (preg_match('#^admin/(users(?:/(?:create|(?:update|delete|unlock|access)/[0-9]+))?|audit-logs)$#', $path)) return $role === 2;
+        if (preg_match('#^admin/users(?:/(?:create|(?:update|delete|unlock|access)/[0-9]+))?$#', $path)) return $role === 2;
         if (preg_match('#^principal/(dashboard|api/analytics|reports/export)$#', $path)) return $role === 3;
         if (preg_match('#^admin/reports(?:/export)?$#', $path)) return $role === 1;
         if (str_starts_with($path, 'counselor/')) return $role === 1 && self::allows($role, 'admin/' . substr($path, 10));

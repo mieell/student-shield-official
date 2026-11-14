@@ -11,7 +11,9 @@ class AuthFilter implements FilterInterface
 {
     protected function account(int $id): ?array
     {
-        return \Config\Database::connect()->table('users')->where('id', $id)->get()->getRowArray();
+        $db = \Config\Database::connect();
+        \App\Libraries\ManilaTime::syncDatabaseSession($db);
+        return $db->table('users')->where('id', $id)->get()->getRowArray();
     }
 
     public function before(RequestInterface $request, $arguments = null)

@@ -405,7 +405,7 @@ final class RoleSeparationTest extends CIUnitTestCase
 
     public function testEveryRoleIsDeniedOnOtherRolesDirectUrlsAndApis(): void
     {
-        $resources = ['admin/api/vents' => [1], 'admin/api/incidents' => [1], 'admin/api/student-profile/10' => [1], 'admin/api/case-summary/10' => [1], 'admin/evidence/test.png' => [1], 'admin/vent/delete/1' => [1], 'admin/approve-student/12' => [1], 'admin/reject-student/12' => [1], 'admin/users' => [2], 'admin/users/access/10' => [2], 'admin/audit-logs' => [2], 'principal/dashboard' => [3], 'principal/api/analytics' => [3], 'principal/reports/export' => [3], 'student/vent' => [0], 'report-bullying/submit' => [0], 'meeting/join/1' => [0, 1]];
+        $resources = ['admin/api/vents' => [1], 'admin/api/incidents' => [1], 'admin/api/student-profile/10' => [1], 'admin/api/case-summary/10' => [1], 'admin/evidence/test.png' => [1], 'admin/vent/delete/1' => [1], 'admin/approve-student/12' => [1], 'admin/reject-student/12' => [1], 'admin/users' => [2], 'admin/users/access/10' => [2], 'admin/audit-logs' => [1, 2], 'counselor/audit-logs' => [1], 'principal/dashboard' => [3], 'principal/api/analytics' => [3], 'principal/reports/export' => [3], 'student/vent' => [0], 'report-bullying/submit' => [0], 'meeting/join/1' => [0, 1]];
         foreach ([0, 1, 2, 3] as $role) foreach ($resources as $path => $allowed) {
             $this->login($role);
             $response = (new AuthFilter())->before($this->request($path));
@@ -1097,6 +1097,131 @@ final class RoleSeparationTest extends CIUnitTestCase
             } else {
                 $_ENV['GUARDIAN_CONSENT_NOTICE'] = $savedNotice;
             }
+        }
+    }
+
+    public function testCounselorAuditLogsAreScopedToGuidanceEventsAndUseManilaTimestamps(): void
+    {
+        $this->rbacDb->table('audit_logs')->insertBatch([
+            [
+                'user_id' => 1,
+                'action' => 'VIEW_VENT',
+                'entity_type' => 'vent',
+                'entity_id' => 101,
+                'ip_address' => '203.0.113.55',
+                'user_agent' => 'TestBrowser/1.0',
+                'created_at' => '2026-11-14 01:05:09',
+            ],
+            [
+                'user_id' => 1,
+                'action' => 'USER_REGISTERED',
+                'entity_type' => 'user',
+                'entity_id' => 10,
+                'ip_address' => '203.0.113.55',
+                'user_agent' => 'TestBrowser/1.0',
+                'created_at' => '2026-11-14 08:15:30',
+            ],
+            [
+                'user_id' => 1,
+                'action' => 'SESSION_SCHEDULED',
+                'entity_type' => 'meeting',
+                'entity_id' => 301,
+                'ip_address' => '203.0.113.55',
+                'user_agent' => 'TestBrowser/1.0',
+                'created_at' => '2026-11-14 09:20:45',
+            ],
+            [
+                'user_id' => 1,
+                'action' => 'SAVED_CASE_NOTES',
+                'entity_type' => 'counselor_note',
+                'entity_id' => 401,
+                'ip_address' => '203.0.113.55',
+                'user_agent' => 'TestBrowser/1.0',
+                'created_at' => '2026-11-14 10:00:00',
+            ],
+            [
+                'user_id' => 2,
+                'action' => 'LOGIN_SUCCESS',
+                'entity_type' => 'system',
+                'entity_id' => 1,
+                'ip_address' => '203.0.113.55',
+                'user_agent' => 'TestBrowser/1.0',
+                'created_at' => '2026-11-14 11:00:00',
+            ],
+            [
+                'user_id' => 2,
+                'action' => 'USER_CREATED',
+                'entity_type' => 'user',
+                'entity_id' => 55,
+                'ip_address' => '203.0.113.55',
+                'user_agent' => 'TestBrowser/1.0',
+                'created_at' => '2026-11-14 11:05:00',
+            ],
+        ]);
+
+        $this->login(1);
+        \Config\Services::resetSingle('response');
+        $counselorController = new \App\Controllers\AdminController();
+        $counselorController->initController(
+            $this->request('admin/audit-logs', 'GET'),
+            \Config\Services::response(),
+            \Config\Services::logger()
+        );
+        $counselorHtml = (string) $counselorController->auditLogs();
+
+        $this->assertStringContainsString('Guidance Audit Logs', $counselorHtml);
+        $this->assertStringContainsString('Timestamp (PHT)', $counselorHtml);
+        $this->assertStringContainsString('1:05:09 AM PHT', $counselorHtml);
+        $this->assertStringContainsString('4 entries', $counselorHtml);
+        $this->assertStringContainsString('View vent (reference #101)', $counselorHtml);
+        $this->assertStringContainsString('User registered (reference #10)', $counselorHtml);
+        $this->assertStringContainsString('Session scheduled (reference #301)', $counselorHtml);
+        $this->assertStringContainsString('Saved case notes (reference #401)', $counselorHtml);
+        $this->assertStringNotContainsString('Login success', $counselorHtml);
+        $this->assertStringNotContainsString('User created (reference #55)', $counselorHtml);
+        $this->assertStringNotContainsString('203.0.113.55', $counselorHtml);
+        $this->assertStringNotContainsString('IP address', $counselorHtml);
+        $this->assertStringNotContainsString('System (Login/Logout)', $counselorHtml);
+
+        $this->login(2);
+        \Config\Services::resetSingle('response');
+        $adminController = new \App\Controllers\AdminController();
+        $adminController->initController(
+            $this->request('admin/audit-logs', 'GET'),
+            \Config\Services::response(),
+            \Config\Services::logger()
+        );
+        $adminHtml = (string) $adminController->auditLogs();
+
+        $this->assertStringContainsString('System Audit Logs', $adminHtml);
+        $this->assertStringContainsString('6 entries', $adminHtml);
+        $this->assertStringContainsString('Login success', $adminHtml);
+        $this->assertStringContainsString('User created (reference #55)', $adminHtml);
+        $this->assertStringContainsString('203.0.113.55', $adminHtml);
+        $this->assertStringContainsString('IP address', $adminHtml);
+        $this->assertStringContainsString('System (Login/Logout)', $adminHtml);
+    }
+
+    public function testManilaTimeIgnoresServerTimezoneAndParsesUtcAndNaiveValues(): void
+    {
+        $previousTz = date_default_timezone_get();
+
+        try {
+            date_default_timezone_set('America/New_York');
+
+            $this->assertSame('2023-11-15 06:13:20', \App\Libraries\ManilaTime::now('Y-m-d H:i:s', 1700000000));
+            $this->assertSame(1700000000, \App\Libraries\ManilaTime::unix('2023-11-15 06:13:20'));
+            $this->assertSame('2026-11-14 01:30:05', \App\Libraries\ManilaTime::format('2026-11-13 17:30:05Z', 'Y-m-d H:i:s'));
+            $this->assertSame('Nov 14, 2026 1:30:05 AM', \App\Libraries\ManilaTime::format('2026-11-14T01:30:05+08:00', 'M d, Y g:i:s A'));
+            $this->assertSame('Nov 14, 2026 1:05:09 AM', \App\Libraries\ManilaTime::format('2026-11-14 01:05:09', 'M d, Y g:i:s A'));
+            $this->assertSame('—', \App\Libraries\ManilaTime::format(null));
+            $this->assertSame('N/A', \App\Libraries\ManilaTime::format('not-a-date', 'M d, Y', 'N/A'));
+
+            \App\Libraries\ManilaTime::ensurePhpTimezone();
+            $this->assertSame('Asia/Manila', date_default_timezone_get());
+        } finally {
+            date_default_timezone_set($previousTz ?: 'Asia/Manila');
+            \App\Libraries\ManilaTime::ensurePhpTimezone();
         }
     }
 }

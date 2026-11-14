@@ -33,7 +33,7 @@ $description = ['profile' => 'Your identity and access within StudentShield.', '
 <p id="profilePasswordHint" class="profile-field-hint">Confirm your password to save these changes.</p>
 <div class="profile-save-actions"><button type="submit">Save profile</button><button type="reset" class="secondary">Reset changes</button></div>
 </form></section>
-<section class="account-surface"><h2>Your workspace access</h2><p><?= $role === 2 ? 'Account management and system audit activity.' : ($role === 1 ? 'Student case review, consultations and registration decisions.' : 'School-level analytics and aggregate report exports.') ?></p><div class="account-access-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3l8 4v6c0 5-8 8-8 8s-8-3-8-8V7zM8 12l3 3 5-6"/></svg><span>Access follows your assigned role. Student clinical details are restricted to the guidance office.</span></div></section>
+<section class="account-surface"><h2>Your workspace access</h2><p><?= $role === 2 ? 'Account management and system audit activity.' : ($role === 1 ? 'Student case review, consultations, registration decisions and guidance audit logs.' : 'School-level analytics and aggregate report exports.') ?></p><div class="account-access-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3l8 4v6c0 5-8 8-8 8s-8-3-8-8V7zM8 12l3 3 5-6"/></svg><span>Access follows your assigned role. Student clinical details are restricted to the guidance office.</span></div></section>
 </div></div>
 <?php endif; ?>
 </main><?= view('partials/session_idle_modal') ?><?= view('partials/password_visibility') ?></body></html>

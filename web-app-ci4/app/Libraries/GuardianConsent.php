@@ -80,14 +80,14 @@ final class GuardianConsent
     {
         if (!$prior) return true;
         if (!empty($prior['response'])) return false;
-        if (strtotime($prior['expires_at']) <= $now) return true;
+        if ((ManilaTime::unix($prior['expires_at'] ?? '') ?? 0) <= $now) return true;
         if (in_array($prior['sms_state'], ['Unknown', 'Manual'], true)) {
             return false;
         }
         if ($prior['sms_state'] !== 'Queued') {
             return true;
         }
-        return strtotime($prior['requested_at']) <= $now - 300;
+        return (ManilaTime::unix($prior['requested_at'] ?? '') ?? 0) <= $now - 300;
     }
 
     public static function lockStudent(BaseConnection $db, int $id): ?array
@@ -150,8 +150,8 @@ final class GuardianConsent
                 if ($h === '' || $p !== $phone || !in_array($k, ['sms', 'manual'], true)) {
                     continue;
                 }
-                $expTs = strtotime($exp);
-                if ($expTs === false || $expTs <= $now) {
+                $expTs = ManilaTime::unix($exp);
+                if ($expTs === null || $expTs <= $now) {
                     continue;
                 }
                 if ($newKind === 'manual' && $k === 'manual') {
@@ -164,9 +164,9 @@ final class GuardianConsent
                 && self::phone($prior['phone'] ?? null) === $phone
                 && ($prior['sms_state'] ?? '') !== 'Manual') {
                 $priorExp = (string) ($prior['expires_at'] ?? '');
-                $priorExpTs = strtotime($priorExp);
+                $priorExpTs = ManilaTime::unix($priorExp);
                 $priorHash = (string) $prior['token_hash'];
-                if ($priorExpTs !== false && $priorExpTs > $now) {
+                if ($priorExpTs !== null && $priorExpTs > $now) {
                     $kept[$priorHash] = [
                         'hash' => $priorHash,
                         'phone' => $phone,
@@ -228,8 +228,8 @@ final class GuardianConsent
                     continue;
                 }
                 $h = (string) ($entry['hash'] ?? '');
-                $expTs = strtotime((string) ($entry['expires_at'] ?? ''));
-                if ($h !== '' && $expTs !== false && $expTs > $now && hash_equals($h, $tokenHash)) {
+                $expTs = ManilaTime::unix((string) ($entry['expires_at'] ?? ''));
+                if ($h !== '' && $expTs !== null && $expTs > $now && hash_equals($h, $tokenHash)) {
                     return true;
                 }
             }

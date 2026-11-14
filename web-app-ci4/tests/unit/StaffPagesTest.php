@@ -94,9 +94,14 @@ final class StaffPagesTest extends CIUnitTestCase
         helper(['url', 'form']);
         session()->set(['isLoggedIn' => true, 'role' => 1, 'user_id' => 1]);
         $html = view('admin_dashboard', ['dashboard_page' => 'sessions', 'pending_meetings_count' => 1]);
+        $dom = new DOMDocument();
+        @$dom->loadHTML($html);
+        $xpath = new DOMXPath($dom);
         $this->assertStringNotContainsString('href="/admin/users"', $html);
-        $this->assertStringNotContainsString('href="/admin/audit-logs"', $html);
         $this->assertStringContainsString('/admin/pending-registrations', $html);
+        $this->assertSame(1, $xpath->query('//aside//nav[@aria-label="Administration"]//a[contains(@href,"/admin/audit-logs")]')->length);
+        $this->assertSame(0, $xpath->query('//aside//nav[@aria-label="Staff pages"]//a[contains(@href,"/admin/audit-logs")]')->length);
+        $this->assertSame(0, $xpath->query('//nav[@aria-label="Mobile staff pages"]//a[contains(@href,"/admin/audit-logs")]')->length);
         session()->remove(['isLoggedIn', 'role', 'user_id']);
     }
 
@@ -111,7 +116,7 @@ final class StaffPagesTest extends CIUnitTestCase
                 @$dom->loadHTML($html);
                 $xpath = new DOMXPath($dom);
                 $this->assertSame($role === 2 ? 1 : 0, $xpath->query('//aside//a[contains(@href,"/admin/users")]')->length);
-                $this->assertSame($role === 2 ? 1 : 0, $xpath->query('//aside//a[contains(@href,"/admin/audit-logs")]')->length);
+                $this->assertSame(1, $xpath->query('//aside//a[contains(@href,"/admin/audit-logs")]')->length);
                 $this->assertSame(1, $xpath->query('//aside//a[contains(@href,"/admin/pending-registrations")]')->length);
                 $this->assertStringNotContainsString('<script>staff</script>', $html);
                 $this->assertSame(1, $xpath->query('//form[contains(@action,"/logout")]')->length);

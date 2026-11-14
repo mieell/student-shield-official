@@ -63,12 +63,13 @@ class VentController extends BaseController
         // history. Sending only risk labels and timestamps avoids transmitting
         // previous vent text and survives Hugging Face container rebuilds.
         $db = \Config\Database::connect();
+        \App\Libraries\ManilaTime::syncDatabaseSession($db);
         $riskHistory = [];
         try {
             $historyRows = $db->table('vent_logs')
                 ->select('risk_level, created_at')
                 ->where('user_id', $userId)
-                ->where('created_at >=', date('Y-m-d H:i:s', strtotime('-14 days')))
+                ->where('created_at >=', \App\Libraries\ManilaTime::now('Y-m-d H:i:s', strtotime('-14 days')))
                 ->where('deleted_at IS NULL')
                 ->orderBy('created_at', 'DESC')
                 ->orderBy('id', 'DESC')
@@ -77,11 +78,11 @@ class VentController extends BaseController
 
             foreach (array_reverse($historyRows) as $historyRow) {
                 $historyRisk = strtoupper((string) ($historyRow['risk_level'] ?? ''));
-                $historyTimestamp = strtotime((string) ($historyRow['created_at'] ?? ''));
-                if (in_array($historyRisk, ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], true) && $historyTimestamp !== false) {
+                $historyDt = \App\Libraries\ManilaTime::parse((string) ($historyRow['created_at'] ?? ''));
+                if (in_array($historyRisk, ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], true) && $historyDt !== null) {
                     $riskHistory[] = [
                         'risk_level' => $historyRisk,
-                        'created_at' => gmdate('c', $historyTimestamp),
+                        'created_at' => $historyDt->format(\DateTimeInterface::ATOM),
                     ];
                 }
             }
@@ -155,7 +156,7 @@ class VentController extends BaseController
             'risk_percent' => $sentimentScore,
             'risk_level'   => $riskLevel,
             'status'       => 'Pending',
-            'created_at'   => date('Y-m-d H:i:s')
+            'created_at'   => \App\Libraries\ManilaTime::now()
         ];
 
         try {
@@ -268,7 +269,8 @@ class VentController extends BaseController
         foreach ($alerts as $alert) {
             if (isset($alert['accepted']) && !$alert['accepted']) continue;
             if ($alert['recipient'] === $recipient) {
-                if (strtotime($alert['timestamp']) > $oneHourAgo) {
+                $alertTs = \App\Libraries\ManilaTime::unix((string) ($alert['timestamp'] ?? ''));
+                if ($alertTs !== null && $alertTs > $oneHourAgo) {
                     return true;
                 }
             }

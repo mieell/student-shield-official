@@ -152,6 +152,7 @@ class BullyReportController extends BaseController
         $rawDetails = "TARGETED STUDENT: " . ($victimName ?: 'Self') . "\nREPORTED AGGRESSOR(S): " . ($bullyName ?: 'N/A') . "\n\n" . $details;
         $encryptedDetails = bin2hex($encrypter->encrypt($rawDetails));
         
+        $nowManila = \App\Libraries\ManilaTime::now();
         $reportData = [
             'reporter_student_id' => $userId,
             'reporter_type'       => $reporterType,
@@ -159,8 +160,8 @@ class BullyReportController extends BaseController
             'bully_student_id'    => $bullyStudentId,
             'incident_details'    => $encryptedDetails,
             'status'              => 'pending_review',
-            'created_at'          => date('Y-m-d H:i:s'),
-            'updated_at'          => date('Y-m-d H:i:s'),
+            'created_at'          => $nowManila,
+            'updated_at'          => $nowManila,
         ];
 
         // Only include evidence_file if a file was actually uploaded

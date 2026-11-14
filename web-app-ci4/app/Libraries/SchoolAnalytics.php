@@ -55,7 +55,7 @@ final class SchoolAnalytics
 
     private function where(array $f): array
     {
-        $end = (new DateTimeImmutable($f['end']))->modify('+1 day')->format('Y-m-d');
+        $end = (new DateTimeImmutable($f['end'], ManilaTime::zone()))->modify('+1 day')->format('Y-m-d');
         $sql = 'e.occurred_at >= ? AND e.occurred_at < ?';
         $params = [$f['start'], $end];
         foreach (['grade' => 'grade', 'section' => 'section', 'category' => 'category', 'risk' => 'risk'] as $key => $column) {
@@ -73,7 +73,7 @@ final class SchoolAnalytics
     {
         [$where, $params] = $this->where($f);
         $events = $this->events();
-        $today = new DateTimeImmutable($f['today']);
+        $today = new DateTimeImmutable($f['today'], ManilaTime::zone());
         $stats = $this->rows("SELECT COUNT(*) AS events,
             SUM(CASE WHEN e.occurred_at >= ? AND e.occurred_at < ? THEN 1 ELSE 0 END) AS today_count,
             SUM(CASE WHEN e.occurred_at >= ? AND e.occurred_at < ? THEN 1 ELSE 0 END) AS week_count,
@@ -91,7 +91,7 @@ final class SchoolAnalytics
         }
         $students = $this->rows("SELECT COUNT(*) AS registered, SUM(CASE WHEN u.is_active = 1 AND u.access_disabled = 0 AND u.registration_status = 'approved' THEN 1 ELSE 0 END) AS active
             FROM users u LEFT JOIN students s ON s.user_id = u.id WHERE $studentWhere", $studentParams)[0];
-        $start = new DateTimeImmutable($f['start']); $end = new DateTimeImmutable($f['end']);
+        $start = new DateTimeImmutable($f['start'], ManilaTime::zone()); $end = new DateTimeImmutable($f['end'], ManilaTime::zone());
         $days = $start->diff($end)->days + 1;
         $previous = $f; $previous['end'] = $start->modify('-1 day')->format('Y-m-d'); $previous['start'] = $start->modify("-$days days")->format('Y-m-d');
         [$previousWhere, $previousParams] = $this->where($previous);

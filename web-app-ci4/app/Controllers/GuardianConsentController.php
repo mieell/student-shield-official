@@ -72,11 +72,12 @@ class GuardianConsentController extends BaseController
                     return $back->with('error', 'Verify the guardian contact first.');
                 }
             }
+            $nowTs = time();
             $data = [
                 'user_id' => $id, 'verified_by' => (int) session()->get('user_id'), 'phone' => $phone,
                 'verified_name' => trim($verifiedName),
-                'token_hash' => $hash, 'notice' => $notice, 'requested_at' => date('Y-m-d H:i:s'),
-                'expires_at' => date('Y-m-d H:i:s', time() + 72 * 3600), 'sms_state' => $manual ? 'Manual' : 'Unknown',
+                'token_hash' => $hash, 'notice' => $notice, 'requested_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $nowTs),
+                'expires_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $nowTs + 72 * 3600), 'sms_state' => $manual ? 'Manual' : 'Unknown',
                 'response' => null, 'guardian_name' => null, 'responded_at' => null,
             ];
             $db->table('guardian_consents')->upsert($data);
@@ -97,7 +98,7 @@ class GuardianConsentController extends BaseController
                     'student_name' => (string) ($user['name'] ?? ''),
                     'guardian_name' => trim((string) $verifiedName),
                     'phone' => (string) $phone,
-                    'expires_at' => date('M j, Y g:i A', strtotime($data['expires_at'])),
+                    'expires_at' => \App\Libraries\ManilaTime::format($data['expires_at'], 'M j, Y g:i A \P\H\T'),
                 ]);
         }
         $smsResult = $this->smsGateway()->send($phone, (string) $message, 'guardian-consent:' . $hash);
@@ -228,7 +229,7 @@ class GuardianConsentController extends BaseController
                 $db->transRollback();
                 return $this->page('This registration is no longer pending.', 409);
             }
-            $nowStr = date('Y-m-d H:i:s');
+            $nowStr = \App\Libraries\ManilaTime::now();
             $query = $db->table('guardian_consents')->where('user_id', $consent['user_id'])
                 ->where('response', null)->where('expires_at >', $nowStr);
             if ($token !== null) {
@@ -270,13 +271,13 @@ class GuardianConsentController extends BaseController
         return Database::connect()->table('guardian_consents g')->select('g.user_id, g.notice')
             ->join('users u', 'u.id = g.user_id')->where('u.role', 0)->where('u.registration_status', 'pending')
             ->where('g.token_hash', hash('sha256', $token))->where('g.response', null)
-            ->where('g.expires_at >', date('Y-m-d H:i:s'))->get()->getRowArray();
+            ->where('g.expires_at >', \App\Libraries\ManilaTime::now())->get()->getRowArray();
     }
 
     private function activeCodeRequest(string $phone, string $canonicalCode): ?array
     {
         $hash = hash('sha256', $canonicalCode);
-        $nowStr = date('Y-m-d H:i:s');
+        $nowStr = \App\Libraries\ManilaTime::now();
         $db = Database::connect();
         $row = $db->table('guardian_consents g')->select('g.user_id, g.notice')
             ->join('users u', 'u.id = g.user_id')->where('u.role', 0)->where('u.registration_status', 'pending')

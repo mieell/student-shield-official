@@ -31,20 +31,20 @@ sort($ticks);
                     <polygon points="0,200 <?= esc(implode(' ', $points), 'attr') ?> 1000,200" fill="#e6f3e9"/>
                     <polyline points="<?= esc(implode(' ', $points), 'attr') ?>" fill="none" stroke="#0f8a3a" stroke-width="3" vector-effect="non-scaling-stroke"/>
                 </svg>
-                <?php foreach ($rows as $i => $row): if ($row['total'] > 0 || $i === 0 || $i === count($rows) - 1):
-                    $date = (new \DateTimeImmutable($row['label']))->format('M j, Y');
+                <?php $manilaZone = \App\Libraries\ManilaTime::zone(); foreach ($rows as $i => $row): if ($row['total'] > 0 || $i === 0 || $i === count($rows) - 1):
+                    $date = (new \DateTimeImmutable($row['label'], $manilaZone))->format('M j, Y');
                     $label = $date . ': ' . (int) $row['total'] . ((int) $row['total'] === 1 ? ' event' : ' events'); ?>
                     <button type="button" class="daily-trend-point" data-day-index="<?= $i ?>" data-label="<?= esc($label, 'attr') ?>" aria-label="<?= esc($label, 'attr') ?>" aria-pressed="<?= $i === $peak ? 'true' : 'false' ?>" style="left:<?= count($rows) === 1 ? 50 : round($i * 100 / $last, 3) ?>%;top:<?= round(100 - $row['total'] * 100 / $ceiling, 3) ?>%">
                         <?php if ($row['total'] > 0 && $nonzero <= 16): ?><span class="daily-trend-value" aria-hidden="true"><?= (int) $row['total'] ?></span><?php endif; ?>
                     </button>
                 <?php endif; endforeach; ?>
-                <div class="daily-trend-dates" aria-hidden="true"><?php foreach ($ticks as $i): ?><span style="left:<?= count($rows) === 1 ? 50 : round($i * 100 / $last, 3) ?>%" class="<?= $i === 0 ? 'first' : ($i === count($rows) - 1 ? 'last' : '') ?>"><?= (new \DateTimeImmutable($rows[$i]['label']))->format('M j') ?></span><?php endforeach; ?></div>
+                <div class="daily-trend-dates" aria-hidden="true"><?php foreach ($ticks as $i): ?><span style="left:<?= count($rows) === 1 ? 50 : round($i * 100 / $last, 3) ?>%" class="<?= $i === 0 ? 'first' : ($i === count($rows) - 1 ? 'last' : '') ?>"><?= (new \DateTimeImmutable($rows[$i]['label'], $manilaZone))->format('M j') ?></span><?php endforeach; ?></div>
             </div>
         </div>
     </div>
     <div class="daily-trend-footer">
-        <output class="daily-trend-readout" aria-live="polite"><?= esc((new \DateTimeImmutable($rows[$peak]['label']))->format('M j, Y') . ': ' . (int) $rows[$peak]['total'] . ((int) $rows[$peak]['total'] === 1 ? ' event' : ' events')) ?></output>
-        <label>View day<select data-trend-day><?php foreach ($rows as $i => $row): ?><option value="<?= $i ?>" <?= $i === $peak ? 'selected' : '' ?>><?= esc((new \DateTimeImmutable($row['label']))->format('M j, Y') . ' — ' . (int) $row['total']) ?></option><?php endforeach; ?></select></label>
+        <output class="daily-trend-readout" aria-live="polite"><?= esc((new \DateTimeImmutable($rows[$peak]['label'], $manilaZone))->format('M j, Y') . ': ' . (int) $rows[$peak]['total'] . ((int) $rows[$peak]['total'] === 1 ? ' event' : ' events')) ?></output>
+        <label>View day<select data-trend-day><?php foreach ($rows as $i => $row): ?><option value="<?= $i ?>" <?= $i === $peak ? 'selected' : '' ?>><?= esc((new \DateTimeImmutable($row['label'], $manilaZone))->format('M j, Y') . ' — ' . (int) $row['total']) ?></option><?php endforeach; ?></select></label>
     </div>
 </div>
 <?php endif; ?>

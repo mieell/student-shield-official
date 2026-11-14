@@ -4,6 +4,17 @@ namespace App\Controllers;
 
 class AdminController extends BaseController
 {
+    private const COUNSELOR_AUDIT_ENTITY_TYPES = ['vent', 'incident', 'student', 'meeting', 'counselor_note'];
+    private const COUNSELOR_AUDIT_USER_ACTIONS = [
+        'USER_REGISTERED',
+        'STUDENT_APPROVED',
+        'STUDENT_REGISTRATION_REJECTED',
+        'STUDENT_REGISTRATION_ARCHIVED',
+        'GUARDIAN_CONTACT_VERIFIED',
+        'GUARDIAN_CONSENT_LINK_GENERATED',
+        'AUTO_LOCK_ACCOUNT',
+    ];
+
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
@@ -77,32 +88,55 @@ class AdminController extends BaseController
     }
 
     /**
-     * Display the System Audit Logs page for administrative oversight.
+     * Display the role-scoped Audit Logs page for counselors (case/guidance) or Super Admins (system-wide).
      */
     public function auditLogs()
     {
-        if (!session()->get('isLoggedIn') || (int) session()->get('role') !== 2) {
+        $role = (int) session()->get('role');
+        if (!session()->get('isLoggedIn') || !in_array($role, [1, 2], true)) {
             return $this->forbidden();
         }
 
+        $isCounselorView = $role === 1;
         $db = \Config\Database::connect();
-        
+        \App\Libraries\ManilaTime::syncDatabaseSession($db);
+
         $pager = null;
         $logs = [];
         if ($db->tableExists('audit_logs')) {
             $auditModel = new \App\Models\AuditLogModel();
+            $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, users.role AS actor_role, CASE WHEN users.role = 0 THEN 'Student account' ELSE users.name END AS actor_name";
+            if (!$isCounselorView) {
+                $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, audit_logs.ip_address, users.role AS actor_role, CASE WHEN users.role = 0 THEN 'Student account' ELSE users.name END AS actor_name";
+            }
+
+            $auditModel
+                ->select($select, false)
+                ->join('users', 'users.id = audit_logs.user_id', 'left');
+
+            if ($isCounselorView) {
+                // Keep guidance audit view scoped to clinical/student cases and registrations; omit Super Admin account and security logs.
+                $auditModel->groupStart()
+                    ->whereIn('audit_logs.entity_type', self::COUNSELOR_AUDIT_ENTITY_TYPES)
+                    ->orGroupStart()
+                        ->where('audit_logs.entity_type', 'user')
+                        ->whereIn('audit_logs.action', self::COUNSELOR_AUDIT_USER_ACTIONS)
+                    ->groupEnd()
+                ->groupEnd();
+            }
+
             $logs = $auditModel
-                ->select("audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, audit_logs.ip_address, users.role AS actor_role, CASE WHEN users.role = 0 THEN 'Student account' ELSE users.name END AS actor_name", false)
-                ->join('users', 'users.id = audit_logs.user_id', 'left')
                 ->orderBy('audit_logs.created_at', 'DESC')
+                ->orderBy('audit_logs.id', 'DESC')
                 ->paginate(50);
-                
+
             $pager = $auditModel->pager;
         }
 
         return view('admin_audit_logs', [
             'logs' => $logs,
-            'pager' => $pager
+            'pager' => $pager,
+            'isCounselorView' => $isCounselorView,
         ]);
     }
 
@@ -153,19 +187,19 @@ class AdminController extends BaseController
     {
         if (!$this->guardStaffAccess()) return $this->forbidden();
         $db = \Config\Database::connect();
-        $db->table('vent_logs')->where('id', $id)->update(['status' => 'Reviewed']);
+        $db->table('vent_logs')->where('id', $id)->update(['status' => 'Reviewed'] + \App\Libraries\ManilaTime::stampFields($db, 'vent_logs', ['updated_at']));
         $this->logAudit('RESOLVE', 'vent', (int) $id);
         return redirect()->to('/admin/dashboard')->with('message', "Vent Entry #$id resolved.");
     }
 
     public function deleteVent($id)
     {
-        return $this->setArchiveState('vent_logs', (int) $id, date('Y-m-d H:i:s'), 'SOFT_DELETE', 'vent', '/admin/dashboard', "Vent Entry #$id archived (soft-deleted).");
+        return $this->setArchiveState('vent_logs', (int) $id, \App\Libraries\ManilaTime::now(), 'SOFT_DELETE', 'vent', '/admin/dashboard', "Vent Entry #$id archived (soft-deleted).");
     }
 
     public function deleteMultipleVents()
     {
-        return $this->setBulkArchiveState('vent_logs', 'vent_ids', date('Y-m-d H:i:s'), 'BULK_SOFT_DELETE', 'vent', '/admin/dashboard', 'Vents archived (soft-deleted).', 'No vents selected for deletion.');
+        return $this->setBulkArchiveState('vent_logs', 'vent_ids', \App\Libraries\ManilaTime::now(), 'BULK_SOFT_DELETE', 'vent', '/admin/dashboard', 'Vents archived (soft-deleted).', 'No vents selected for deletion.');
     }
 
     public function restoreVent($id)
@@ -212,7 +246,7 @@ class AdminController extends BaseController
         if (!$this->guardStaffAccess()) return $this->forbidden();
         $db = \Config\Database::connect();
         $db->table('bully_reports')->where('id', $id)->where('status', 'verified')
-            ->where('deleted_at', null)->update(['status' => 'resolved']);
+            ->where('deleted_at', null)->update(['status' => 'resolved'] + \App\Libraries\ManilaTime::stampFields($db, 'bully_reports', ['updated_at']));
         if ($db->affectedRows() !== 1) {
             return redirect()->to('/admin/incidents')->with('error', 'Only an active, verified report can be closed. Refresh the incidents list to check its status.');
         }
@@ -236,7 +270,7 @@ class AdminController extends BaseController
         // Update status to verified
         $db->table('bully_reports')->where('id', $id)->update([
             'status' => 'verified',
-            'updated_at' => date('Y-m-d H:i:s')
+            'updated_at' => \App\Libraries\ManilaTime::now()
         ]);
         $this->logAudit('VERIFY_AND_ALERT', 'incident', (int) $id);
 
@@ -295,7 +329,7 @@ class AdminController extends BaseController
 
         $db->table('bully_reports')->where('id', $id)->update([
             'status' => 'rejected_fake',
-            'updated_at' => date('Y-m-d H:i:s')
+            'updated_at' => \App\Libraries\ManilaTime::now()
         ]);
         $this->logAudit('REJECT_FAKE', 'incident', (int) $id);
 
@@ -335,7 +369,7 @@ class AdminController extends BaseController
                 // ── Strike 3: Auto-lock the student's reporting privileges ──
                 $db->table('users')->where('id', $reporterId)->update([
                     'is_locked' => 1,
-                    'updated_at' => date('Y-m-d H:i:s')
+                    'updated_at' => \App\Libraries\ManilaTime::now()
                 ]);
                 $this->logAudit('AUTO_LOCK_ACCOUNT', 'user', (int) $reporterId);
 
@@ -376,7 +410,7 @@ class AdminController extends BaseController
         $db = \Config\Database::connect();
         $db->table('bully_reports')->where('id', $id)->update([
             'status' => 'pending_review',
-            'updated_at' => date('Y-m-d H:i:s')
+            'updated_at' => \App\Libraries\ManilaTime::now()
         ]);
         $this->logAudit('UNDO_TO_PENDING', 'incident', (int) $id);
         return redirect()->to('/admin/incidents')->with('message', "Incident Report #$id has been reset to Pending Review.");
@@ -433,12 +467,12 @@ class AdminController extends BaseController
 
     public function deleteIncident($id)
     {
-        return $this->setArchiveState('bully_reports', (int) $id, date('Y-m-d H:i:s'), 'SOFT_DELETE', 'incident', '/admin/incidents', "Incident Report #$id archived (soft-deleted).");
+        return $this->setArchiveState('bully_reports', (int) $id, \App\Libraries\ManilaTime::now(), 'SOFT_DELETE', 'incident', '/admin/incidents', "Incident Report #$id archived (soft-deleted).");
     }
 
     public function deleteMultipleIncidents()
     {
-        return $this->setBulkArchiveState('bully_reports', 'incident_ids', date('Y-m-d H:i:s'), 'BULK_SOFT_DELETE', 'incident', '/admin/incidents', 'Incident Reports archived (soft-deleted).', 'No incidents selected for deletion.');
+        return $this->setBulkArchiveState('bully_reports', 'incident_ids', \App\Libraries\ManilaTime::now(), 'BULK_SOFT_DELETE', 'incident', '/admin/incidents', 'Incident Reports archived (soft-deleted).', 'No incidents selected for deletion.');
     }
 
     public function restoreIncident($id)
@@ -472,7 +506,8 @@ class AdminController extends BaseController
 
         // Sort descending by timestamp
         usort($logs, function ($a, $b) {
-            return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+            return (\App\Libraries\ManilaTime::unix((string) ($b['timestamp'] ?? '')) ?? 0)
+                <=> (\App\Libraries\ManilaTime::unix((string) ($a['timestamp'] ?? '')) ?? 0);
         });
 
         // Return latest 50
@@ -560,7 +595,7 @@ class AdminController extends BaseController
                 $y = 25;
 
             $timelineData[] = [
-                'x'                    => strtotime($vent['created_at']) * 1000,
+                'x'                    => (\App\Libraries\ManilaTime::unix((string) ($vent['created_at'] ?? '')) ?? 0) * 1000,
                 'y'                    => $y,
                 'risk_label'           => $riskUpper,
                 'sentiment'            => $vent['risk_percent'] ?? '0',
@@ -655,10 +690,8 @@ class AdminController extends BaseController
         if (!$this->hasRole(2)) return $this->forbidden();
         $back = redirect()->to(site_url('admin/pending-registrations'));
         $db = \Config\Database::connect();
-        $userUpdate = ['registration_status' => 'archived', 'is_active' => 0, 'remember_token' => null];
-        if ($this->tableHasColumn($db, 'users', 'updated_at')) {
-            $userUpdate['updated_at'] = date('Y-m-d H:i:s');
-        }
+        $userUpdate = ['registration_status' => 'archived', 'is_active' => 0, 'remember_token' => null]
+            + \App\Libraries\ManilaTime::stampFields($db, 'users', ['updated_at']);
         $db->table('users')->where('id', $id)->where('role', 0)->where('registration_status', 'pending')
             ->update($userUpdate);
         if ($db->affectedRows() !== 1) {
@@ -707,10 +740,7 @@ class AdminController extends BaseController
             'registration_status' => $status,
             'is_active' => $status === 'approved' ? 1 : 0,
             'remember_token' => null,
-        ];
-        if ($this->tableHasColumn($db, 'users', 'updated_at')) {
-            $userUpdate['updated_at'] = date('Y-m-d H:i:s');
-        }
+        ] + \App\Libraries\ManilaTime::stampFields($db, 'users', ['updated_at']);
         $db->table('users')->where('id', $id)->where('role', 0)->where('registration_status', 'pending')
             ->update($userUpdate);
         if ($db->affectedRows() !== 1 || ($status === 'approved' && (!$db->transStatus() || !$db->transCommit()))) {

@@ -42,8 +42,9 @@ final class GuardianSafetyController extends BaseController
                 }
             }
             $hasAlternate = !empty($data['alternate_phone']) || !empty($data['alternate_email']);
+            $nowManila = \App\Libraries\ManilaTime::now();
             $data += ['user_id' => $userId, 'verified_by' => $hasAlternate ? (int) session()->get('user_id') : null,
-                'verified_at' => $hasAlternate ? date('Y-m-d H:i:s') : null, 'updated_at' => date('Y-m-d H:i:s')];
+                'verified_at' => $hasAlternate ? $nowManila : null, 'updated_at' => $nowManila];
             $db->table('guardian_alert_routes')->upsert($data);
             if (!$db->transStatus() || !$db->transCommit()) throw new \RuntimeException('Guardian routing write failed.');
         } catch (\Throwable $error) {

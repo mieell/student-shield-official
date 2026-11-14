@@ -552,7 +552,7 @@
 
         // Set date in print footer
         document.querySelectorAll('.print-date').forEach(el => {
-            el.innerText = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            el.innerText = formatPHDate(new Date(), { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }, 'en-US') + ' PHT';
         });
 
         // Check if student has a pending session request
@@ -645,7 +645,7 @@
                         data.highestRisk === 'MEDIUM' ? 'text-yellow-600' : 'text-emerald-700'
                     }`;
                     if (data.highestRiskDate) {
-                        const dateFormatted = new Date(data.highestRiskDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+                        const dateFormatted = formatPHDate(data.highestRiskDate, {month: 'short', day: 'numeric', year: 'numeric'}, 'en-US');
                         document.getElementById('statHighestRiskDate').innerText = `Flagged on ${dateFormatted}`;
                     } else {
                         document.getElementById('statHighestRiskDate').innerText = `No recorded risk`;
@@ -707,7 +707,10 @@
                     type: 'datetime',
                     labels: {
                         style: { colors: '#9ca3af', fontSize: '11px' },
-                        datetimeUTC: false
+                        formatter: function(value, timestamp) {
+                            const ts = typeof timestamp === 'number' ? timestamp : value;
+                            return formatPHDate(ts, { month: 'short', day: 'numeric' }, 'en-US');
+                        }
                     }
                 },
                 yaxis: {
@@ -727,7 +730,11 @@
                 },
                 grid: { borderColor: '#f0f0f0' },
                 tooltip: {
-                    x: { format: 'MMM dd, yyyy' },
+                    x: {
+                        formatter: function(val) {
+                            return formatPHDate(val, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }, 'en-US');
+                        }
+                    },
                     y: {
                         formatter: function(val) {
                             if (val >= 100) return 'Critical Risk';
@@ -813,7 +820,7 @@
                     roleBadge = 'bg-orange-50 text-orange-700 border border-orange-200';
                 }
 
-                const dateStr = new Date(r.created_at).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+                const dateStr = formatPHDate(r.created_at, {month: 'short', day: 'numeric', year: 'numeric'}, 'en-US');
                 
                 let statusBadge = '';
                 let reviewerInfo = r.reviewed_by_name ? `<span class="text-[9px] text-gray-500 font-normal leading-tight mt-0.5">by ${r.reviewed_by_name}</span>` : '';
@@ -847,7 +854,7 @@
             smsLogs.forEach(s => allNotifs.push({ ...s, type: 'SMS', recipient: s.parent_number, timestamp: s.timestamp }));
             emailLogs.forEach(e => allNotifs.push({ ...e, type: 'Email', recipient: e.recipient_email, timestamp: e.timestamp }));
 
-            allNotifs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            allNotifs.sort((a, b) => parsePHDate(b.timestamp) - parsePHDate(a.timestamp));
 
             if (allNotifs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="py-4 px-2.5 text-left sm:text-center text-gray-400 text-xs">No alerts generated or sent.</td></tr>';
@@ -855,7 +862,7 @@
             }
 
             allNotifs.slice(0, 15).forEach(n => {
-                const dateStr = new Date(n.timestamp).toLocaleDateString('en-US', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'});
+                const dateStr = formatPHDate(n.timestamp, {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}, 'en-US');
                 const statusColor = n.sent_status === 'sent' || n.sent_status === 'delivered' || n.sent_status === 'success' ? 'text-emerald-600' : 'text-amber-500';
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50/50 transition-colors">
@@ -880,7 +887,7 @@
             }
 
             timeline.slice(0, 25).forEach(item => {
-                const dateStr = item.date ? new Date(item.date.replace(' ', 'T')).toLocaleDateString('en-US', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'N/A';
+                const dateStr = item.date ? formatPHDate(item.date, {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}, 'en-US') : 'N/A';
                 
                 let iconBg = 'bg-gray-200';
                 let iconSvg = '';
@@ -932,7 +939,7 @@
             }
 
             notes.forEach(n => {
-                const dateStr = n.created_at ? new Date(n.created_at.replace(' ', 'T')).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'N/A';
+                const dateStr = n.created_at ? formatPHDate(n.created_at, {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}, 'en-US') : 'N/A';
                 const typeLabels = {
                     'general': 'General note',
                     'observation': 'Observation',
@@ -993,7 +1000,7 @@
             };
 
             history.forEach(h => {
-                const dateStr = h.created_at ? new Date(h.created_at.replace(' ', 'T')).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'N/A';
+                const dateStr = h.created_at ? formatPHDate(h.created_at, {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}, 'en-US') : 'N/A';
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50/50 transition-colors">
                         <td class="py-3.5"><span class="px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider border ${statusBadges[h.status]}">${cleanStatus[h.status] || h.status}</span></td>

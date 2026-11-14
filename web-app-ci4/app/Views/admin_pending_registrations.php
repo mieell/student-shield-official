@@ -341,10 +341,11 @@
                                     </div>
                                 </td>
                                 <td data-label="Registered On" class="px-6 py-4 whitespace-nowrap">
+                                    <?php $registeredDt = \App\Libraries\ManilaTime::parse($student['created_at'] ?? ''); ?>
                                     <span class="text-sm text-gray-600">
-                                        <?= date('M d, Y', strtotime($student['created_at'])) ?>
+                                        <?= esc($registeredDt ? $registeredDt->format('M d, Y') : '—') ?>
                                     </span>
-                                    <div class="text-xs text-gray-400"><?= date('g:i A', strtotime($student['created_at'])) ?></div>
+                                    <div class="text-xs text-gray-400"><?= esc($registeredDt ? $registeredDt->format('g:i A') . ' PHT' : '') ?></div>
                                 </td>
                                 <td data-label="Status" class="registration-status px-6 py-4 text-center">
                                     <?php
@@ -361,7 +362,7 @@
                                         $consentStatus = empty($student['verified_phone']) ? 'Contact needs verification' : match ($student['response']) {
                                             'accepted' => 'Consent accepted',
                                             'declined' => 'Consent declined',
-                                            default => strtotime((string) ($student['expires_at'] ?? '')) <= time() ? 'Consent request expired' : match ($student['sms_state']) {
+                                            default => (\App\Libraries\ManilaTime::unix($student['expires_at'] ?? '') ?? 0) <= time() ? 'Consent request expired' : match ($student['sms_state']) {
                                                 'Queued' => 'SMS sent to carrier · awaiting guardian',
                                                 'Unknown' => 'SMS status uncertain',
                                                 'Manual' => 'Manual link generated; awaiting guardian',
@@ -420,11 +421,11 @@
                                                     <span class="block font-semibold text-[#173a2a] mt-0.5 break-words"><?= esc($student['verified_name']) ?></span>
                                                 </div>
                                             </div>
-                                            <?php if (empty($student['response']) && ($student['sms_state'] ?? '') === 'Queued' && strtotime((string) ($student['expires_at'] ?? '')) > time()): ?>
+                                            <?php if (empty($student['response']) && ($student['sms_state'] ?? '') === 'Queued' && (\App\Libraries\ManilaTime::unix($student['expires_at'] ?? '') ?? 0) > time()): ?>
                                                 <p class="text-[11px] text-[#526b5b] pt-2 border-t border-[#e7efe7]">Submitted to the SMS carrier; live delivery receipts are unavailable. You can resend after 5 minutes or generate a link below.</p>
                                             <?php endif; ?>
                                             <?php if ($student['guardian_name']): ?>
-                                                <p class="text-[#15492c] font-semibold pt-2 border-t border-[#e7efe7]">Signed by <?= esc($student['guardian_name']) ?> · <?= esc($student['responded_at']) ?></p>
+                                                <p class="text-[#15492c] font-semibold pt-2 border-t border-[#e7efe7]">Signed by <?= esc($student['guardian_name']) ?> · <?= esc(\App\Libraries\ManilaTime::format($student['responded_at'] ?? '', 'M d, Y g:i A \P\H\T')) ?></p>
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
@@ -445,7 +446,7 @@
                                             <?php else:
                                                 $smsStateNow = (string) ($student['sms_state'] ?? '');
                                                 if ($smsStateNow === 'Queued' && !empty($student['requested_at'])) {
-                                                    $waitSeconds = max(1, (strtotime((string) $student['requested_at']) + 300) - $consentNow);
+                                                    $waitSeconds = max(1, ((\App\Libraries\ManilaTime::unix($student['requested_at'] ?? '') ?? 0) + 300) - $consentNow);
                                                     $waitLabel = $waitSeconds >= 60 ? (int) ceil($waitSeconds / 60) . 'm' : $waitSeconds . 's';
                                                     $disabledLabel = 'Resend SMS (wait ' . $waitLabel . ')';
                                                     $disabledHint = 'Wait 5 minutes from the last SMS before resending.';
@@ -659,7 +660,7 @@
     <!-- Footer -->
     <footer class="mt-auto py-4 bg-white border-t border-gray-100">
         <div class="container mx-auto px-6 text-center text-xs text-gray-400">
-            © <?= date('Y') ?> StudentShield — St. Vincent Blessed School of Manila
+            © <?= \App\Libraries\ManilaTime::now('Y') ?> StudentShield — St. Vincent Blessed School of Manila
         </div>
     </footer>
 

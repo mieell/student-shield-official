@@ -81,6 +81,7 @@ class UserController extends BaseController
             $data['is_active'] = $role === 0 ? 0 : 1;
         }
         try {
+            \App\Libraries\ManilaTime::syncDatabaseSession($db);
             $db->transStart();
             // Serialize contact edits so simultaneous removals cannot erase both guardian contacts.
             if ($id && $db->DBDriver === 'MySQLi') {
@@ -108,9 +109,11 @@ class UserController extends BaseController
                 $db->transRollback();
                 return redirect()->to('/admin/users')->with('error', 'This student has a verified guardian contact. Refer any changes to the Guidance Office.');
             }
-            if ($id) $db->table('users')->where('id', $id)->update($data);
-            else {
-                if (!$db->table('users')->insert($data)) throw new \RuntimeException('Account insert failed');
+            if ($id) {
+                $db->table('users')->where('id', $id)->update($data + \App\Libraries\ManilaTime::stampFields($db, 'users', ['updated_at']));
+            } else {
+                $userInsert = $data + \App\Libraries\ManilaTime::stampFields($db, 'users', ['created_at']);
+                if (!$db->table('users')->insert($userInsert)) throw new \RuntimeException('Account insert failed');
                 $id = (int) $db->insertID();
                 if ($id < 1) throw new \RuntimeException('Account ID not generated');
             }

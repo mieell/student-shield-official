@@ -425,8 +425,10 @@
                 axisTicks: { show: false },
                 labels: {
                     style: { colors: '#9ca3af', fontSize: '11px', fontWeight: 500 },
-                    datetimeUTC: false,
-                    datetimeFormatter: { day: 'MMM d', hour: 'h:mm TT' }
+                    formatter: function (value, timestamp) {
+                        var ts = typeof timestamp === 'number' ? timestamp : value;
+                        return formatPHDate(ts, { month: 'short', day: 'numeric' });
+                    }
                 }
             },
             yaxis: {
@@ -454,7 +456,11 @@
             tooltip: {
                 theme: 'light',
                 style: { fontSize: '13px' },
-                x: { format: 'MMM d, yyyy · h:mm tt' },
+                x: {
+                    formatter: function (val) {
+                        return formatPHDate(val, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+                    }
+                },
                 y: {
                     formatter: function (val) {
                         return getRiskName(val);
@@ -494,7 +500,7 @@
         vents.forEach(function (v) {
             allItems.push({
                 type: 'vent',
-                date: new Date(v.created_at),
+                date: parsePHDate(v.created_at),
                 raw_date: v.created_at,
                 data: v
             });
@@ -504,7 +510,7 @@
         incidents.forEach(function (i) {
             allItems.push({
                 type: 'incident',
-                date: new Date(i.created_at),
+                date: parsePHDate(i.created_at),
                 raw_date: i.created_at,
                 data: i
             });
@@ -520,7 +526,7 @@
 
         var html = '';
         allItems.forEach(function (item) {
-            var dateStr = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true }).format(item.date);
+            var dateStr = formatPHDate(item.date, { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true }, 'en-US');
 
             if (item.type === 'vent') {
                 var v = item.data;

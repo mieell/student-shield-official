@@ -73,7 +73,7 @@
 <details class="basic-student-profile"><summary>View basic profile</summary>
 <dl class="basic-profile-fields">
 <?php foreach (['student_id' => 'Student ID', 'grade_level' => 'Grade level', 'section' => 'Section', 'adviser_name' => 'Adviser', 'created_at' => 'Registered'] as $field => $label): ?>
-<div><dt><?= esc($label) ?></dt><dd><?= esc(($user[$field] ?? '') ?: 'Not set') ?></dd></div>
+<div><dt><?= esc($label) ?></dt><dd><?= $field === 'created_at' ? esc(\App\Libraries\ManilaTime::format($user[$field] ?? null, 'M d, Y g:i A \P\H\T', 'Not set')) : esc(($user[$field] ?? '') ?: 'Not set') ?></dd></div>
 <?php endforeach; ?>
 <div><dt>LRN</dt><dd><?= !empty($user['lrn_suffix']) ? '••••••••' . esc($user['lrn_suffix']) : 'Not set' ?></dd></div>
 </dl>

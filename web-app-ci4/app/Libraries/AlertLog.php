@@ -56,7 +56,7 @@ final class AlertLog
                 'type' => $type,
                 'recipient' => $recipient,
                 'message' => $message,
-                'timestamp' => date('Y-m-d H:i:s'),
+                'timestamp' => ManilaTime::now(),
             ], $status));
 
             if (count($alerts) > self::MAX_ENTRIES) {

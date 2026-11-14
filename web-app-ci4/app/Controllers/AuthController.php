@@ -34,6 +34,7 @@ class AuthController extends BaseController
         }
 
         $db = \Config\Database::connect();
+        \App\Libraries\ManilaTime::syncDatabaseSession($db);
         $name = trim((string) ($this->request->getPost('identifier') ?? $this->request->getPost('name')));
         $password = (string) $this->request->getPost('password');
 
@@ -104,6 +105,7 @@ class AuthController extends BaseController
         }
 
         $db = \Config\Database::connect();
+        \App\Libraries\ManilaTime::syncDatabaseSession($db);
         $name = trim((string) ($this->request->getPost('identifier') ?? $this->request->getPost('name')));
         $password = (string) $this->request->getPost('password');
 
@@ -492,6 +494,7 @@ class AuthController extends BaseController
 
         try {
             $db = \Config\Database::connect();
+            \App\Libraries\ManilaTime::syncDatabaseSession($db);
             if ($db->tableExists('email_logs')) {
                 $db->table('email_logs')->insert([
                     'student_id'      => $user['id'] ?? null,
@@ -499,8 +502,8 @@ class AuthController extends BaseController
                     'alert_type'      => 'ADMIN_LOGIN_OTP',
                     'subject'         => 'Admin Verification Code',
                     'message_content' => "Admin login OTP delivery attempted for user " . ($user['name'] ?? 'Staff'),
-                    'sent_status'     => $emailSent ? 'sent' : 'failed'
-                ]);
+                    'sent_status'     => $emailSent ? 'sent' : 'failed',
+                ] + \App\Libraries\ManilaTime::stampFields($db, 'email_logs', ['timestamp']));
             }
         } catch (\Throwable $e) {}
 
@@ -520,6 +523,7 @@ class AuthController extends BaseController
     {
         helper(['form', 'url']);
         $db = \Config\Database::connect();
+        \App\Libraries\ManilaTime::syncDatabaseSession($db);
         foreach (['name', 'lrn', 'grade_level', 'section', 'password', 'password_confirm', 'terms'] as $field) {
             if (!is_string($this->request->getPost($field))) {
                 return $this->registrationFailure('Check the registration fields and try again.');
@@ -550,7 +554,7 @@ class AuthController extends BaseController
         $confirmPassword = (string) $this->request->getPost('password_confirm');
 
         // Auto-generate a unique system student ID: SS-YYYYMMDD-XXXX
-        $studentId = 'SS-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(5)));
+        $studentId = 'SS-' . \App\Libraries\ManilaTime::now('Ymd') . '-' . strtoupper(bin2hex(random_bytes(5)));
 
         $terms = $this->request->getPost('terms');
 
@@ -603,7 +607,7 @@ class AuthController extends BaseController
             'password_hash' => password_hash($password, PASSWORD_BCRYPT),
             'is_active' => 0, // Pending approval
             'registration_status' => 'pending'
-        ]);
+        ] + \App\Libraries\ManilaTime::stampFields($db, 'users', ['created_at']));
 
         $userId = $db->insertID();
 
@@ -615,7 +619,7 @@ class AuthController extends BaseController
             'grade_level' => $gradeLevel,
             'section' => $section,
             'parent_phone' => $parentPhone,
-        ]);
+        ] + \App\Libraries\ManilaTime::stampFields($db, 'students', ['created_at']));
 
         $db->transComplete();
 

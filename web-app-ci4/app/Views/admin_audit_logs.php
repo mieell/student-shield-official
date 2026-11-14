@@ -55,6 +55,7 @@
     <link rel="stylesheet" href="<?= base_url('css/staff-layout.css?v=' . filemtime(FCPATH . 'css/staff-layout.css')) ?>">
 <?= view('partials/ui_polish') ?>
 </head>
+<?php $isCounselorView = !empty($isCounselorView); ?>
 <body class="school-staff-page staff-layout min-h-screen">
 
     <?= view('partials/staff_navigation', ['staffPage' => 'audit-logs', 'staffPageLabel' => 'Audit Logs']) ?>
@@ -62,8 +63,12 @@
     <main id="staffMain" class="staff-main container mx-auto px-6 py-8">
         <div class="staff-page-heading flex items-center justify-between mb-8">
             <div>
-                <h2 class="text-2xl font-heading font-bold text-gray-900">System Audit Logs</h2>
-                <p class="text-gray-600 text-sm mt-1">Account and security activity. IP addresses reflect the connection observed by the server or a configured trusted proxy.</p>
+                <h2 class="text-2xl font-heading font-bold text-gray-900"><?= $isCounselorView ? 'Guidance Audit Logs' : 'System Audit Logs' ?></h2>
+                <p class="text-gray-600 text-sm mt-1">
+                    <?= $isCounselorView
+                        ? 'Chronological trail of student case reviews, safety reports, counseling sessions, and registration decisions (Philippine Standard Time, UTC+8).'
+                        : 'Account and security activity (Philippine Standard Time, UTC+8). IP addresses reflect the connection observed by the server or a configured trusted proxy.' ?>
+                </p>
             </div>
         </div>
 
@@ -72,22 +77,26 @@
                 <h2 class="text-lg font-bold flex items-center gap-3">
                     <svg class="h-5 w-5 text-[#0B5E2E]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     <span>Action History</span>
-                    <span id="visibleCount" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200"><?= count($logs) ?> entries</span>
+                    <span id="visibleCount" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200"><?= count($logs) === 1 ? '1 entry' : count($logs) . ' entries' ?></span>
                 </h2>
             </div>
             <div class="staff-filter-bar px-6 py-3 flex justify-between items-center bg-white border-b border-gray-100 flex-wrap gap-2">
                 <div class="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm relative">
                     <svg class="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <input type="text" id="searchLogs" aria-label="Search logs" placeholder="Search actor, action or IP..." class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 transition-all">
+                    <input type="text" id="searchLogs" aria-label="Search logs" placeholder="<?= $isCounselorView ? 'Search actor, action, or time...' : 'Search actor, action, IP, or time...' ?>" class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 transition-all">
                 </div>
                 <div class="staff-filter-controls flex items-center gap-2 flex-wrap">
                     <select id="filterCategoryLogs" aria-label="Filter audit category" class="text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 bg-white cursor-pointer transition-all">
                         <option value="all">All Categories</option>
                         <option value="INCIDENT">Incident</option>
                         <option value="VENT">Vent</option>
+                        <option value="STUDENT">Case &amp; Student</option>
+                        <option value="MEETING">Session</option>
+                        <option value="COUNSELOR_NOTE">Counselor Note</option>
+                        <option value="USER"><?= $isCounselorView ? 'Registration &amp; Consent' : 'User' ?></option>
+                        <?php if (!$isCounselorView): ?>
                         <option value="SYSTEM">System (Login/Logout)</option>
-                        <option value="STUDENT">Student</option>
-                        <option value="USER">User</option>
+                        <?php endif; ?>
                     </select>
                     <input type="date" id="filterDateLogs" aria-label="Filter audit date" class="text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 text-gray-700 bg-white cursor-pointer transition-all">
                     <button type="button" id="clearFiltersLogs" class="text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 px-3.5 py-2 min-h-[38px] rounded-lg border border-gray-200 transition-colors cursor-pointer">✕ Clear</button>
@@ -98,18 +107,26 @@
                 <table class="w-full text-left border-collapse" id="logsTable">
                     <thead>
                         <tr class="thead-green text-xs uppercase tracking-wider">
-                            <th class="px-6 py-4 border-b border-gray-200">Time</th>
+                            <th class="px-6 py-4 border-b border-gray-200">Timestamp (PHT)</th>
                             <th class="px-6 py-4 border-b border-gray-200">Actor</th>
                             <th class="px-6 py-4 border-b border-gray-200">Summary</th>
                             <th class="px-6 py-4 border-b border-gray-200">Category</th>
+                            <?php if (!$isCounselorView): ?>
                             <th class="px-6 py-4 border-b border-gray-200">IP address</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <?php foreach ($logs as $log): ?>
-                        <tr class="hover:bg-gray-50/50 transition-colors" data-category="<?= esc(strtoupper($log['entity_type']), 'attr') ?>" data-date="<?= date('Y-m-d', strtotime($log['created_at'])) ?>">
+                        <?php $logDt = \App\Libraries\ManilaTime::parse($log['created_at'] ?? ''); ?>
+                        <tr class="hover:bg-gray-50/50 transition-colors" data-category="<?= esc(strtoupper($log['entity_type']), 'attr') ?>" data-date="<?= esc($logDt ? $logDt->format('Y-m-d') : '', 'attr') ?>">
                             <td data-label="Time" class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
-                                <?= date('M d, Y h:i A', strtotime($log['created_at'])) ?>
+                                <time datetime="<?= esc($logDt ? $logDt->format(DateTimeInterface::ATOM) : '', 'attr') ?>" title="<?= esc($logDt ? $logDt->format('Y-m-d H:i:s \P\H\T') : '', 'attr') ?>">
+                                    <span class="font-medium text-gray-700"><?= esc($logDt ? $logDt->format('M d, Y') : '—') ?></span>
+                                    <?php if ($logDt): ?>
+                                    <span class="block text-[11px] text-gray-500"><?= esc($logDt->format('g:i:s A')) ?> PHT</span>
+                                    <?php endif; ?>
+                                </time>
                             </td>
                             <td data-label="Actor" class="px-6 py-4">
                                 <div class="flex items-center gap-3">
@@ -147,6 +164,10 @@
                                         $bgClass = 'bg-orange-100 text-orange-800';
                                     } elseif ($entity == 'VENT') {
                                         $bgClass = 'bg-blue-100 text-blue-800';
+                                    } elseif ($entity == 'MEETING') {
+                                        $bgClass = 'bg-emerald-100 text-emerald-800';
+                                    } elseif ($entity == 'COUNSELOR_NOTE') {
+                                        $bgClass = 'bg-teal-100 text-teal-800';
                                     } elseif ($entity == 'STUDENT' || $entity == 'USER') {
                                         $bgClass = 'bg-purple-100 text-purple-800';
                                     } elseif ($entity == 'SYSTEM') {
@@ -157,12 +178,14 @@
                                     <?= esc($entity) ?>
                                 </span>
                             </td>
+                            <?php if (!$isCounselorView): ?>
                             <td data-label="IP address" class="px-6 py-4 text-sm text-gray-700"><code><?= esc(($log['ip_address'] ?? '') ?: 'Not recorded') ?></code></td>
+                            <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
-                        <tr id="noLogsFound" style="display:none;"><td colspan="5" class="px-6 py-12 text-center text-gray-500 font-medium">No matching audit logs found.</td></tr>
+                        <tr id="noLogsFound" style="display:none;"><td colspan="<?= $isCounselorView ? 4 : 5 ?>" class="px-6 py-12 text-center text-gray-500 font-medium">No matching audit logs found.</td></tr>
                         <?php if (empty($logs)): ?>
-                        <tr><td colspan="5" class="px-6 py-12 text-center text-gray-500">No audit logs found.</td></tr>
+                        <tr><td colspan="<?= $isCounselorView ? 4 : 5 ?>" class="px-6 py-12 text-center text-gray-500">No audit logs found.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -215,7 +238,7 @@
 
             // Update visible count badge
             const badge = document.getElementById('visibleCount');
-            if (badge) badge.textContent = visibleCount + ' entry' + (visibleCount !== 1 ? 's' : '');
+            if (badge) badge.textContent = visibleCount === 1 ? '1 entry' : visibleCount + ' entries';
         }
 
         document.getElementById('searchLogs').addEventListener('input', applyAuditFilters);
