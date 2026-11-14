@@ -1,7 +1,7 @@
 <style>
 .password-control{position:relative;display:block;width:100%;min-width:0}
-.password-control input{padding-right:70px!important}
-.password-control .password-visibility{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:auto;min-width:54px;min-height:36px;margin:0;padding:5px 8px;border:0;border-radius:4px;background:transparent;color:#155638;font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:none}
+.password-control input{padding-right:74px!important}
+.password-control .password-visibility{position:absolute;left:auto;right:5px;top:50%;transform:translateY(-50%);z-index:2;display:inline-flex;align-items:center;justify-content:center;width:auto!important;min-width:54px;min-height:36px;margin:0!important;padding:5px 8px;border:0;border-radius:4px;background:transparent;color:#155638;font:inherit;font-size:13px;font-weight:700;line-height:1.2;cursor:pointer;box-shadow:none}
 .password-control .password-visibility:hover{background:#edf4ee}
 .password-control .password-visibility:active{transform:translateY(-50%)}
 .password-control .password-visibility:focus-visible{outline:2px solid #a38224;outline-offset:1px}

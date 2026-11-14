@@ -63,7 +63,8 @@
 .staff-layout #staffMain.accounts-workspace #accountInspectorContent label { font-size:12px; }
 .staff-layout #staffMain.accounts-workspace #accountInspectorContent :is(input,select) { min-height:40px; padding:8px 10px; font-size:13px; }
 .staff-layout #staffMain.accounts-workspace #accountInspectorContent .account-access { padding-top:16px; border-top:1px solid #e0e9e3; }
-.staff-layout #staffMain.accounts-workspace #accountInspectorContent button { width:100%; }
+.staff-layout #staffMain.accounts-workspace #accountInspectorContent button:not(.password-visibility) { width:100%; }
+.staff-layout #staffMain.accounts-workspace #accountInspectorContent .password-control .password-visibility { width:auto; min-height:32px; padding:4px 9px; }
 .staff-layout #staffMain.accounts-workspace .account-fields .contact-remove { width:auto; align-self:flex-start; min-height:32px; padding:5px 10px; margin-top:2px; font-size:12px; }
 .staff-layout #staffMain.accounts-workspace [data-account-contact] { display:flex; flex-direction:column; gap:6px; min-width:0; }
 .staff-layout #staffMain.accounts-workspace [data-contact-status] { display:inline-block; margin-left:4px; padding:2px 6px; border-radius:4px; color:#76560b; background:#fff4c7; font-size:11px; font-weight:600; }

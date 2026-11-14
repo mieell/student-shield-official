@@ -16,13 +16,13 @@
 
 /* Labels, Inputs, and Selects */
 .role-main label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #2e4135; }
-.role-main :is(input, select, button, .role-button) { min-height: 44px; padding: 10px 14px; border: 1px solid #cfd9d4; border-radius: 8px; font: inherit; font-size: 14px; max-width: 100%; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+.role-main :is(input, select, button:not(.password-visibility), .role-button) { min-height: 44px; padding: 10px 14px; border: 1px solid #cfd9d4; border-radius: 8px; font: inherit; font-size: 14px; max-width: 100%; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
 .role-main :is(input, select) { background: white; color: #212825; width: 100%; }
 .role-main :is(input, select):hover { border-color: #aab8b1; }
 .role-main :is(input, select):focus { border-color: #0f8a3a; outline: none; box-shadow: 0 0 0 3px rgba(15, 138, 58, 0.15); }
-.role-main :is(button, .role-button) { background: #0f8a3a; border-color: #0f8a3a; color: white; cursor: pointer; text-decoration: none; text-align: center; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; }
-.role-main :is(button, .role-button):hover { background: #0d7b34; border-color: #0d7b34; }
-.role-main :is(button, .role-button):active { background: #0a652a; transform: translateY(1px); }
+.role-main :is(button:not(.password-visibility), .role-button) { background: #0f8a3a; border-color: #0f8a3a; color: white; cursor: pointer; text-decoration: none; text-align: center; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; }
+.role-main :is(button:not(.password-visibility), .role-button):hover { background: #0d7b34; border-color: #0d7b34; }
+.role-main :is(button:not(.password-visibility), .role-button):active { background: #0a652a; transform: translateY(1px); }
 .role-main .secondary { background: white; color: #0b7533; border: 1px solid #cfd9d4; }
 .role-main .secondary:hover { background: #f4f8f5; border-color: #0b7533; color: #075826; }
 .role-main .secondary:active { background: #eaf4ed; }
@@ -32,7 +32,7 @@
 /* Super Admin Account Directory & Badges */
 .account-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 14px; }
 .account-fields p { grid-column: 1 / -1; margin: 0; font-size: 13px; color: #61756b; }
-.account-fields button { margin-top: 6px; }
+.account-fields button:not(.password-visibility) { margin-top: 6px; }
 .account-access { margin-top: 12px; }
 .account-row { padding: 18px 0; border-bottom: 1px solid #e6ebe8; display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; }
 .account-row:last-child { border: 0; padding-bottom: 0; }
