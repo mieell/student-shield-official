@@ -114,7 +114,7 @@ final class GeminiVentClient
             ],
             'generationConfig' => [
                 'temperature' => 0.1,
-                'maxOutputTokens' => 320,
+                'maxOutputTokens' => 1200,
                 'responseMimeType' => 'application/json',
                 'responseSchema' => [
                     'type' => 'OBJECT',

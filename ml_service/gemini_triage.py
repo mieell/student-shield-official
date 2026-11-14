@@ -229,7 +229,7 @@ def _invoke_gemini(
         config: Any = types.GenerateContentConfig(
             system_instruction=_SYSTEM_INSTRUCTION,
             temperature=0.1,
-            max_output_tokens=320,
+            max_output_tokens=1200,
             response_mime_type="application/json",
             response_schema=_RESPONSE_SCHEMA,
         )
@@ -237,7 +237,7 @@ def _invoke_gemini(
         config = {
             "system_instruction": _SYSTEM_INSTRUCTION,
             "temperature": 0.1,
-            "max_output_tokens": 320,
+            "max_output_tokens": 1200,
             "response_mime_type": "application/json",
             "response_schema": _RESPONSE_SCHEMA,
         }
