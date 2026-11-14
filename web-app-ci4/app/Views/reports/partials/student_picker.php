@@ -17,8 +17,13 @@ $inputName = $kind === 'victim' ? 'victim_name' : 'bully_name';
         </div>
     </div>
     <label for="<?= $kind ?>-search" class="text-xs block mb-1">Search student name</label>
-    <input id="<?= $kind ?>-search" type="search" maxlength="80" autocomplete="off" class="directory-search w-full border rounded-xl px-3 py-3 mb-3" placeholder="Type at least 2 letters" disabled>
-    <div class="directory-matches mb-3 rounded-xl border border-gray-200 bg-white" hidden aria-label="Matching students"></div>
+    <div class="directory-search-wrap">
+        <input id="<?= $kind ?>-search" type="search" maxlength="80" autocomplete="off" class="directory-search w-full border rounded-xl px-3 py-3 mb-3" placeholder="Type at least 2 letters" disabled>
+        <div class="directory-popup" hidden>
+            <div class="directory-popup-label">Matching students</div>
+            <div class="directory-matches" role="group" aria-label="Matching students"></div>
+        </div>
+    </div>
     <label for="<?= $kind ?>-student" class="sr-only">Select student or choose not listed</label>
     <select id="<?= $kind ?>-student" name="<?= $kind ?>_student_id" class="directory-choice w-full border rounded-xl px-3 py-3 bg-white" <?= $kind === 'bully' ? 'required' : '' ?>>
         <option value="">Select a student</option>

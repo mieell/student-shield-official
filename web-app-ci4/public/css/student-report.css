@@ -140,3 +140,53 @@
 .report-progress-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #82958b; border-radius: 50%; color: #526259; background: white; font-size: 12px; }
 .report-progress-reached .report-progress-dot { background: #235d3a; border-color: #235d3a; color: white; }
 .report-progress li[aria-current="step"] { color: #235d3a; font-weight: 700; }
+
+/* Anchor the student suggestions to their search field. */
+.directory-search-wrap {
+    position: relative;
+}
+
+.directory-popup {
+    position: absolute;
+    z-index: 20;
+    inset-inline: 0;
+    top: calc(100% - 6px);
+    overflow: hidden;
+    border: 1px solid #7da88b;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(20, 63, 38, 0.2);
+}
+
+.directory-popup-label {
+    padding: 8px 14px;
+    background: #eaf5ed;
+    color: #245b38;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.directory-matches {
+    max-height: 12rem;
+    overflow-y: auto;
+}
+
+.student-picker button.directory-match {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    color: #173e28;
+    text-align: left;
+    cursor: pointer;
+}
+
+.student-picker button.directory-match:hover,
+.student-picker button.directory-match:focus-visible {
+    background: #eaf5ed;
+    outline: 2px solid #398454;
+    outline-offset: -2px;
+}

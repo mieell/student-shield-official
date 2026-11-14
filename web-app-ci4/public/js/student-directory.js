@@ -6,6 +6,7 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
     const description = picker.querySelector('.directory-description');
     const descriptionLabel = picker.querySelector('.directory-description-label');
     const status = picker.querySelector('.directory-status');
+    const popup = picker.querySelector('.directory-popup');
     const matches = picker.querySelector('.directory-matches');
     let timer;
     let requestVersion = 0;
@@ -13,7 +14,7 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
     function resetChoices() {
         clearTimeout(timer);
         matches.replaceChildren();
-        matches.hidden = true;
+        popup.hidden = true;
         choice.replaceChildren(new Option('Select a student', ''), new Option("I don't know / not listed", 'unknown'));
         description.value = '';
         description.hidden = true;
@@ -60,7 +61,7 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
 
                     const button = document.createElement('button');
                     button.type = 'button';
-                    button.className = 'block w-full px-3 py-2 text-left hover:bg-calm-50 focus:bg-calm-50';
+                    button.className = 'directory-match';
                     button.textContent = student.name;
                     button.addEventListener('click', () => {
                         choice.value = id;
@@ -69,7 +70,7 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
                     });
                     matches.append(button);
                 });
-                matches.hidden = result.students.length === 0;
+                popup.hidden = result.students.length === 0;
                 status.textContent = result.students.length ? 'Choose the matching student. Add more letters if needed.' : 'No students found. Check the grade and section, or select “not listed”.';
             } catch (error) {
                 if (version === requestVersion) status.textContent = 'Search is unavailable. Try again or select “not listed” and describe the person.';
@@ -77,7 +78,7 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
         }, 150);
     });
     choice.addEventListener('change', () => {
-        matches.hidden = true;
+        popup.hidden = true;
         const unknown = choice.value === 'unknown';
         descriptionLabel.hidden = !unknown;
         description.hidden = !unknown;
