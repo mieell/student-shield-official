@@ -173,6 +173,10 @@ final class GeminiVentClientTest extends CIUnitTestCase
         self::assertSame('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent', $captured['endpoint']);
         self::assertSame('gem-test-key', $captured['apiKey']);
         self::assertStringContainsString('<student_vent>', $captured['jsonBody']);
+        self::assertStringContainsString('DepEd DO 40 s.2012', $captured['jsonBody']);
+        self::assertStringContainsString('patay ako kay mama', $captured['jsonBody']);
+        self::assertStringContainsString('healed past NSSI in recovery', $captured['jsonBody']);
+        self::assertStringContainsString('perceived burdensomeness', $captured['jsonBody']);
         self::assertStringNotContainsString('Juan Dela Cruz', $captured['jsonBody']);
         self::assertStringNotContainsString('SS-2026-10', $captured['jsonBody']);
         self::assertSame('gemini', $result['source']);

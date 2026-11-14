@@ -102,6 +102,12 @@ class GeminiTriageUnitTests(unittest.TestCase):
         self.assertIn("<student_vent>", captured["contents"])
         self.assertNotIn("student_id", captured["contents"])
         self.assertNotIn("risk_history", captured["contents"])
+        sys_inst = captured["config"]["system_instruction"]
+        self.assertIn("DepEd Child Protection Policy DO 40 s.2012", sys_inst)
+        self.assertIn("patay ako kay mama", sys_inst)
+        self.assertIn("healed past NSSI in recovery", sys_inst)
+        self.assertIn("perceived burdensomeness", sys_inst)
+        self.assertIn("Passive ideation", sys_inst.replace("passive ideation", "Passive ideation"))
 
     def test_parse_payload_clamps_bands_and_rejects_malformed_json(self) -> None:
         self.assertIsNone(gemini_triage.parse_gemini_payload("not-json"))
