@@ -275,7 +275,7 @@ final class GeminiVentClient
 
     private static function readEnv(string $key, string $default = ''): string
     {
-        $val = env($key);
+        $val = function_exists('env') ? env($key) : null;
         if ($val === null || $val === false || $val === '') {
             $val = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
         }
