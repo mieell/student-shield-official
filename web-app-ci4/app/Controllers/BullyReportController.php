@@ -148,9 +148,14 @@ class BullyReportController extends BaseController
 
         $db = \Config\Database::connect();
 
-        $encrypter = \Config\Services::encrypter();
-        $rawDetails = "TARGETED STUDENT: " . ($victimName ?: 'Self') . "\nREPORTED AGGRESSOR(S): " . ($bullyName ?: 'N/A') . "\n\n" . $details;
-        $encryptedDetails = bin2hex($encrypter->encrypt($rawDetails));
+        try {
+            $encrypter = \Config\Services::encrypter();
+            $rawDetails = "TARGETED STUDENT: " . ($victimName ?: 'Self') . "\nREPORTED AGGRESSOR(S): " . ($bullyName ?: 'N/A') . "\n\n" . $details;
+            $encryptedDetails = bin2hex($encrypter->encrypt($rawDetails));
+        } catch (\Throwable $e) {
+            log_message('critical', 'Bully report encryption failed: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Your report could not be encrypted right now. Please try again shortly.');
+        }
         
         $nowManila = \App\Libraries\ManilaTime::now();
         $reportData = [

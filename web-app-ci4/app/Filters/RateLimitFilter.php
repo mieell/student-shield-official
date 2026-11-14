@@ -15,23 +15,28 @@ use CodeIgniter\Filters\FilterInterface;
  */
 class RateLimitFilter implements FilterInterface
 {
-    private const MAX_LOGIN_ATTEMPTS   = 5;
-    private const MAX_OTP_ATTEMPTS     = 5;
-    private const MAX_RESEND_ATTEMPTS  = 3;
-    private const MAX_CONSENT_ATTEMPTS = 10;
-    private const LOCKOUT_SECONDS      = 300; // 5 minutes
-    private const STORAGE_DIR          = WRITEPATH . 'rate_limits/';
+    private const MAX_LOGIN_ATTEMPTS     = 5;
+    private const MAX_OTP_ATTEMPTS       = 5;
+    private const MAX_RESEND_ATTEMPTS    = 3;
+    private const MAX_CONSENT_ATTEMPTS   = 10;
+    private const MAX_REGISTER_ATTEMPTS  = 10;
+    private const MAX_DIRECTORY_ATTEMPTS = 60;
+    private const LOCKOUT_SECONDS        = 300; // 5 minutes
+    private const STORAGE_DIR            = WRITEPATH . 'rate_limits/';
 
     public function before(RequestInterface $request, $arguments = null)
     {
-        // Only rate limit POST requests (actual credential / OTP submissions)
-        if (strtolower($request->getMethod()) !== 'post') {
+        $method = strtolower($request->getMethod());
+        $uriPath = trim($request->getUri()->getPath(), '/');
+        $isDirectoryLookup = str_starts_with($uriPath, 'report/bullying/directory');
+
+        // Rate-limit POST submissions and authenticated student directory searches
+        if ($method !== 'post' && !$isDirectoryLookup) {
             return;
         }
 
         try {
             $ip = $request->getIPAddress();
-            $uriPath = trim($request->getUri()->getPath(), '/');
 
             // Determine rate limiting bucket based on target action
             if (str_contains($uriPath, 'resend-otp')) {
@@ -46,6 +51,14 @@ class RateLimitFilter implements FilterInterface
                 $action = 'guardian_consent';
                 $maxAttempts = self::MAX_CONSENT_ATTEMPTS;
                 $actionLabel = 'consent verification attempts';
+            } elseif (str_starts_with($uriPath, 'register/process')) {
+                $action = 'register';
+                $maxAttempts = self::MAX_REGISTER_ATTEMPTS;
+                $actionLabel = 'registration attempts';
+            } elseif ($isDirectoryLookup) {
+                $action = 'directory';
+                $maxAttempts = self::MAX_DIRECTORY_ATTEMPTS;
+                $actionLabel = 'directory lookup requests';
             } else {
                 $action = 'login';
                 $maxAttempts = self::MAX_LOGIN_ATTEMPTS;
@@ -81,7 +94,7 @@ class RateLimitFilter implements FilterInterface
                 $minutes = max(1, (int) ceil($remaining / 60));
                 $errorMessage = "Too many {$actionLabel}. Please try again in {$minutes} minute(s).";
 
-                if ($request instanceof \CodeIgniter\HTTP\IncomingRequest && $request->isAJAX()) {
+                if ($action === 'directory' || ($request instanceof \CodeIgniter\HTTP\IncomingRequest && $request->isAJAX())) {
                     return service('response')
                         ->setStatusCode(429)
                         ->setJSON(['status' => 'error', 'message' => $errorMessage]);
@@ -94,6 +107,10 @@ class RateLimitFilter implements FilterInterface
 
                 if ($action === 'guardian_consent') {
                     return $redirect->to('/guardian-consent')->with('error', $errorMessage);
+                }
+
+                if ($action === 'register') {
+                    return $redirect->to('/register')->with('error', $errorMessage);
                 }
 
                 $target = (strpos($uriPath, 'admin') !== false) ? '/admin/login' : '/login';
@@ -123,8 +140,10 @@ class RateLimitFilter implements FilterInterface
                 return;
             }
 
-            // On fully successful login, clear all rate limit buckets for this IP
-            if (session()->get('isLoggedIn')) {
+            $isAuthEndpoint = str_contains($uriPath, 'login') || str_contains($uriPath, 'verify-otp') || str_contains($uriPath, 'resend-otp');
+
+            // On fully successful login, clear auth rate limit buckets for this IP
+            if ($isAuthEndpoint && session()->get('isLoggedIn')) {
                 foreach (['login', 'otp', 'resend', ''] as $action) {
                     $file = self::STORAGE_DIR . ($action ? md5($ip . '_' . $action) : md5($ip)) . '.json';
                     if (file_exists($file)) {
@@ -133,7 +152,7 @@ class RateLimitFilter implements FilterInterface
                 }
             }
             // On successful admin password entry (transitioning to OTP step), clear login rate limit
-            elseif (session()->has('otp') && session()->has('temp_user_id')) {
+            elseif ($isAuthEndpoint && session()->has('otp') && session()->has('temp_user_id')) {
                 $loginFile = self::STORAGE_DIR . md5($ip . '_login') . '.json';
                 if (file_exists($loginFile)) {
                     @unlink($loginFile);

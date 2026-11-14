@@ -1032,6 +1032,13 @@ final class RoleSeparationTest extends CIUnitTestCase
                 'access_disabled' => 0,
                 'password_hash' => password_hash('DemoTestPassword!9', PASSWORD_DEFAULT),
             ]);
+            if ($account['role'] !== 1) {
+                $this->rbacDb->table('admins')->where('user_id', $account['id'])->delete();
+                $this->rbacDb->table('admins')->insert([
+                    'user_id' => $account['id'],
+                    'email' => 'staff' . $account['id'] . '@example.test',
+                ]);
+            }
 
             $response = $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', [
                 'name' => $account['name'],

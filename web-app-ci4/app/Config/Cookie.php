@@ -56,6 +56,22 @@ class Cookie extends BaseConfig
      */
     public bool $secure = false;
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        $isHttps = stripos((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''), 'https') !== false
+            || str_contains(strtolower((string) ($_SERVER['HTTP_CF_VISITOR'] ?? '')), '"https"')
+            || (isset($_SERVER['HTTPS']) && !in_array(strtolower((string) $_SERVER['HTTPS']), ['', 'off', '0'], true));
+        $baseHost = strtolower((string) parse_url((string) env('app.baseURL', ''), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? ''));
+        $baseHostOnly = explode(':', $baseHost)[0];
+        $isProdPublic = ENVIRONMENT === 'production' && !in_array($baseHostOnly, ['localhost', '127.0.0.1', '[::1]', ''], true);
+
+        if ($isHttps || $isProdPublic) {
+            $this->secure = true;
+        }
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Cookie HTTPOnly

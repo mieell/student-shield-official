@@ -21,16 +21,99 @@ class App extends BaseConfig
     public function __construct()
     {
         parent::__construct();
-        
-        // Dynamically detect Ngrok or other external domains to prevent phone redirect errors
-        if (isset($_SERVER['HTTP_HOST'])) {
-            $isHttps = stripos((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''), 'https') !== false
-                || str_contains(strtolower((string) ($_SERVER['HTTP_CF_VISITOR'] ?? '')), '"https"')
-                || (isset($_SERVER['HTTPS']) && !in_array(strtolower((string) $_SERVER['HTTPS']), ['', 'off', '0'], true));
-            $protocol = $isHttps ? 'https://' : 'http://';
-            $this->baseURL = $protocol . $_SERVER['HTTP_HOST'] . '/';
-            $this->forceGlobalSecureRequests = false; // Prevent endless HTTPS redirect loops on Ngrok
+
+        $proxyEnv = trim((string) env('app.proxyIPs', ''));
+        if ($proxyEnv !== '') {
+            $proxyHeader = trim((string) env('app.proxyHeader', 'X-Forwarded-For')) ?: 'X-Forwarded-For';
+            foreach (array_filter(array_map('trim', explode(',', $proxyEnv))) as $proxyIp) {
+                $this->proxyIPs[$proxyIp] = $proxyHeader;
+            }
         }
+
+        $isHttps = stripos((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''), 'https') !== false
+            || str_contains(strtolower((string) ($_SERVER['HTTP_CF_VISITOR'] ?? '')), '"https"')
+            || (isset($_SERVER['HTTPS']) && !in_array(strtolower((string) $_SERVER['HTTPS']), ['', 'off', '0'], true));
+
+        $allowedHosts = $this->configuredAllowedHostnames();
+        $effectiveHost = strtolower((string) parse_url($this->baseURL, PHP_URL_HOST));
+
+        if (isset($_SERVER['HTTP_HOST'])) {
+            $rawHost = trim((string) $_SERVER['HTTP_HOST']);
+            $hostMatches = preg_match(
+                '/\A(\[::1\]|[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*)(?::[0-9]{1,5})?\z/i',
+                $rawHost,
+                $parts
+            ) === 1;
+            $candidateName = $hostMatches ? strtolower($parts[1]) : '';
+            $isDevTunnel = ENVIRONMENT !== 'production' && $this->isDevTunnelHost($candidateName);
+
+            if ($hostMatches && (
+                in_array(strtolower($rawHost), $allowedHosts, true)
+                || in_array($candidateName, $allowedHosts, true)
+                || $isDevTunnel
+            )) {
+                $protocol = $isHttps ? 'https://' : 'http://';
+                $this->baseURL = $protocol . strtolower($rawHost) . '/';
+                $effectiveHost = $candidateName;
+            }
+        }
+
+        $isLocalHost = in_array($effectiveHost, ['localhost', '127.0.0.1', '[::1]', ''], true)
+            || str_ends_with($effectiveHost, '.localhost')
+            || str_ends_with($effectiveHost, '.invalid');
+
+        if (ENVIRONMENT !== 'production' || $isLocalHost) {
+            $this->forceGlobalSecureRequests = false;
+        } elseif ($isHttps && $this->proxyIPs === [] && empty($_SERVER['HTTPS'])) {
+            // Proxy-terminated HTTPS (e.g., Cloudflare Universal SSL without explicit origin proxy IPs).
+            $this->forceGlobalSecureRequests = false;
+        }
+    }
+
+    /** @return list<string> */
+    private function configuredAllowedHostnames(): array
+    {
+        $hosts = ['studentshield.app', 'www.studentshield.app', 'localhost', '127.0.0.1', '[::1]'];
+
+        foreach ([$this->baseURL, (string) env('app.baseURL', '')] as $url) {
+            $parsedHost = strtolower((string) parse_url($url, PHP_URL_HOST));
+            if ($parsedHost !== '') {
+                $hosts[] = $parsedHost;
+                $parsedPort = parse_url($url, PHP_URL_PORT);
+                if ($parsedPort !== null) {
+                    $hosts[] = $parsedHost . ':' . $parsedPort;
+                }
+            }
+        }
+
+        foreach ($this->allowedHostnames as $host) {
+            $clean = strtolower(trim((string) $host));
+            if ($clean !== '') {
+                $hosts[] = $clean;
+            }
+        }
+
+        $envHosts = trim((string) env('app.allowedHostnames', ''));
+        if ($envHosts !== '') {
+            foreach (explode(',', $envHosts) as $host) {
+                $clean = strtolower(trim($host));
+                if ($clean !== '') {
+                    $hosts[] = $clean;
+                }
+            }
+        }
+
+        return array_values(array_unique($hosts));
+    }
+
+    private function isDevTunnelHost(string $hostname): bool
+    {
+        foreach (['.ngrok-free.app', '.ngrok-free.dev', '.ngrok.io', '.ngrok.app'] as $suffix) {
+            if (str_ends_with($hostname, $suffix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

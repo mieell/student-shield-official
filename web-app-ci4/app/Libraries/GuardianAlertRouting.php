@@ -8,20 +8,75 @@ final class GuardianAlertRouting
 {
     public static function settings(BaseConnection $db, int $userId): ?array
     {
+        return self::settingsForUsers($db, [$userId])[$userId] ?? null;
+    }
+
+    /**
+     * Batch-load guardian safety settings using single whereIn queries (avoids N+1 lookups).
+     * Missing optional table defaults safely to unflagged parent routing; DB query failures fail closed (null).
+     *
+     * @param list<int|string> $userIds
+     * @return array<int, array<string, mixed>|null>
+     */
+    public static function settingsForUsers(BaseConnection $db, array $userIds): array
+    {
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', $userIds),
+            static fn (int $id): bool => $id > 0
+        )));
+        if ($ids === []) {
+            return [];
+        }
+
         try {
-            if (!$db->tableExists('guardian_alert_routes')) return null;
-            $settings = $db->table('guardian_alert_routes')->where('user_id', $userId)->get()->getRowArray() ?? [
-                'unsafe_guardian' => 0, 'alternate_name' => '', 'alternate_phone' => '',
-                'alternate_email' => '', 'verified_by' => null, 'verified_at' => null,
-            ];
-            $verifiedContact = $db->tableExists('guardian_consents')
-                ? $db->table('guardian_consents')->select('phone')->where('user_id', $userId)->get()->getRowArray() : null;
-            $settings['verified_guardian_phone'] = $verifiedContact['phone'] ?? null;
-            return $settings;
+            $hasRoutes = $db->tableExists('guardian_alert_routes');
+            if (!$hasRoutes) {
+                log_message('warning', 'guardian_alert_routes table missing; defaulting to standard guardian routing.');
+            }
+
+            $routesById = [];
+            if ($hasRoutes) {
+                $routeRows = $db->table('guardian_alert_routes')->whereIn('user_id', $ids)->get()->getResultArray();
+                foreach ($routeRows as $row) {
+                    $routesById[(int) $row['user_id']] = $row;
+                }
+            }
+
+            $consentsById = [];
+            if ($db->tableExists('guardian_consents')) {
+                $consentRows = $db->table('guardian_consents')
+                    ->select('user_id, phone')
+                    ->whereIn('user_id', $ids)
+                    ->get()->getResultArray();
+                foreach ($consentRows as $row) {
+                    $consentsById[(int) $row['user_id']] = $row['phone'] ?? null;
+                }
+            }
+
+            $result = [];
+            foreach ($ids as $id) {
+                $settings = $routesById[$id] ?? self::defaultSettings();
+                $settings['verified_guardian_phone'] = $consentsById[$id] ?? null;
+                $result[$id] = $settings;
+            }
+            return $result;
         } catch (\Throwable $error) {
             log_message('error', 'Guardian alert routing could not be read. Counselor outreach is required.');
-            return null;
+            return array_fill_keys($ids, null);
         }
+    }
+
+    /** Default unflagged routing structure when no unsafe guardian record is configured. */
+    private static function defaultSettings(): array
+    {
+        return [
+            'unsafe_guardian' => 0,
+            'alternate_name' => '',
+            'alternate_phone' => '',
+            'alternate_email' => '',
+            'verified_by' => null,
+            'verified_at' => null,
+        ];
     }
 
     public static function resolve(array $student, ?array $settings): array

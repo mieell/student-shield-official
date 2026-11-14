@@ -167,6 +167,7 @@ class AdminController extends BaseController
             ->get()->getResultArray();
 
         $this->decryptRowsField($vents, 'raw_text');
+        $this->redactUnsafeGuardianContacts($vents, 'user_id', $db);
         $sources = [];
         if ($vents) {
             $events = $db->table('audit_logs')->select('entity_id, action')->where('entity_type', 'vent')
@@ -238,8 +239,9 @@ class AdminController extends BaseController
             ->get()->getResultArray();
 
         $this->decryptRowsField($incidents, 'description');
+        $this->redactUnsafeGuardianContacts($incidents, 'reporter_student_id', $db);
 
-        return $this->response->setJSON($incidents);
+        return $this->response->setHeader('Cache-Control', 'private, no-store')->setJSON($incidents);
     }
 
     public function resolveIncident($id)
@@ -529,10 +531,27 @@ class AdminController extends BaseController
             return $this->response->setStatusCode(404)->setBody('Evidence not found');
         }
 
-        $mime = mime_content_type($path) ?: 'application/octet-stream';
+        $rawMime = mime_content_type($path) ?: 'application/octet-stream';
+        $mime = strtolower(trim(explode(';', (string) $rawMime)[0]));
+        $inlineMimes = [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'video/mp4',
+            'video/webm',
+            'video/quicktime',
+            'video/ogg',
+        ];
+        $isSafeInline = in_array($mime, $inlineMimes, true);
+        $disposition = $isSafeInline ? 'inline' : 'attachment';
+        $headerName = preg_replace('/[^A-Za-z0-9._-]/', '_', $safeName) ?: 'evidence.bin';
+
         return $this->response
-            ->setHeader('Content-Type', $mime)
-            ->setHeader('Content-Disposition', 'inline; filename="' . $safeName . '"')
+            ->setHeader('Content-Type', $isSafeInline ? $mime : 'application/octet-stream')
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setHeader('Cache-Control', 'private, no-store')
+            ->setHeader('Content-Disposition', $disposition . '; filename="' . $headerName . '"')
             ->setBody(file_get_contents($path));
     }
 
@@ -763,6 +782,37 @@ class AdminController extends BaseController
         } catch (\Throwable $e) {
             return false;
         }
+    }
+
+    private function redactUnsafeGuardianContacts(array &$rows, string $userIdKey, $db): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $safetyByUser = \App\Libraries\GuardianAlertRouting::settingsForUsers($db, array_column($rows, $userIdKey));
+        foreach ($rows as &$row) {
+            $uid = (int) ($row[$userIdKey] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            $settings = $safetyByUser[$uid] ?? null;
+            if ($settings === null) {
+                $row['parent_phone'] = null;
+                $row['parent_email'] = null;
+                continue;
+            }
+            if (!empty($settings['unsafe_guardian'])) {
+                $route = \App\Libraries\GuardianAlertRouting::resolve([
+                    'parent_phone' => $row['parent_phone'] ?? null,
+                    'parent_email' => $row['parent_email'] ?? null,
+                ], $settings);
+                $row['parent_phone'] = $route['phone'];
+                $row['parent_email'] = $route['email'];
+                $row['guardian_unsafe'] = true;
+            }
+        }
+        unset($row);
     }
 
     private function decryptRowsField(array &$rows, string $field): void

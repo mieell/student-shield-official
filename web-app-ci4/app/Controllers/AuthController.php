@@ -158,6 +158,18 @@ class AuthController extends BaseController
                 }
             }
 
+            // Determine recipient email:
+            // 1. Specific account email (counselors.counselor_email or admins.email)
+            // 2. Fallback to COUNSELOR_EMAIL / SMTPUser ONLY for Counselors (role = 1)
+            $recipientEmail = !empty($user['parent_email']) ? trim($user['parent_email']) : '';
+            if (empty($recipientEmail) && (int) $user['role'] === 1) {
+                $recipientEmail = trim((string) env('COUNSELOR_EMAIL', env('email.SMTPUser', '')));
+            }
+            if (empty($recipientEmail) && (int) $user['role'] !== 1) {
+                log_message('warning', 'Staff login blocked: no OTP email configured for role ' . (int) $user['role'] . ' (user ID ' . (int) $user['id'] . ').');
+                return redirect()->back()->with('error', 'No verification email is configured for this account. Contact the system administrator.');
+            }
+
             // ── LAYER 6: TWO-FACTOR AUTHENTICATION (OTP) ──
             $otp = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
             
@@ -174,15 +186,6 @@ class AuthController extends BaseController
                 'otp_resend_count' => 0,
                 'otp_resend_time'  => time(),
             ]);
-
-            // Determine recipient email:
-            // 1. Specific account email
-            // 2. Fallback to COUNSELOR_EMAIL in .env
-            // 3. Fallback to SMTP User
-            $recipientEmail = !empty($user['parent_email']) ? trim($user['parent_email']) : '';
-            if (empty($recipientEmail)) {
-                $recipientEmail = env('COUNSELOR_EMAIL', env('email.SMTPUser', ''));
-            }
 
             // Mask email for display on OTP page (e.g. vo***s@gmail.com)
             $maskedEmail = $recipientEmail;
@@ -336,6 +339,15 @@ class AuthController extends BaseController
             return redirect()->to('/admin/login')->with('error', 'Session invalid. Please log in again.');
         }
 
+        $recipientEmail = !empty($user['parent_email']) ? trim($user['parent_email']) : '';
+        if (empty($recipientEmail) && (int) ($user['role'] ?? 0) === 1) {
+            $recipientEmail = trim((string) env('COUNSELOR_EMAIL', env('email.SMTPUser', '')));
+        }
+        if (empty($recipientEmail) && (int) ($user['role'] ?? 0) !== 1) {
+            $this->clearOtpSession();
+            return redirect()->to('/admin/login')->with('error', 'No verification email is configured for this account.');
+        }
+
         // Invalidate prior code and issue brand new 6-digit OTP
         $newOtp = str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         session()->set([
@@ -345,11 +357,6 @@ class AuthController extends BaseController
             'otp_resend_time'  => time(),
             'otp_resend_count' => $resendCount + 1,
         ]);
-
-        $recipientEmail = !empty($user['parent_email']) ? trim($user['parent_email']) : '';
-        if (empty($recipientEmail)) {
-            $recipientEmail = env('COUNSELOR_EMAIL', env('email.SMTPUser', ''));
-        }
 
         $this->sendOtpEmail($user, $recipientEmail, $newOtp);
 
@@ -537,9 +544,6 @@ class AuthController extends BaseController
         if (!preg_match('/\A[0-9]{12}\z/', $lrn)) {
             return $this->registrationFailure('Enter a valid 12-digit LRN.');
         }
-        if ($db->table('students')->where('lrn', $lrn)->countAllResults() > 0) {
-            return $this->registrationFailure('That LRN is already registered. Please contact the guidance office.');
-        }
         $gradeLevel = trim((string) $this->request->getPost('grade_level'));
         $section = trim((string) $this->request->getPost('section'));
         if (!\App\Libraries\SchoolRoster::validPlacement($gradeLevel, $section, \App\Libraries\SchoolRoster::sections($db))) {
@@ -604,8 +608,9 @@ class AuthController extends BaseController
         }
 
         $existingUser = $db->table('users')->where('name', $name)->get()->getRow();
-        if ($existingUser) {
-            return $this->registrationFailure('That name is already registered.');
+        $existingLrn = $db->table('students')->where('lrn', $lrn)->countAllResults() > 0;
+        if ($existingUser || $existingLrn) {
+            return $this->registrationFailure('Registration could not be completed with those details. If you already have an account, please sign in or contact the guidance office.');
         }
 
         $db->transStart();
@@ -654,6 +659,7 @@ class AuthController extends BaseController
     private function shouldUseSecureCookie(): bool
     {
         return $this->request->isSecure()
-            || strtolower((string) $this->request->getServer('HTTP_X_FORWARDED_PROTO')) === 'https';
+            || stripos((string) $this->request->getServer('HTTP_X_FORWARDED_PROTO'), 'https') !== false
+            || str_contains(strtolower((string) $this->request->getServer('HTTP_CF_VISITOR')), '"https"');
     }
 }

@@ -141,10 +141,16 @@ class VentController extends BaseController
         try {
             $encrypter = \Config\Services::encrypter();
             $encryptedText = bin2hex($encrypter->encrypt($text));
-        } catch (\Exception $e) {
-            log_message('error', 'Encryption failed: ' . $e->getMessage());
-            // Store safely without encryption so submission is not lost
-            $encryptedText = base64_encode($text);
+        } catch (\Throwable $e) {
+            log_message('critical', 'Vent encryption failed: ' . $e->getMessage());
+            $msg = 'Your check-in could not be encrypted right now. Please try again shortly.';
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(503)->setJSON([
+                    'status' => 'error',
+                    'message' => $msg
+                ]);
+            }
+            return redirect()->back()->with('error', $msg);
         }
 
         // --- 3. SAVE TO DATABASE ---
@@ -240,15 +246,15 @@ class VentController extends BaseController
 
         return redirect()->to('/student/vent')->with('message', 'Vent securely submitted.');
         } catch (\Throwable $e) {
-            $errDetail = $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')';
-            log_message('error', 'VentController::submit fatal: ' . $errDetail);
+            log_message('error', 'VentController::submit fatal: ' . $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')');
+            $safeMessage = 'We could not save your check-in right now. Please try again.';
             if ($this->request->isAJAX()) {
                 return $this->response->setStatusCode(500)->setJSON([
                     'status' => 'error',
-                    'message' => 'Server error: ' . $errDetail
+                    'message' => $safeMessage
                 ]);
             }
-            return redirect()->back()->with('error', 'Server error: ' . $errDetail);
+            return redirect()->back()->with('error', $safeMessage);
         }
     }
 
@@ -263,8 +269,7 @@ class VentController extends BaseController
         if (!is_array($alerts))
             return false;
 
-        // 1-minute cooldown for TESTING purposes (originally 1 hour)
-        $oneHourAgo = strtotime('-1 minute');
+        $oneHourAgo = strtotime('-1 hour');
 
         foreach ($alerts as $alert) {
             if (isset($alert['accepted']) && !$alert['accepted']) continue;
@@ -296,7 +301,7 @@ class VentController extends BaseController
             . $safeName . '.</p><p>A submission was flagged for urgent counselor review. Please contact the school Guidance Office promptly so staff can coordinate a safe response.</p>'
             . '<p>St. Vincent Blessed School of Manila</p></div>';
 
-        $this->logAlert('Email', $parentEmail, "StudentShield Alert: Sent wellness check email regarding $studentName.");
+        $accepted = false;
 
         try {
             $email = \Config\Services::email();
@@ -307,6 +312,10 @@ class VentController extends BaseController
 
             if (empty($smtpUser) || empty($smtpPass)) {
                 log_message('error', 'Auto Email Failed: SMTP credentials not set in .env (email.SMTPUser, email.SMTPPass)');
+                $this->logAlert('Email', $parentEmail, 'StudentShield Alert: Automated urgent follow-up email failed (SMTP not configured).', [
+                    'accepted' => false,
+                    'state' => 'Failed',
+                ]);
                 return;
             }
 
@@ -339,14 +348,25 @@ class VentController extends BaseController
 
             if (!$email->send(false)) {
                 log_message('error', 'Auto Email Failed: ' . $email->printDebugger(['headers', 'subject']));
-            }
-            else {
+            } else {
+                $accepted = true;
                 log_message('info', "Auto Email sent successfully to {$parentEmail} for student {$studentName}");
             }
-        }
-        catch (\Exception $e) {
+        } catch (\Throwable $e) {
             log_message('error', 'Auto Email Exception: ' . $e->getMessage());
         }
+
+        $this->logAlert(
+            'Email',
+            $parentEmail,
+            $accepted
+                ? 'StudentShield Alert: Sent urgent Guidance Office follow-up email.'
+                : 'StudentShield Alert: Automated urgent follow-up email failed to send.',
+            [
+                'accepted' => $accepted,
+                'state' => $accepted ? 'Sent' : 'Failed',
+            ]
+        );
     }
 
     private function triggerCounselorEmergencyAlert($message, $subject, string $eventKey, string $smsMessage)
