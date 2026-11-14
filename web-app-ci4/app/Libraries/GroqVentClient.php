@@ -10,7 +10,7 @@ final class GroqVentClient
 {
     public const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
     private const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-    private const DEFAULT_TIMEOUT_SECONDS = 5;
+    private const DEFAULT_TIMEOUT_SECONDS = 8;
     private const MAX_VENT_CHARS = 1500;
     private const CATEGORY_BAND_MAP = [
         'positive_or_banter' => 'LOW',
@@ -240,7 +240,7 @@ final class GroqVentClient
         if ($val === false || $val === null) {
             return $default;
         }
-        $str = trim((string) $val);
+        $str = trim((string) $val, " \t\n\r\0\x0B\"'");
         return $str === '' ? $default : $str;
     }
 }

@@ -20,7 +20,12 @@ from risk_history import evaluate_risk_history
 from violent_threats import detect_violent_threat
 from translation_gate import TranslationGate
 from crisis_context import current_disclosure_text
-from groq_triage import evaluate_vent_with_groq, merge_groq_assessment
+from groq_triage import (
+    evaluate_vent_with_groq,
+    get_last_groq_status,
+    is_groq_enabled,
+    merge_groq_assessment,
+)
 
 translation_gate = TranslationGate()
 
@@ -458,9 +463,10 @@ PASSIVE_DISAPPEARANCE_IDEATION = [
     r"\bgusto\s+(?:ko\s+)?(?:nang?|na\s+lang|na\s+talagang|kong)\s+(?:maglaho|mawala)\b",
     r"\bmas\s+mabuti\s+pang\s+(?:maglaho|mawala)\b",
     r"\bmay magbabago\b.{0,30}\bkung wala ako\b",
-    r"\bmas maayos\b.{0,20}\bkung wala ako\b",
-    r"\bmas maganda\b.{0,20}\bkung wala ako\b",
-    r"\bmas okay\b.{0,20}\bkung wala ako\b",
+    r"\bmas maayos\b.{0,20}\b(?:kung|pag|kapag) wala (?:na )?ako\b",
+    r"\bmas maganda\b.{0,20}\b(?:kung|pag|kapag) wala (?:na )?ako\b",
+    r"\bmas okay\b.{0,20}\b(?:kung|pag|kapag) wala (?:na )?ako\b",
+    r"\bpagod\s+na\s+(?:pagod\s+)?(?:na\s+)?(?:(?:ako|ko)(?:ng)?\s+)?mabuhay\b",
     r"\bmas (?:magiging )?madali\b.{0,25}\bpara sa lahat\b",
     r"\bkung wala na ako\b",
     r"\bpara saan pa ako\b",
@@ -1293,6 +1299,8 @@ async def root_health_check():
         "service": "StudentShield AI Engine",
         "version": "7.3.0",
         "translation_policy": "english-skip-cache-retry-v2",
+        "groq_enabled": is_groq_enabled(),
+        "groq_last_status": get_last_groq_status(),
         "message": "Send POST requests to /analyze-text to classify vents.",
     }
 

@@ -14,8 +14,9 @@ logger = logging.getLogger("ML_Service")
 
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
-DEFAULT_TIMEOUT_SECONDS = 4.5
+DEFAULT_TIMEOUT_SECONDS = 8.0
 MAX_VENT_CHARS = 1500
+_LAST_GROQ_STATUS = "not_called"
 
 RISK_BANDS: dict[str, tuple[int, int]] = {
     "LOW": (1, 30),
@@ -84,16 +85,26 @@ _SYSTEM_INSTRUCTION = (
 )
 
 
+def _clean_env(name: str, default: str = "") -> str:
+    raw = os.environ.get(name, "").strip().strip('"').strip("'").strip()
+    return raw if raw else default
+
+
+def get_last_groq_status() -> str:
+    """Return non-secret status code of the most recent Groq clinical triage attempt."""
+    return _LAST_GROQ_STATUS
+
+
 def is_groq_enabled() -> bool:
     """Return True when Groq clinical triage is configured and not explicitly disabled."""
-    flag = os.environ.get("GROQ_ENABLED", "true").strip().lower()
+    flag = _clean_env("GROQ_ENABLED", "true").lower()
     if flag in {"0", "false", "no", "off"}:
         return False
-    return bool(os.environ.get("GROQ_API_KEY", "").strip())
+    return bool(_clean_env("GROQ_API_KEY"))
 
 
 def _get_timeout_seconds() -> float:
-    raw = os.environ.get("GROQ_TIMEOUT_SECONDS", "").strip()
+    raw = _clean_env("GROQ_TIMEOUT_SECONDS")
     if not raw:
         return DEFAULT_TIMEOUT_SECONDS
     try:
@@ -103,8 +114,7 @@ def _get_timeout_seconds() -> float:
 
 
 def _get_model_name() -> str:
-    configured = os.environ.get("GROQ_MODEL", "").strip()
-    return configured or DEFAULT_GROQ_MODEL
+    return _clean_env("GROQ_MODEL", DEFAULT_GROQ_MODEL)
 
 
 def _clean_note(value: Any, max_len: int) -> str:
@@ -250,15 +260,23 @@ def evaluate_vent_with_groq(
     Returns None silently when disabled, unconfigured, timed out, or rate-limited
     so deterministic local/ML triage always succeeds.
     """
-    if not is_groq_enabled():
+    global _LAST_GROQ_STATUS
+    flag = _clean_env("GROQ_ENABLED", "true").lower()
+    if flag in {"0", "false", "no", "off"}:
+        _LAST_GROQ_STATUS = "disabled_flag"
+        return None
+    api_key = _clean_env("GROQ_API_KEY")
+    if not api_key:
+        _LAST_GROQ_STATUS = "disabled_no_key"
         return None
     if not isinstance(text, str):
+        _LAST_GROQ_STATUS = "invalid_text"
         return None
     cleaned_text = text.strip()[:MAX_VENT_CHARS]
     if not cleaned_text:
+        _LAST_GROQ_STATUS = "empty_text"
         return None
 
-    api_key = os.environ.get("GROQ_API_KEY", "").strip()
     model_name = _get_model_name()
     timeout_s = _get_timeout_seconds()
 
@@ -272,15 +290,30 @@ def evaluate_vent_with_groq(
         )
         parsed = parse_groq_payload(raw_outer)
         if parsed is None:
+            _LAST_GROQ_STATUS = "parse_error"
             logger.warning("Groq returned unparseable or incomplete triage payload; retaining baseline score.")
+        else:
+            _LAST_GROQ_STATUS = "ok"
         return parsed
     except TimeoutError:
+        _LAST_GROQ_STATUS = f"timeout_{timeout_s:.1f}s"
         logger.warning("Groq clinical triage timed out after %.1fs; retaining baseline score.", timeout_s)
         return None
     except urllib.error.HTTPError as exc:
-        logger.warning("Groq clinical triage HTTP %s; retaining baseline score.", exc.code)
+        err_code = f"http_{exc.code}"
+        try:
+            err_body = exc.read().decode("utf-8", errors="ignore")
+            err_json = json.loads(err_body)
+            detail = _clean_note(str(err_json.get("error", {}).get("code") or err_json.get("error", {}).get("type") or ""), 40)
+            if detail:
+                err_code = f"http_{exc.code}:{detail}"
+        except Exception:
+            pass
+        _LAST_GROQ_STATUS = err_code
+        logger.warning("Groq clinical triage %s; retaining baseline score.", err_code)
         return None
     except Exception as exc:
+        _LAST_GROQ_STATUS = f"error:{type(exc).__name__}"
         logger.warning("Groq clinical triage skipped (%s); retaining baseline score.", type(exc).__name__)
         return None
 

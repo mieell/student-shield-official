@@ -55,7 +55,7 @@ class GroqTriageUnitTests(unittest.TestCase):
         self.assertEqual(calls, [])
 
     def test_prompt_excludes_pii_and_parses_chat_completions_json(self) -> None:
-        os.environ["GROQ_API_KEY"] = "gsk_test_key"
+        os.environ["GROQ_API_KEY"] = ' "gsk_test_key" '
         os.environ["GROQ_MODEL"] = "llama-3.3-70b-versatile"
         captured = {}
 
@@ -160,11 +160,13 @@ class GroqTriageUnitTests(unittest.TestCase):
             )
 
         self.assertIsNone(groq_triage.evaluate_vent_with_groq("feeling stressed", http_post=_rate_limited))
+        self.assertEqual(groq_triage.get_last_groq_status(), "http_429")
 
         def _timed_out(*args, **kwargs):
             raise TimeoutError("timed out")
 
         self.assertIsNone(groq_triage.evaluate_vent_with_groq("feeling stressed", http_post=_timed_out))
+        self.assertEqual(groq_triage.get_last_groq_status(), "timeout_1.0s")
 
     def test_merge_never_downgrades_crisis_or_history_floors(self) -> None:
         benign_groq = {
