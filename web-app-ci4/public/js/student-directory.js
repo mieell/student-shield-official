@@ -6,10 +6,14 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
     const description = picker.querySelector('.directory-description');
     const descriptionLabel = picker.querySelector('.directory-description-label');
     const status = picker.querySelector('.directory-status');
+    const matches = picker.querySelector('.directory-matches');
     let timer;
     let requestVersion = 0;
 
     function resetChoices() {
+        clearTimeout(timer);
+        matches.replaceChildren();
+        matches.hidden = true;
         choice.replaceChildren(new Option('Select a student', ''), new Option("I don't know / not listed", 'unknown'));
         description.value = '';
         description.hidden = true;
@@ -36,7 +40,6 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
         status.textContent = 'Enter at least two letters to search this grade and section.';
     });
     search.addEventListener('input', () => {
-        clearTimeout(timer);
         const version = ++requestVersion;
         resetChoices();
         if (search.value.trim().length < 2) {
@@ -51,14 +54,30 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
                 if (!response.ok) throw new Error('Search unavailable');
                 const result = await response.json();
                 if (version !== requestVersion) return;
-                result.students.forEach((student) => choice.add(new Option(student.name, String(student.id))));
+                result.students.forEach((student) => {
+                    const id = String(student.id);
+                    choice.add(new Option(student.name, id));
+
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'block w-full px-3 py-2 text-left hover:bg-calm-50 focus:bg-calm-50';
+                    button.textContent = student.name;
+                    button.addEventListener('click', () => {
+                        choice.value = id;
+                        choice.dispatchEvent(new Event('change'));
+                        choice.focus();
+                    });
+                    matches.append(button);
+                });
+                matches.hidden = result.students.length === 0;
                 status.textContent = result.students.length ? 'Choose the matching student. Add more letters if needed.' : 'No students found. Check the grade and section, or select “not listed”.';
             } catch (error) {
                 if (version === requestVersion) status.textContent = 'Search is unavailable. Try again or select “not listed” and describe the person.';
             }
-        }, 300);
+        }, 150);
     });
     choice.addEventListener('change', () => {
+        matches.hidden = true;
         const unknown = choice.value === 'unknown';
         descriptionLabel.hidden = !unknown;
         description.hidden = !unknown;
