@@ -16,6 +16,18 @@ final class GuardianConsent
         return str_starts_with($phone, '09') ? '+63' . substr($phone, 1) : '+' . ltrim($phone, '+');
     }
 
+    public static function email(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+        $email = trim($value);
+        if ($email === '' || strlen($email) > 254 || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return null;
+        }
+        return strtolower($email);
+    }
+
     public static function generateCode(): string
     {
         $max = strlen(self::CODE_ALPHABET) - 1;
@@ -90,6 +102,23 @@ final class GuardianConsent
         return (ManilaTime::unix($prior['requested_at'] ?? '') ?? 0) <= $now - 300;
     }
 
+    public static function canSendEmail(?array $prior, int $now): bool
+    {
+        if (!$prior) {
+            return true;
+        }
+        if (!empty($prior['response'])) {
+            return false;
+        }
+        if ((ManilaTime::unix($prior['expires_at'] ?? '') ?? 0) <= $now) {
+            return true;
+        }
+        if (($prior['sms_state'] ?? '') !== 'EmailSent') {
+            return true;
+        }
+        return (ManilaTime::unix($prior['requested_at'] ?? '') ?? 0) <= $now - 300;
+    }
+
     public static function lockStudent(BaseConnection $db, int $id): ?array
     {
         $lock = $db->DBDriver === 'MySQLi' ? ' FOR UPDATE' : '';
@@ -138,6 +167,9 @@ final class GuardianConsent
             $decoded = is_string($raw) && $raw !== '' ? json_decode($raw, true) : [];
             $entries = is_array($decoded) ? $decoded : [];
 
+            $normalizedNewKind = in_array($newKind, ['manual', 'email'], true) ? $newKind : 'sms';
+            $isLinkAction = in_array($normalizedNewKind, ['manual', 'email'], true);
+
             $kept = [];
             foreach ($entries as $entry) {
                 if (!is_array($entry)) {
@@ -147,32 +179,38 @@ final class GuardianConsent
                 $p = (string) ($entry['phone'] ?? '');
                 $k = (string) ($entry['kind'] ?? '');
                 $exp = (string) ($entry['expires_at'] ?? '');
-                if ($h === '' || $p !== $phone || !in_array($k, ['sms', 'manual'], true)) {
+                if ($h === '' || $p !== $phone || !in_array($k, ['sms', 'manual', 'email'], true)) {
                     continue;
                 }
                 $expTs = ManilaTime::unix($exp);
                 if ($expTs === null || $expTs <= $now) {
                     continue;
                 }
-                if ($newKind === 'manual' && $k === 'manual') {
+                if ($isLinkAction && in_array($k, ['manual', 'email'], true)) {
                     continue;
                 }
                 $kept[$h] = ['hash' => $h, 'phone' => $phone, 'kind' => $k, 'expires_at' => $exp];
             }
 
             if (is_array($prior) && empty($prior['response']) && !empty($prior['token_hash'])
-                && self::phone($prior['phone'] ?? null) === $phone
-                && ($prior['sms_state'] ?? '') !== 'Manual') {
-                $priorExp = (string) ($prior['expires_at'] ?? '');
-                $priorExpTs = ManilaTime::unix($priorExp);
-                $priorHash = (string) $prior['token_hash'];
-                if ($priorExpTs !== null && $priorExpTs > $now) {
-                    $kept[$priorHash] = [
-                        'hash' => $priorHash,
-                        'phone' => $phone,
-                        'kind' => 'sms',
-                        'expires_at' => $priorExp,
-                    ];
+                && self::phone($prior['phone'] ?? null) === $phone) {
+                $priorState = (string) ($prior['sms_state'] ?? '');
+                $priorKind = $priorState === 'Manual'
+                    ? 'manual'
+                    : (str_starts_with($priorState, 'Email') ? 'email' : 'sms');
+                $isPriorLink = in_array($priorKind, ['manual', 'email'], true);
+                if (!($isLinkAction && $isPriorLink)) {
+                    $priorExp = (string) ($prior['expires_at'] ?? '');
+                    $priorExpTs = ManilaTime::unix($priorExp);
+                    $priorHash = (string) $prior['token_hash'];
+                    if ($priorExpTs !== null && $priorExpTs > $now) {
+                        $kept[$priorHash] = [
+                            'hash' => $priorHash,
+                            'phone' => $phone,
+                            'kind' => $priorKind,
+                            'expires_at' => $priorExp,
+                        ];
+                    }
                 }
             }
 
@@ -180,7 +218,7 @@ final class GuardianConsent
             $kept[$newHash] = [
                 'hash' => $newHash,
                 'phone' => $phone,
-                'kind' => $newKind === 'manual' ? 'manual' : 'sms',
+                'kind' => $normalizedNewKind,
                 'expires_at' => $newExpiresAt,
             ];
             $values = array_values($kept);
@@ -203,6 +241,19 @@ final class GuardianConsent
 
     public static function hasActiveSmsToken(int $userId, string $phone, string $tokenHash, int $now): bool
     {
+        return self::hasTokenForKinds($userId, $phone, $tokenHash, $now, ['sms']);
+    }
+
+    public static function hasActiveLinkToken(int $userId, string $phone, string $tokenHash, int $now): bool
+    {
+        return self::hasTokenForKinds($userId, $phone, $tokenHash, $now, ['email', 'manual']);
+    }
+
+    /**
+     * @param list<string> $kinds
+     */
+    private static function hasTokenForKinds(int $userId, string $phone, string $tokenHash, int $now, array $kinds): bool
+    {
         if ($userId <= 0 || $tokenHash === '') {
             return false;
         }
@@ -224,7 +275,9 @@ final class GuardianConsent
                 return false;
             }
             foreach ($decoded as $entry) {
-                if (!is_array($entry) || ($entry['kind'] ?? '') !== 'sms' || ($entry['phone'] ?? '') !== $phone) {
+                if (!is_array($entry)
+                    || !in_array((string) ($entry['kind'] ?? ''), $kinds, true)
+                    || ($entry['phone'] ?? '') !== $phone) {
                     continue;
                 }
                 $h = (string) ($entry['hash'] ?? '');

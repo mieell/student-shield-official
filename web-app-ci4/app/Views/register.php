@@ -257,17 +257,32 @@ $selectedSection = (string) set_value('section');
                     <p id="sectionHelp" class="registration-help registration-school-help" role="status">Choose your grade first.</p>
                 </div>
 
-                <div class="registration-guardian registration-field">
-                    <label for="parent_contact" class="registration-label">Parent or guardian mobile (required)</label>
-                    <div class="relative group/input">
-                        <div class="registration-input-icon pointer-events-none">
-                            <i class="fas fa-phone-alt text-white/50 group-focus-within/input:text-gold transition-colors text-[15px]"></i>
+                <div class="registration-guardian-fields">
+                    <div class="registration-guardian registration-field">
+                        <label for="parent_contact" class="registration-label">Parent or guardian mobile (required)</label>
+                        <div class="relative group/input">
+                            <div class="registration-input-icon pointer-events-none">
+                                <i class="fas fa-phone-alt text-white/50 group-focus-within/input:text-gold transition-colors text-[15px]"></i>
+                            </div>
+                            <input type="tel" name="parent_contact" id="parent_contact" required maxlength="32" aria-describedby="guardian-contact-help" value="<?= set_value('parent_contact') ?>"
+                                   class="w-full pl-11 pr-4 input-dark registration-control rounded-xl text-[15px] font-semibold outline-none tabular-nums"
+                                   placeholder="09123456789">
                         </div>
-                        <input type="tel" name="parent_contact" id="parent_contact" required maxlength="32" aria-describedby="guardian-contact-help" value="<?= set_value('parent_contact') ?>"
-                               class="w-full pl-11 pr-4 input-dark registration-control rounded-xl text-[15px] font-semibold outline-none tabular-nums"
-                               placeholder="09123456789">
+                        <p id="guardian-contact-help" class="registration-help">School staff verify this number before sending a consent request. If you cannot safely provide a number, contact the Guidance Office for help.</p>
                     </div>
-                    <p id="guardian-contact-help" class="registration-help">School staff verify this number before sending a consent request. If you cannot safely provide a number, contact the Guidance Office for help.</p>
+
+                    <div class="registration-guardian-email registration-field">
+                        <label for="parent_email" class="registration-label">Parent or guardian email <span class="registration-optional">(optional)</span></label>
+                        <div class="relative group/input">
+                            <div class="registration-input-icon pointer-events-none">
+                                <i class="fas fa-envelope text-white/50 group-focus-within/input:text-gold transition-colors text-[15px]"></i>
+                            </div>
+                            <input type="email" name="parent_email" id="parent_email" maxlength="254" autocomplete="email" aria-describedby="guardian-email-help" value="<?= set_value('parent_email') ?>"
+                                   class="w-full pl-11 pr-4 input-dark registration-control rounded-xl text-[15px] font-semibold outline-none"
+                                   placeholder="parent@example.com">
+                        </div>
+                        <p id="guardian-email-help" class="registration-help">Optional. If entered, Guidance staff can also email the consent link and safety alerts.</p>
+                    </div>
                 </div>
 
                 <div class="registration-password-fields grid grid-cols-1 md:grid-cols-2">
@@ -422,11 +437,15 @@ $selectedSection = (string) set_value('section');
                         <dt>Parent / Guardian Mobile</dt>
                         <dd id="confirmParentContact" class="tabular-nums font-bold text-[#FFF4C7]">-</dd>
                     </div>
+                    <div class="confirm-summary-row">
+                        <dt>Parent / Guardian Email</dt>
+                        <dd id="confirmParentEmail" class="font-bold text-[#FFF4C7] break-all">Not provided</dd>
+                    </div>
                 </dl>
 
                 <p class="confirm-modal-note">
                     <i class="fas fa-info-circle text-[#FFF4C7] shrink-0 mt-0.5" aria-hidden="true"></i>
-                    <span>Guardian consent SMS and Guidance Office approval will use these details. You can still edit them if anything looks wrong.</span>
+                    <span>Guardian consent (SMS or email) and Guidance Office approval will use these details. You can still edit them if anything looks wrong.</span>
                 </p>
             </div>
 
@@ -524,10 +543,12 @@ $selectedSection = (string) set_value('section');
         const gradeLabel = gradeSelect.value ? ('Grade ' + gradeSelect.value) : '';
         const sectionLabel = sectionSelect.value ? sectionSelect.options[sectionSelect.selectedIndex]?.text || sectionSelect.value : '';
 
+        const parentEmailValue = document.getElementById('parent_email')?.value.trim() || '';
         document.getElementById('confirmName').textContent = document.getElementById('name').value.trim();
         document.getElementById('confirmLrn').textContent = document.getElementById('lrn').value.trim();
         document.getElementById('confirmPlacement').textContent = [gradeLabel, sectionLabel].filter(Boolean).join(' · ');
         document.getElementById('confirmParentContact').textContent = document.getElementById('parent_contact').value.trim();
+        document.getElementById('confirmParentEmail').textContent = parentEmailValue || 'Not provided';
 
         const cancelBtn = document.getElementById('confirmCancelBtn');
         const submitModalBtn = document.getElementById('confirmSubmitBtn');

@@ -413,4 +413,91 @@ final class GuardianConsentTest extends CIUnitTestCase
             session()->remove(['isLoggedIn', 'role', 'user_id']);
         }
     }
+
+    public function testEmailNormalizationAndHybridCooldownRules(): void
+    {
+        self::assertNull(\App\Libraries\GuardianConsent::email(null));
+        self::assertNull(\App\Libraries\GuardianConsent::email(''));
+        self::assertNull(\App\Libraries\GuardianConsent::email('not-an-email'));
+        self::assertNull(\App\Libraries\GuardianConsent::email(str_repeat('a', 245) . '@example.com'));
+        self::assertSame('guardian@example.com', \App\Libraries\GuardianConsent::email('  Guardian@Example.COM '));
+
+        $now = 1_800_000_000;
+        self::assertTrue(\App\Libraries\GuardianConsent::canSendEmail(null, $now));
+        self::assertFalse(\App\Libraries\GuardianConsent::canSendEmail(['response' => 'accepted'], $now));
+        self::assertFalse(\App\Libraries\GuardianConsent::canSendEmail([
+            'sms_state' => 'EmailSent',
+            'requested_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now - 60),
+            'expires_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now + 3600),
+        ], $now));
+        self::assertTrue(\App\Libraries\GuardianConsent::canSendEmail([
+            'sms_state' => 'EmailSent',
+            'requested_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now - 300),
+            'expires_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now + 3600),
+        ], $now));
+        self::assertTrue(\App\Libraries\GuardianConsent::canSendEmail([
+            'sms_state' => 'EmailFailed',
+            'requested_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now - 10),
+            'expires_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now + 3600),
+        ], $now));
+        self::assertTrue(\App\Libraries\GuardianConsent::canSendEmail([
+            'sms_state' => 'Queued',
+            'requested_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now - 10),
+            'expires_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now + 3600),
+        ], $now));
+        self::assertTrue(\App\Libraries\GuardianConsent::canSend([
+            'sms_state' => 'EmailSent',
+            'requested_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now - 10),
+            'expires_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', $now + 3600),
+        ], $now));
+    }
+
+    public function testManageRegistrationDialogRendersEmailConsentControlsAndStatus(): void
+    {
+        helper(['url', 'form']);
+        session()->set(['isLoggedIn' => true, 'role' => 2, 'user_id' => 2]);
+        $baseStudent = [
+            'user_id' => 93,
+            'name' => 'Maria Clara',
+            'email' => 'maria@example.edu',
+            'student_id' => 'SS-20261113-00093',
+            'lrn' => '123456789093',
+            'grade_level' => '8',
+            'section' => 'Rizal',
+            'parent_phone' => '+639123456789',
+            'parent_email' => 'parent.clara@example.com',
+            'verified_phone' => '+639123456789',
+            'verified_name' => 'Kapitan Tiago',
+            'guardian_name' => null,
+            'response' => null,
+            'responded_at' => null,
+            'requested_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', time() - 60),
+            'expires_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s', time() + 86400),
+            'sms_state' => 'EmailSent',
+            'created_at' => \App\Libraries\ManilaTime::now('Y-m-d H:i:s'),
+        ];
+
+        try {
+            $emailSentHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [$baseStudent],
+                'canVerifyContact' => true,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('Consent link emailed · awaiting guardian', $emailSentHtml);
+            self::assertStringContainsString('Guardian email on record', $emailSentHtml);
+            self::assertStringContainsString('parent.clara@example.com', $emailSentHtml);
+            self::assertStringContainsString('Resend email (wait ', $emailSentHtml);
+            self::assertStringContainsString('>Resend consent SMS</button>', $emailSentHtml);
+
+            $emailFailedHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [array_merge($baseStudent, ['sms_state' => 'EmailFailed'])],
+                'canVerifyContact' => true,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('Consent email failed', $emailFailedHtml);
+            self::assertStringContainsString('Send consent link by Email', $emailFailedHtml);
+        } finally {
+            session()->remove(['isLoggedIn', 'role', 'user_id']);
+        }
+    }
 }

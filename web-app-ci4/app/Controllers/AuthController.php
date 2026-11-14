@@ -550,6 +550,15 @@ class AuthController extends BaseController
         if ($parentPhone === null) {
             return $this->registrationFailure('Enter a valid Philippine mobile number for your parent or guardian. If you cannot safely provide one, contact the Guidance Office.');
         }
+
+        $rawParentEmail = trim((string) ($this->request->getPost('parent_email') ?? ''));
+        $parentEmail = null;
+        if ($rawParentEmail !== '') {
+            $parentEmail = \App\Libraries\GuardianConsent::email($rawParentEmail);
+            if ($parentEmail === null) {
+                return $this->registrationFailure('Enter a valid email address for your parent or guardian, or leave that field blank.');
+            }
+        }
         $password = (string) $this->request->getPost('password');
         $confirmPassword = (string) $this->request->getPost('password_confirm');
 
@@ -619,6 +628,7 @@ class AuthController extends BaseController
             'grade_level' => $gradeLevel,
             'section' => $section,
             'parent_phone' => $parentPhone,
+            'parent_email' => $parentEmail,
         ] + \App\Libraries\ManilaTime::stampFields($db, 'students', ['created_at']));
 
         $db->transComplete();
@@ -635,7 +645,7 @@ class AuthController extends BaseController
     private function registrationFailure(string $message)
     {
         $post = array_filter(array_intersect_key($this->request->getPost(), array_flip([
-            'name', 'lrn', 'grade_level', 'section', 'parent_contact', 'terms',
+            'name', 'lrn', 'grade_level', 'section', 'parent_contact', 'parent_email', 'terms',
         ])), 'is_string');
         session()->setFlashdata('_ci_old_input', ['get' => [], 'post' => $post]);
         return redirect()->back()->with('error', $message);

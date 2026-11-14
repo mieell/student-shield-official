@@ -115,7 +115,7 @@
         .guardian-verification p { margin-top: .25rem; color: #526b5b; font-size: .75rem; line-height: 1.45; }
         .guardian-verification .guardian-field { margin-top: .75rem; }
         .guardian-verification label { display: block; color: #284b35; font-size: .75rem; font-weight: 600; }
-        .guardian-verification input[type='text'], .guardian-verification input[type='tel'] { display: block; width: 100%; min-height: 42px; margin-top: .3rem; padding: .55rem .75rem; border: 1px solid #c9d9ce; border-radius: 8px; background: #fff; color: #173a2a; }
+        .guardian-verification input[type='text'], .guardian-verification input[type='tel'], .guardian-verification input[type='email'] { display: block; width: 100%; min-height: 42px; margin-top: .3rem; padding: .55rem .75rem; border: 1px solid #c9d9ce; border-radius: 8px; background: #fff; color: #173a2a; }
         .guardian-verification input:focus-visible { outline: 3px solid #b5dec0; outline-offset: 1px; border-color: #096328; }
         .guardian-verification .guardian-check { display: flex; align-items: flex-start; gap: .55rem; margin: .85rem 0 1rem; font-weight: 400; line-height: 1.45; cursor: pointer; }
         .guardian-verification .guardian-check input { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 2px; accent-color: #096328; }
@@ -364,6 +364,9 @@
                                             'declined' => 'Consent declined',
                                             default => (\App\Libraries\ManilaTime::unix($student['expires_at'] ?? '') ?? 0) <= time() ? 'Consent request expired' : match ($student['sms_state']) {
                                                 'Queued' => 'SMS sent to carrier · awaiting guardian',
+                                                'EmailSent' => 'Consent link emailed · awaiting guardian',
+                                                'EmailFailed' => 'Consent email failed',
+                                                'EmailPending' => 'Consent email pending',
                                                 'Unknown' => 'SMS status uncertain',
                                                 'Manual' => 'Manual link generated; awaiting guardian',
                                                 default => 'SMS was not queued',
@@ -371,7 +374,7 @@
                                         };
                                         $consentBadgeStyle = match (true) {
                                             $consentStatus === 'Consent accepted' => ['pill' => 'bg-emerald-50 text-[#0B5E2E] border-emerald-200', 'dot' => 'bg-[#128f42]'],
-                                            in_array($consentStatus, ['Consent declined', 'Consent request expired', 'SMS was not queued'], true) => ['pill' => 'bg-rose-50 text-rose-800 border-rose-200', 'dot' => 'bg-rose-500'],
+                                            in_array($consentStatus, ['Consent declined', 'Consent request expired', 'SMS was not queued', 'Consent email failed'], true) => ['pill' => 'bg-rose-50 text-rose-800 border-rose-200', 'dot' => 'bg-rose-500'],
                                             default => ['pill' => 'bg-amber-50 text-amber-800 border-amber-200', 'dot' => 'bg-amber-500'],
                                         };
                                     ?>
@@ -420,9 +423,17 @@
                                                     <span class="block uppercase tracking-wider text-[10px] font-bold text-[#61756b]">Guardian on school record</span>
                                                     <span class="block font-semibold text-[#173a2a] mt-0.5 break-words"><?= esc($student['verified_name']) ?></span>
                                                 </div>
+                                                <?php if (!empty($student['parent_email'])): ?>
+                                                <div class="sm:col-span-2">
+                                                    <span class="block uppercase tracking-wider text-[10px] font-bold text-[#61756b]">Guardian email on record</span>
+                                                    <span class="block font-semibold text-[#173a2a] mt-0.5 break-all"><?= esc($student['parent_email']) ?></span>
+                                                </div>
+                                                <?php endif; ?>
                                             </div>
                                             <?php if (empty($student['response']) && ($student['sms_state'] ?? '') === 'Queued' && (\App\Libraries\ManilaTime::unix($student['expires_at'] ?? '') ?? 0) > time()): ?>
                                                 <p class="text-[11px] text-[#526b5b] pt-2 border-t border-[#e7efe7]">Submitted to the SMS carrier; live delivery receipts are unavailable. You can resend after 5 minutes or generate a link below.</p>
+                                            <?php elseif (empty($student['response']) && ($student['sms_state'] ?? '') === 'EmailSent' && (\App\Libraries\ManilaTime::unix($student['expires_at'] ?? '') ?? 0) > time()): ?>
+                                                <p class="text-[11px] text-[#526b5b] pt-2 border-t border-[#e7efe7]">Consent link emailed. You can resend by email after 5 minutes, send a follow-up SMS, or generate a replacement link below.</p>
                                             <?php endif; ?>
                                             <?php if ($student['guardian_name']): ?>
                                                 <p class="text-[#15492c] font-semibold pt-2 border-t border-[#e7efe7]">Signed by <?= esc($student['guardian_name']) ?> · <?= esc(\App\Libraries\ManilaTime::format($student['responded_at'] ?? '', 'M d, Y g:i A \P\H\T')) ?></p>
@@ -433,6 +444,9 @@
                                         $consentNow = time();
                                         $canSendSms = ($canVerifyContact && empty($student['response']))
                                             ? \App\Libraries\GuardianConsent::canSend(!empty($student['requested_at']) ? $student : null, $consentNow)
+                                            : false;
+                                        $canSendEmail = ($canVerifyContact && empty($student['response']))
+                                            ? \App\Libraries\GuardianConsent::canSendEmail(!empty($student['requested_at']) ? $student : null, $consentNow)
                                             : false; ?>
                                     <?php if ($canVerifyContact && !empty($student['verified_phone']) && empty($student['response'])): ?>
                                         <div class="rounded-xl border border-[#dce7df] bg-white p-3.5 space-y-3">
@@ -462,6 +476,23 @@
                                                     <p class="text-[11px] text-[#526b5b] mt-1.5 leading-relaxed"><?= esc($disabledHint) ?></p>
                                                 </div>
                                             <?php endif; ?>
+                                            <?php if (!empty($student['parent_email'])): ?>
+                                                <?php if ($canSendEmail): ?>
+                                                    <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="pt-2.5 border-t border-[#edf2ed]">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="use_verified" value="1">
+                                                        <button type="submit" name="delivery" value="email" class="w-full secondary-consent-btn consent-action font-semibold" onclick="return confirm('Send the 72-hour guardian consent link to <?= esc(addslashes($student['parent_email'])) ?>? Any active SMS codes stay usable.')">Send consent link by Email</button>
+                                                        <p class="text-[11px] text-[#526b5b] mt-1.5 leading-relaxed">Emails a 72-hour consent link to <?= esc($student['parent_email']) ?> while keeping active SMS codes usable.</p>
+                                                    </form>
+                                                <?php else:
+                                                    $emailWaitSeconds = max(1, ((\App\Libraries\ManilaTime::unix($student['requested_at'] ?? '') ?? 0) + 300) - $consentNow);
+                                                    $emailWaitLabel = $emailWaitSeconds >= 60 ? (int) ceil($emailWaitSeconds / 60) . 'm' : $emailWaitSeconds . 's'; ?>
+                                                    <div class="pt-2.5 border-t border-[#edf2ed]">
+                                                        <button type="button" disabled aria-disabled="true" class="w-full inline-flex items-center justify-center min-h-[42px] px-3 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 text-xs font-semibold cursor-not-allowed">Resend email (wait <?= esc($emailWaitLabel) ?>)</button>
+                                                        <p class="text-[11px] text-[#526b5b] mt-1.5 leading-relaxed">Wait 5 minutes from the last email before resending, or use SMS / replacement link.</p>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
                                             <form method="post" action="<?= esc(site_url('admin/registrations/' . $uid . '/send-consent'), 'attr') ?>" class="pt-2.5 border-t border-[#edf2ed]">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="use_verified" value="1">
@@ -486,6 +517,9 @@
                                             <div class="guardian-field"><label for="verified-phone-<?= $uid ?>">Guardian mobile from school records</label>
                                             <input class="w-full border rounded-lg px-2 py-2 text-sm" type="tel" id="verified-phone-<?= $uid ?>" name="verified_phone" placeholder="09123456789" maxlength="32" required>
                                             </div>
+                                            <div class="guardian-field"><label for="verified-email-<?= $uid ?>">Guardian email from school records (optional; needed for Email link)</label>
+                                            <input class="w-full border rounded-lg px-2 py-2 text-sm" type="email" id="verified-email-<?= $uid ?>" name="verified_email" value="<?= esc((string) ($student['parent_email'] ?? ''), 'attr') ?>" placeholder="guardian@example.com" maxlength="254">
+                                            </div>
                                             <label class="guardian-check">
                                                 <input type="checkbox" name="checked_records" value="1" required>
                                                 <span>I confirmed the guardian and this number against current school records.</span>
@@ -493,6 +527,9 @@
                                             <div class="guardian-actions">
                                                 <?php if ($canSendSms): ?>
                                                 <button type="submit" name="delivery" value="sms" class="approve-btn font-semibold">Send consent code by SMS</button>
+                                                <?php endif; ?>
+                                                <?php if ($canSendEmail): ?>
+                                                <button type="submit" name="delivery" value="email" class="secondary-consent-btn font-semibold">Send consent link by Email</button>
                                                 <?php endif; ?>
                                                 <button type="submit" name="delivery" value="manual" class="secondary-consent-btn font-semibold">Generate link for private sharing</button>
                                             </div>
@@ -914,6 +951,15 @@
         btn.addEventListener('mouseleave', function () {
             this.style.boxShadow = '0 6px 20px -4px rgba(0,0,0,0.35), 0 0 0 3px rgba(217,170,46,0.20)';
             this.style.transform = 'translateY(0) scale(1)';
+        });
+        document.querySelectorAll('.guardian-verification button[name="delivery"]').forEach(function (actionBtn) {
+            actionBtn.addEventListener('click', function () {
+                var form = actionBtn.closest('form');
+                var emailInput = form ? form.querySelector('input[name="verified_email"]') : null;
+                if (emailInput) {
+                    emailInput.required = actionBtn.value === 'email';
+                }
+            });
         });
     })();
     </script>

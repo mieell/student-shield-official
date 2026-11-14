@@ -12,6 +12,7 @@ class AdminController extends BaseController
         'STUDENT_REGISTRATION_ARCHIVED',
         'GUARDIAN_CONTACT_VERIFIED',
         'GUARDIAN_CONSENT_LINK_GENERATED',
+        'GUARDIAN_CONSENT_EMAIL_SENT',
         'AUTO_LOCK_ACCOUNT',
     ];
 

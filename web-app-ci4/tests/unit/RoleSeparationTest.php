@@ -403,6 +403,46 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertSame($before + 1, $this->rbacDb->table('users')->countAllResults());
     }
 
+    public function testRegistrationSavesOptionalGuardianEmailAndRejectsInvalidOptionalEmail(): void
+    {
+        $post = [
+            'name' => 'Hybrid Registration Student',
+            'lrn' => '098765432109',
+            'grade_level' => '8',
+            'section' => 'B',
+            'parent_contact' => '09123456789',
+            'parent_email' => 'not-an-email',
+            'password' => 'Example!234A',
+            'password_confirm' => 'Example!234A',
+            'terms' => '1',
+        ];
+        $before = $this->rbacDb->table('users')->countAllResults();
+
+        $this->controller(\App\Controllers\AuthController::class, 'register/process', $post)->processStudentRegistration();
+        $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
+        $old = session()->getFlashdata('_ci_old_input')['post'];
+        $this->assertSame('not-an-email', $old['parent_email'] ?? null);
+
+        $blankResponse = $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, [
+            'parent_email' => '   ',
+        ]))->processStudentRegistration();
+        $this->assertStringEndsWith('/login', $blankResponse->getHeaderLine('Location'));
+        $blankStudent = $this->rbacDb->table('students')->where('lrn', $post['lrn'])->get()->getRowArray();
+        $this->assertSame('+639123456789', $blankStudent['parent_phone']);
+        $this->assertNull($blankStudent['parent_email']);
+
+        $withEmailPost = array_replace($post, [
+            'name' => 'Hybrid Registration Student Two',
+            'lrn' => '098765432110',
+            'parent_email' => '  Parent.Hybrid@Example.COM ',
+        ]);
+        $emailResponse = $this->controller(\App\Controllers\AuthController::class, 'register/process', $withEmailPost)->processStudentRegistration();
+        $this->assertStringEndsWith('/login', $emailResponse->getHeaderLine('Location'));
+        $emailStudent = $this->rbacDb->table('students')->where('lrn', '098765432110')->get()->getRowArray();
+        $this->assertSame('+639123456789', $emailStudent['parent_phone']);
+        $this->assertSame('parent.hybrid@example.com', $emailStudent['parent_email']);
+    }
+
     public function testEveryRoleIsDeniedOnOtherRolesDirectUrlsAndApis(): void
     {
         $resources = ['admin/api/vents' => [1], 'admin/api/incidents' => [1], 'admin/api/student-profile/10' => [1], 'admin/api/case-summary/10' => [1], 'admin/evidence/test.png' => [1], 'admin/vent/delete/1' => [1], 'admin/approve-student/12' => [1], 'admin/reject-student/12' => [1], 'admin/users' => [2], 'admin/users/access/10' => [2], 'admin/audit-logs' => [1, 2], 'counselor/audit-logs' => [1], 'principal/dashboard' => [3], 'principal/api/analytics' => [3], 'principal/reports/export' => [3], 'student/vent' => [0], 'report-bullying/submit' => [0], 'meeting/join/1' => [0, 1]];
@@ -1222,6 +1262,179 @@ final class RoleSeparationTest extends CIUnitTestCase
         } finally {
             date_default_timezone_set($previousTz ?: 'Asia/Manila');
             \App\Libraries\ManilaTime::ensurePhpTimezone();
+        }
+    }
+
+    public function testGuardianConsentEmailDeliveryCoexistsWithSmsEnforcesCooldownBlocksReplayAndLogsAudit(): void
+    {
+        $this->rbacDb->table('students')->where('user_id', 12)->update(['parent_email' => null]);
+        $path = 'admin/registrations/12/send-consent';
+        $gateway = new class extends \App\Libraries\SmsGateway {
+            public array $messages = [];
+
+            public function send(string $phone, string $message, string $eventKey): array
+            {
+                $this->messages[] = [$phone, $message];
+                return ['state' => 'Queued'];
+            }
+        };
+        $mailState = (object) [
+            'configured' => false,
+            'succeed' => true,
+            'sent' => [],
+        ];
+        $controller = new class ($gateway, $mailState) extends \App\Controllers\GuardianConsentController {
+            public function __construct(
+                private \App\Libraries\SmsGateway $gateway,
+                private object $mailState
+            ) {}
+
+            protected function smsGateway(): \App\Libraries\SmsGateway
+            {
+                return $this->gateway;
+            }
+
+            protected function hasConfiguredEmail(): bool
+            {
+                return $this->mailState->configured;
+            }
+
+            protected function sendConsentEmail(
+                string $recipientEmail,
+                string $verifiedName,
+                string $url,
+                string $expiresAt,
+                int $studentUserId
+            ): bool {
+                $this->mailState->sent[] = [
+                    'recipient' => $recipientEmail,
+                    'verified_name' => $verifiedName,
+                    'url' => $url,
+                    'expires_at' => $expiresAt,
+                    'user_id' => $studentUserId,
+                ];
+                return $this->mailState->succeed;
+            }
+        };
+
+        $savedEnv = $_ENV;
+        $_ENV['GUARDIAN_CONSENT_NOTICE'] = 'Approved hybrid notice.';
+        $_ENV['IPROG_SMS_API_TOKEN'] = 'fixture-token';
+
+        try {
+            $this->login(2);
+
+            // Missing SMTP configuration rejects cleanly before creating any consent row.
+            $controller->initController($this->request($path, 'POST', [
+                'verified_phone' => '09123456789',
+                'verified_name' => 'Hybrid Guardian',
+                'verified_email' => 'guardian@example.com',
+                'checked_records' => '1',
+                'delivery' => 'email',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertStringContainsString('SMTP email service', (string) session()->getFlashdata('error'));
+            $this->assertNull($this->rbacDb->table('guardian_consents')->where('user_id', 12)->get()->getRowArray());
+
+            $mailState->configured = true;
+
+            // Missing guardian email on email delivery fails without mutating consent rows.
+            $controller->initController($this->request($path, 'POST', [
+                'verified_phone' => '09123456789',
+                'verified_name' => 'Hybrid Guardian',
+                'verified_email' => '',
+                'checked_records' => '1',
+                'delivery' => 'email',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertStringContainsString('valid guardian email', (string) session()->getFlashdata('error'));
+            $this->assertNull($this->rbacDb->table('guardian_consents')->where('user_id', 12)->get()->getRowArray());
+
+            // Failed SMTP send records EmailFailed without logging GUARDIAN_CONSENT_EMAIL_SENT and permits immediate retry.
+            $mailState->succeed = false;
+            $controller->initController($this->request($path, 'POST', [
+                'verified_phone' => '09123456789',
+                'verified_name' => 'Hybrid Guardian',
+                'verified_email' => 'Hybrid.Guardian@Example.com',
+                'checked_records' => '1',
+                'delivery' => 'email',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $failedRow = $this->rbacDb->table('guardian_consents')->where('user_id', 12)->get()->getRowArray();
+            $this->assertSame('EmailFailed', $failedRow['sms_state']);
+            $this->assertSame(0, $this->rbacDb->table('audit_logs')->where('action', 'GUARDIAN_CONSENT_EMAIL_SENT')->countAllResults());
+
+            // Successful email saves normalized parent_email, records EmailSent + audit, and enforces 5-min email cooldown.
+            $mailState->succeed = true;
+            $controller->initController($this->request($path, 'POST', [
+                'use_verified' => '1',
+                'delivery' => 'email',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+
+            $sentRow = $this->rbacDb->table('guardian_consents')->where('user_id', 12)->get()->getRowArray();
+            $studentRow = $this->rbacDb->table('students')->where('user_id', 12)->get()->getRowArray();
+            $this->assertSame('EmailSent', $sentRow['sms_state']);
+            $this->assertSame('hybrid.guardian@example.com', $studentRow['parent_email']);
+            $this->assertCount(2, $mailState->sent);
+            $emailUrl = $mailState->sent[1]['url'];
+            $emailToken = basename((string) parse_url($emailUrl, PHP_URL_PATH));
+            $this->assertMatchesRegularExpression('/\A[a-f0-9]{32}\z/', $emailToken);
+            $this->assertSame(1, $this->rbacDb->table('audit_logs')->where('action', 'GUARDIAN_CONSENT_EMAIL_SENT')->countAllResults());
+
+            $controller->initController($this->request($path, 'POST', [
+                'use_verified' => '1',
+                'delivery' => 'email',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertStringContainsString('Wait 5 minutes', (string) session()->getFlashdata('error'));
+            $this->assertCount(2, $mailState->sent);
+
+            // Guidance counselor sees GUARDIAN_CONSENT_EMAIL_SENT inside scoped Guidance Audit Logs.
+            $this->login(1);
+            Services::resetSingle('response');
+            $adminController = new \App\Controllers\AdminController();
+            $adminController->initController($this->request('admin/audit-logs', 'GET'), Services::response(), Services::logger());
+            $this->assertStringContainsString('Guardian consent email sent (reference #12)', (string) $adminController->auditLogs());
+
+            // Staff can still send a follow-up SMS without invalidating the emailed link, and SMS still respects 5-min cooldown.
+            $this->login(2);
+            $controller->initController($this->request($path, 'POST', [
+                'use_verified' => '1',
+                'delivery' => 'sms',
+            ]), Services::response(), Services::logger());
+            $controller->send(12);
+            $this->assertCount(1, $gateway->messages);
+            preg_match('/enter code ([A-Z0-9]{4}-[A-Z0-9]{4})/', $gateway->messages[0][1], $smsMatch);
+            $smsCode = $smsMatch[1] ?? '';
+            $this->assertNotSame('', $smsCode);
+
+            // Both the earlier emailed link and the follow-up SMS code stay active until responded.
+            $public = \App\Controllers\GuardianConsentController::class;
+            session()->remove('isLoggedIn');
+            $this->assertSame(200, $this->controller($public, 'guardian-consent/' . $emailToken)->form($emailToken)->getStatusCode());
+            $this->assertSame(200, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09123456789',
+                'consent_code' => $smsCode,
+            ])->lookup()->getStatusCode());
+
+            // Guardian responds using the emailed link even after SMS updated DB token_hash; closes all tokens and blocks replay.
+            $this->assertSame(200, $this->controller($public, 'guardian-consent/' . $emailToken . '/respond', [
+                'guardian_name' => 'Hybrid Guardian',
+                'choice' => 'accepted',
+            ])->respond($emailToken)->getStatusCode());
+
+            $completedRow = $this->rbacDb->table('guardian_consents')->where('user_id', 12)->get()->getRowArray();
+            $this->assertSame('accepted', $completedRow['response']);
+            $this->assertNull($completedRow['token_hash']);
+            $this->assertSame(404, $this->controller($public, 'guardian-consent/' . $emailToken)->form($emailToken)->getStatusCode());
+            $this->assertSame(404, $this->controller($public, 'guardian-consent', [
+                'guardian_phone' => '09123456789',
+                'consent_code' => $smsCode,
+            ])->lookup()->getStatusCode());
+        } finally {
+            \App\Libraries\GuardianConsent::clearTokens(12);
+            $_ENV = $savedEnv;
         }
     }
 }
