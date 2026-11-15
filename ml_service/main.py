@@ -1708,8 +1708,12 @@ def _apply_risk_history_escalation(
     if escalation_prob > 0:
         reason = f"[Predictive Recurrence Risk: {int(escalation_prob * 100)}%] " + reason
 
+    has_severity_variation = any(
+        str(item.get("risk_level", "")).upper() in {"LOW", "MEDIUM", "CRITICAL"}
+        for item in (risk_history or [])
+    )
     if b_escalate:
-        if risk == "HIGH" and trajectory == "ESCALATING":
+        if risk == "HIGH" and trajectory == "ESCALATING" and has_severity_variation:
             risk = "CRITICAL"
             risk_score = max(0.92, risk_score)
             reason = "CRITICAL ESCALATION: Repeated HIGH distress with escalating trajectory. " + reason

@@ -42,8 +42,16 @@ final class VentRiskAnalyzer
             'risk_percent' => (float) ($result['risk_score'] ?? $result['risk_percent']),
         ]);
         $classification = ViolentThreats::enforce($text, $classification);
-        if (!$hasPrimaryTrajectory && $riskHistory !== []) {
-            [$trajectory, $probability] = self::evaluateRiskHistory($riskHistory, $classification['risk_level']);
+        if ($riskHistory !== []) {
+            [$localTrajectory, $localProbability] = self::evaluateRiskHistory($riskHistory, $classification['risk_level']);
+            if (
+                !$hasPrimaryTrajectory
+                || $localTrajectory === 'ESCALATING'
+                || ($trajectory === 'STABLE' && $localTrajectory !== 'INSUFFICIENT_DATA')
+            ) {
+                $trajectory = $localTrajectory;
+                $probability = max($probability, $localProbability);
+            }
         }
         $hasModelReason = in_array($source, ['model', 'groq', 'gemini'], true) && is_string($result['reasoning'] ?? $result['flag_reason'] ?? null);
         $reasoning = $hasModelReason
@@ -72,9 +80,10 @@ final class VentRiskAnalyzer
         $riskValues = ['LOW' => 1.0, 'MEDIUM' => 2.0, 'HIGH' => 3.0, 'CRITICAL' => 4.0];
         $reference = ($now ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->setTimezone(new \DateTimeZone('UTC'));
         $cutoff = $reference->modify('-14 days');
+        $upperBound = $reference->modify('+24 hours');
         $records = [];
 
-        foreach ($history as $item) {
+        foreach ($history as $idx => $item) {
             if (!is_array($item)) {
                 continue;
             }
@@ -88,8 +97,8 @@ final class VentRiskAnalyzer
             } catch (\Throwable $e) {
                 continue;
             }
-            if ($dt >= $cutoff && $dt <= $reference) {
-                $records[] = ['ts' => $dt, 'risk' => $risk];
+            if ($dt >= $cutoff && $dt <= $upperBound) {
+                $records[] = ['ts' => $dt, 'idx' => (int) $idx, 'risk' => $risk];
             }
         }
 
@@ -97,10 +106,26 @@ final class VentRiskAnalyzer
         if (!isset($riskValues[$normalizedCurrent])) {
             $normalizedCurrent = 'LOW';
         }
-        $records[] = ['ts' => $reference, 'risk' => $normalizedCurrent];
-        usort($records, static fn (array $a, array $b): int => $a['ts'] <=> $b['ts']);
+        $records[] = ['ts' => $reference, 'idx' => count($records), 'risk' => $normalizedCurrent];
+        usort($records, static fn (array $a, array $b): int => ($a['ts'] <=> $b['ts']) ?: ($a['idx'] <=> $b['idx']));
 
-        if (count($records) < 3) {
+        $totalRecords = count($records);
+        $recentSevere = 0;
+        $recent48hSevere = 0;
+        $cutoff48h = $reference->modify('-48 hours');
+        foreach ($records as $r) {
+            if (in_array($r['risk'], ['HIGH', 'CRITICAL'], true)) {
+                $recentSevere++;
+                if ($r['ts'] >= $cutoff48h) {
+                    $recent48hSevere++;
+                }
+            }
+        }
+
+        if ($totalRecords === 2) {
+            return $recentSevere === 2 ? ['ESCALATING', 0.72] : ['INSUFFICIENT_DATA', 0.0];
+        }
+        if ($totalRecords < 2) {
             return ['INSUFFICIENT_DATA', 0.0];
         }
 
@@ -141,28 +166,21 @@ final class VentRiskAnalyzer
         $ewmaCurrent = $ewma[$count - 1];
         $ewmaDelta = $ewma[$count - 1] - $ewma[$count - 2];
 
-        $recentSevere = 0;
-        $recent48hSevere = 0;
-        $cutoff48h = $reference->modify('-48 hours');
-        foreach ($records as $r) {
+        $recent3Severe = 0;
+        foreach (array_slice($records, -3) as $r) {
             if (in_array($r['risk'], ['HIGH', 'CRITICAL'], true)) {
-                $recentSevere++;
-                if ($r['ts'] >= $cutoff48h) {
-                    $recent48hSevere++;
-                }
+                $recent3Severe++;
             }
         }
-        $tailRisks = array_map(static fn (array $r): string => $r['risk'], array_slice($records, -4));
-        $hasRecentCritical = in_array('CRITICAL', $tailRisks, true);
 
         $acuteControlBreach = in_array($normalizedCurrent, ['HIGH', 'CRITICAL'], true)
-            && (($ewmaCurrent >= 3.25 && $hasRecentCritical) || $recent48hSevere >= 3);
+            && ($recent3Severe >= 2 || $ewmaCurrent >= 2.60 || $recent48hSevere >= 2);
         $upwardShift = ($weightedSlope > 0.05) || ($ewmaDelta > 0.15 && $normalizedCurrent !== 'LOW');
         $downwardShift = ($weightedSlope < -0.05) || ($ewmaDelta < -0.15);
 
         if ($acuteControlBreach || $upwardShift) {
             $trajectory = 'ESCALATING';
-        } elseif ($downwardShift && !$acuteControlBreach) {
+        } elseif ($downwardShift) {
             $trajectory = 'IMPROVING';
         } else {
             $trajectory = 'STABLE';
@@ -175,5 +193,68 @@ final class VentRiskAnalyzer
         $probability = round(min(0.99, 0.10 + $ewmaFactor + $slopeFactor + $severityFactor + $frequencyFactor), 2);
 
         return [$trajectory, $probability];
+    }
+
+    /**
+     * Recompute each vent row's 14-day EWMA trajectory in memory using its student's
+     * chronologically preceding vents, preserving the caller's original row order.
+     */
+    public static function recomputeBatchTrajectories(array $vents): array
+    {
+        if ($vents === []) {
+            return [];
+        }
+
+        $byStudent = [];
+        foreach ($vents as $origIndex => $vent) {
+            $uid = (string) ($vent['user_id'] ?? '');
+            if ($uid === '') {
+                continue;
+            }
+            $rawDate = (string) ($vent['created_at'] ?? '');
+            try {
+                $dt = $rawDate !== '' ? new \DateTimeImmutable($rawDate) : new \DateTimeImmutable('now');
+            } catch (\Throwable $e) {
+                continue;
+            }
+            $byStudent[$uid][] = [
+                'origIndex' => $origIndex,
+                'id' => (int) ($vent['id'] ?? 0),
+                'ts' => $dt,
+                'risk_level' => strtoupper((string) ($vent['risk_level'] ?? 'LOW')),
+                'created_at' => $dt->format(\DateTimeInterface::ATOM),
+            ];
+        }
+
+        foreach ($byStudent as $studentEntries) {
+            usort(
+                $studentEntries,
+                static fn (array $a, array $b): int => ($a['ts'] <=> $b['ts']) ?: ($a['id'] <=> $b['id']) ?: ($a['origIndex'] <=> $b['origIndex'])
+            );
+
+            $prior = [];
+            foreach ($studentEntries as $entry) {
+                [$recomputedTrajectory, $recomputedProbability] = self::evaluateRiskHistory(
+                    $prior,
+                    $entry['risk_level'],
+                    $entry['ts']
+                );
+                $idx = $entry['origIndex'];
+                $existing = strtoupper((string) ($vents[$idx]['trajectory'] ?? ''));
+
+                if ($recomputedTrajectory !== 'INSUFFICIENT_DATA' || in_array($existing, ['', 'STABLE', 'INSUFFICIENT_DATA'], true)) {
+                    $vents[$idx]['trajectory'] = $recomputedTrajectory;
+                    $existingProb = (float) ($vents[$idx]['escalation_probability'] ?? 0.0);
+                    $vents[$idx]['escalation_probability'] = max($existingProb, $recomputedProbability);
+                }
+
+                $prior[] = [
+                    'risk_level' => $entry['risk_level'],
+                    'created_at' => $entry['created_at'],
+                ];
+            }
+        }
+
+        return $vents;
     }
 }

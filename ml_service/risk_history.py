@@ -93,25 +93,30 @@ def evaluate_risk_history(
         reference_time = reference_time.astimezone(timezone.utc)
 
     cutoff = reference_time - timedelta(days=14)
-    records: list[tuple[datetime, str]] = []
+    upper_bound = reference_time + timedelta(hours=24)
+    records: list[tuple[datetime, int, str]] = []
 
-    for item in history:
+    for idx, item in enumerate(history):
         risk = str(item.get("risk_level", "")).upper()
         timestamp = _parse_timestamp(item.get("created_at"))
-        if risk in RISK_VALUES and timestamp is not None and cutoff <= timestamp <= reference_time:
-            records.append((timestamp, risk))
+        if risk in RISK_VALUES and timestamp is not None and cutoff <= timestamp <= upper_bound:
+            records.append((timestamp, idx, risk))
 
     normalized_current = str(current_risk).upper()
     if normalized_current not in RISK_VALUES:
         normalized_current = "LOW"
-    records.append((reference_time, normalized_current))
-    records.sort(key=lambda record: record[0])
+    records.append((reference_time, len(records), normalized_current))
+    records.sort(key=lambda record: (record[0], record[1]))
 
-    recent_severe = sum(1 for _, risk in records if risk in {"HIGH", "CRITICAL"})
-    if len(records) < 3:
-        return recent_severe >= 3, "INSUFFICIENT_DATA", 0.0
+    recent_severe = sum(1 for _, _, risk in records if risk in {"HIGH", "CRITICAL"})
+    if len(records) == 2:
+        if recent_severe == 2:
+            return False, "ESCALATING", 0.72
+        return False, "INSUFFICIENT_DATA", 0.0
+    if len(records) < 2:
+        return False, "INSUFFICIENT_DATA", 0.0
 
-    scores = [RISK_VALUES[risk] for _, risk in records]
+    scores = [RISK_VALUES[risk] for _, _, risk in records]
     weighted_slope = _weighted_slope(scores)
     ewma = _ewma_series(scores)
     ewma_current = ewma[-1]
@@ -119,23 +124,23 @@ def evaluate_risk_history(
 
     recent_48h_cutoff = reference_time - timedelta(hours=48)
     recent_48h_severe = sum(
-        1 for ts, risk in records if ts >= recent_48h_cutoff and risk in {"HIGH", "CRITICAL"}
+        1 for ts, _, risk in records if ts >= recent_48h_cutoff and risk in {"HIGH", "CRITICAL"}
     )
-    recent_tail = [risk for _, risk in records[-4:]]
-    has_recent_critical = "CRITICAL" in recent_tail
+    recent_3_severe = sum(1 for _, _, risk in records[-3:] if risk in {"HIGH", "CRITICAL"})
 
     # Upper EWMA control limit / acute clustering prevents repeated HIGH+CRITICAL
-    # vents from flattening to STABLE under unweighted linear regression.
+    # vents from flattening to STABLE when slope/delta converge.
     acute_control_breach = normalized_current in {"HIGH", "CRITICAL"} and (
-        (ewma_current >= 3.25 and has_recent_critical)
-        or recent_48h_severe >= 3
+        recent_3_severe >= 2
+        or ewma_current >= 2.60
+        or recent_48h_severe >= 2
     )
     upward_shift = (weighted_slope > 0.05) or (ewma_delta > 0.15 and normalized_current != "LOW")
     downward_shift = (weighted_slope < -0.05) or (ewma_delta < -0.15)
 
     if acute_control_breach or upward_shift:
         trajectory = "ESCALATING"
-    elif downward_shift and not acute_control_breach:
+    elif downward_shift:
         trajectory = "IMPROVING"
     else:
         trajectory = "STABLE"

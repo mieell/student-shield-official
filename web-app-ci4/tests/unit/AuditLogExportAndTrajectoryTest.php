@@ -94,4 +94,80 @@ final class AuditLogExportAndTrajectoryTest extends CIUnitTestCase
         $this->assertSame('ESCALATING', $assessment['trajectory']);
         $this->assertGreaterThan(0.5, $assessment['escalation_probability']);
     }
+
+    public function testResolveOverridesStaleStablePrimaryWhenRepeatedSevereVentsExist(): void
+    {
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $history = [
+            ['risk_level' => 'CRITICAL', 'created_at' => $now->modify('-10 days')->format(DateTimeInterface::ATOM)],
+            ['risk_level' => 'LOW', 'created_at' => $now->modify('-7 days')->format(DateTimeInterface::ATOM)],
+            ['risk_level' => 'HIGH', 'created_at' => $now->modify('-2 days')->format(DateTimeInterface::ATOM)],
+            ['risk_level' => 'CRITICAL', 'created_at' => $now->modify('-1 day')->format(DateTimeInterface::ATOM)],
+        ];
+
+        $assessment = VentRiskAnalyzer::resolve(
+            'I am still feeling hopeless and exhausted',
+            [
+                'risk_level' => 'HIGH',
+                'risk_score' => 78,
+                'trajectory' => 'STABLE',
+                'escalation_probability' => 0.3,
+                'reasoning' => 'Simulated stale primary response',
+            ],
+            200,
+            static fn (): array => ['risk_level' => 'HIGH', 'risk_percent' => 78],
+            $history
+        );
+
+        $this->assertSame('ESCALATING', $assessment['trajectory']);
+        $this->assertGreaterThanOrEqual(0.7, $assessment['escalation_probability']);
+    }
+
+    public function testRecomputeBatchTrajectoriesUpgradesExistingStoredStableVents(): void
+    {
+        $ventsDesc = [
+            [
+                'id' => 4,
+                'user_id' => 15,
+                'risk_level' => 'CRITICAL',
+                'created_at' => '2026-11-15 16:00:00',
+                'trajectory' => 'STABLE',
+                'escalation_probability' => 0.25,
+            ],
+            [
+                'id' => 3,
+                'user_id' => 15,
+                'risk_level' => 'HIGH',
+                'created_at' => '2026-11-15 14:00:00',
+                'trajectory' => 'STABLE',
+                'escalation_probability' => 0.25,
+            ],
+            [
+                'id' => 2,
+                'user_id' => 15,
+                'risk_level' => 'HIGH',
+                'created_at' => '2026-11-14 20:00:00',
+                'trajectory' => 'STABLE',
+                'escalation_probability' => 0.20,
+            ],
+            [
+                'id' => 1,
+                'user_id' => 15,
+                'risk_level' => 'CRITICAL',
+                'created_at' => '2026-11-13 10:00:00',
+                'trajectory' => 'INSUFFICIENT_DATA',
+                'escalation_probability' => 0.0,
+            ],
+        ];
+
+        $recomputed = VentRiskAnalyzer::recomputeBatchTrajectories($ventsDesc);
+
+        // Caller's original DESC order is preserved, while vents 2, 3, and 4 upgrade to ESCALATING.
+        $this->assertSame(4, $recomputed[0]['id']);
+        $this->assertSame('ESCALATING', $recomputed[0]['trajectory']);
+        $this->assertGreaterThan(0.7, $recomputed[0]['escalation_probability']);
+        $this->assertSame('ESCALATING', $recomputed[1]['trajectory']);
+        $this->assertSame('ESCALATING', $recomputed[2]['trajectory']);
+        $this->assertSame('INSUFFICIENT_DATA', $recomputed[3]['trajectory']);
+    }
 }

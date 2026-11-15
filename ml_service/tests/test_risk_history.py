@@ -118,6 +118,35 @@ class RiskHistoryTest(unittest.TestCase):
         self.assertFalse(repeated)
         self.assertEqual("IMPROVING", trajectory)
 
+    def test_mixed_14_day_history_followed_by_high_and_critical_flags_escalating(self):
+        history = [
+            self.record(10, "CRITICAL"),
+            self.record(8, "LOW"),
+            self.record(6, "MEDIUM"),
+            self.record(3, "HIGH"),
+            self.record(2, "HIGH"),
+            self.record(1, "CRITICAL"),
+        ]
+
+        repeated, trajectory, probability = evaluate_risk_history(
+            history, "HIGH", now=self.now
+        )
+
+        self.assertTrue(repeated)
+        self.assertEqual("ESCALATING", trajectory)
+        self.assertGreaterEqual(probability, 0.70)
+
+    def test_two_consecutive_severe_vents_flag_escalating(self):
+        history = [self.record(1, "HIGH")]
+
+        repeated, trajectory, probability = evaluate_risk_history(
+            history, "CRITICAL", now=self.now
+        )
+
+        self.assertFalse(repeated)
+        self.assertEqual("ESCALATING", trajectory)
+        self.assertGreaterEqual(probability, 0.70)
+
 
 if __name__ == "__main__":
     unittest.main()

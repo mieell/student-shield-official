@@ -233,6 +233,7 @@ class AdminController extends BaseController
             unset($vent['analysis_details']);
         }
         unset($vent);
+        $vents = \App\Libraries\VentRiskAnalyzer::recomputeBatchTrajectories($vents);
         return $this->response->setHeader('Cache-Control', 'private, no-store')->setJSON($vents);
     }
 
@@ -642,6 +643,7 @@ class AdminController extends BaseController
             ->orderBy('id', 'DESC')
             ->limit(30)
             ->get()->getResultArray());
+        $vents = \App\Libraries\VentRiskAnalyzer::recomputeBatchTrajectories($vents);
 
         $encrypter = \Config\Services::encrypter();
         $timelineData = [];
