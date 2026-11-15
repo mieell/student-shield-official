@@ -7,6 +7,9 @@ class SmsGateway
 {
     public function send(string $phone, string $message, string $eventKey): array
     {
+        if (!filter_var(env('SMS_ENABLED', false), FILTER_VALIDATE_BOOLEAN)) {
+            return ['accepted' => false, 'message_id' => null, 'state' => 'Disabled', 'http_status' => 0];
+        }
         $phone = preg_replace('/[\s()\-]/', '', $phone);
         if (preg_match('/\A09\d{9}\z/D', $phone)) $phone = '63' . substr($phone, 1);
         if (preg_match('/\A\+639\d{9}\z/D', $phone)) $phone = substr($phone, 1);

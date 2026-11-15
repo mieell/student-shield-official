@@ -33,6 +33,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
             'app.baseURL' => 'http://test-' . bin2hex(random_bytes(8)) . '.invalid/',
             'email.SMTPUser' => '', 'email.SMTPPass' => '',
             'COUNSELOR_PHONE' => '09171234567', 'COUNSELOR_EMAIL' => '',
+            'SMS_ENABLED' => 'true',
             'IPROG_SMS_API_TOKEN' => 'synthetic-secret',
             'GUARDIAN_CONSENT_NOTICE' => 'School guardian consent notice.',
             'encryption.key' => str_repeat('k', 32),

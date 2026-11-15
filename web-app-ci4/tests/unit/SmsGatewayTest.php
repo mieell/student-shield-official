@@ -8,10 +8,14 @@ use CodeIgniter\Test\CIUnitTestCase;
 final class SmsGatewayTest extends CIUnitTestCase
 {
     private array $saved;
+    private array $savedSwitch;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->savedSwitch = [$_ENV['SMS_ENABLED'] ?? null, $_SERVER['SMS_ENABLED'] ?? null, getenv('SMS_ENABLED')];
+        $_ENV['SMS_ENABLED'] = $_SERVER['SMS_ENABLED'] = 'true';
+        putenv('SMS_ENABLED=true');
         $key = 'IPROG_SMS_API_TOKEN';
         $this->saved = [$_ENV[$key] ?? null, $_SERVER[$key] ?? null, getenv($key)];
         $_ENV[$key] = $_SERVER[$key] = 'test-token';
@@ -25,7 +29,23 @@ final class SmsGatewayTest extends CIUnitTestCase
         if ($env !== null) $_ENV['IPROG_SMS_API_TOKEN'] = $env;
         if ($server !== null) $_SERVER['IPROG_SMS_API_TOKEN'] = $server;
         putenv($process === false ? 'IPROG_SMS_API_TOKEN' : 'IPROG_SMS_API_TOKEN=' . $process);
+        [$a, $b, $c] = $this->savedSwitch;
+        unset($_ENV['SMS_ENABLED'], $_SERVER['SMS_ENABLED']);
+        if ($a !== null) $_ENV['SMS_ENABLED'] = $a;
+        if ($b !== null) $_SERVER['SMS_ENABLED'] = $b;
+        putenv($c === false ? 'SMS_ENABLED' : 'SMS_ENABLED=' . $c);
         parent::tearDown();
+    }
+
+    public function testSmsIsPausedByDefaultWithoutCallingProvider(): void
+    {
+        unset($_ENV['SMS_ENABLED'], $_SERVER['SMS_ENABLED']);
+        putenv('SMS_ENABLED');
+        $client = $this->client(['status' => 200, 'body' => '{"status":200,"message_id":"test"}']);
+        $result = $client->send('09171234567', 'Test message.', 'paused:' . bin2hex(random_bytes(12)));
+        self::assertSame('Disabled', $result['state']);
+        self::assertFalse($result['accepted']);
+        self::assertSame([], $client->payloads);
     }
 
     private function client(array $response): SmsGateway
