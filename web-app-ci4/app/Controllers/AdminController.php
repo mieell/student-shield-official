@@ -138,7 +138,51 @@ class AdminController extends BaseController
             'logs' => $logs,
             'pager' => $pager,
             'isCounselorView' => $isCounselorView,
+            'exportCategories' => \App\Libraries\AuditLogExport::categoriesForRole($role),
         ]);
+    }
+
+    /**
+     * Download role-scoped Audit Logs as an Excel (.xlsx) workbook filtered by checked categories.
+     */
+    public function exportAuditLogs()
+    {
+        $role = (int) session()->get('role');
+        if (!session()->get('isLoggedIn') || !in_array($role, [1, 2], true)) {
+            return $this->forbidden();
+        }
+
+        $requestedCategories = $this->request->getGet('categories');
+        $selectedCategories = \App\Libraries\AuditLogExport::resolveSelectedCategories($role, $requestedCategories);
+        if ($selectedCategories === []) {
+            return redirect()->to('/admin/audit-logs')->with('error', 'Select at least one audit log category to download.');
+        }
+
+        $rawDate = trim((string) ($this->request->getGet('date') ?? ''));
+        $dateFilter = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDate) === 1 ? $rawDate : null;
+
+        $db = \Config\Database::connect();
+        \App\Libraries\ManilaTime::syncDatabaseSession($db);
+        $isCounselorView = $role === 1;
+
+        try {
+            $rows = \App\Libraries\AuditLogExport::fetchRows($db, $role, $selectedCategories, $dateFilter);
+            $workbook = \App\Libraries\AuditLogExport::buildWorkbook($rows, $isCounselorView, $selectedCategories, $dateFilter);
+        } catch (\Throwable $e) {
+            log_message('error', 'Audit log export failed: {message}', ['message' => $e->getMessage()]);
+            return $this->response->setStatusCode(503)->setContentType('text/plain')->setBody('Audit log export failed. Please try again later.');
+        }
+
+        $this->logAudit('EXPORT_AUDIT_LOGS', $isCounselorView ? 'student' : 'system', 0);
+
+        $prefix = $isCounselorView ? 'StudentShield-Guidance-Audit-Logs-' : 'StudentShield-System-Audit-Logs-';
+        $filename = $prefix . \App\Libraries\ManilaTime::now('Y-m-d') . '.xlsx';
+
+        return $this->response
+            ->setHeader('Cache-Control', 'private, no-store')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setContentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            ->setBody($workbook);
     }
 
     public function fetchVents()

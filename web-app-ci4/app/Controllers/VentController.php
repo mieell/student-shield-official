@@ -115,7 +115,8 @@ class VentController extends BaseController
             }
         }
         $assessment = VentRiskAnalyzer::resolve($text, $mlResult, $httpCode,
-            fn (string $entry) => $this->localKeywordFallback($entry));
+            fn (string $entry) => $this->localKeywordFallback($entry),
+            $riskHistory);
         $riskLevel = $assessment['risk_level'];
         $sentimentScore = $assessment['risk_percent'];
         $trajectory = $assessment['trajectory'];

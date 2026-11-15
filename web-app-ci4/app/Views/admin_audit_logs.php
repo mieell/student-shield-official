@@ -79,7 +79,60 @@
                     <span>Action History</span>
                     <span id="visibleCount" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200"><?= count($logs) === 1 ? '1 entry' : count($logs) . ' entries' ?></span>
                 </h2>
+                <button type="button" id="toggleExportPanelBtn" aria-expanded="true" aria-controls="auditExportPanel" class="inline-flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-lg border border-emerald-200 bg-emerald-50/70 text-[#0B5E2E] hover:bg-emerald-100 transition-colors cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    <span>Download by Category</span>
+                </button>
             </div>
+
+            <?php $exportCategories = $exportCategories ?? []; ?>
+            <section id="auditExportPanel" aria-label="Download audit logs by category" class="px-6 py-4 bg-gradient-to-r from-emerald-50/60 via-white to-amber-50/40 border-b border-emerald-100">
+                <form id="auditExportForm" method="get" action="<?= esc(base_url('admin/audit-logs/export'), 'attr') ?>" class="flex flex-col gap-3">
+                    <input type="hidden" name="date" id="exportDateHidden" value="">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-[#0B5E2E]">Export Categories</span>
+                            <span id="exportSelectedCount" class="text-xs font-medium px-2 py-0.5 rounded-full bg-white text-emerald-800 border border-emerald-200"><?= count($exportCategories) ?> selected</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="exportSelectAll" class="text-xs font-semibold text-[#0B5E2E] hover:underline px-2 py-1 cursor-pointer">Select all</button>
+                            <span class="text-gray-300">|</span>
+                            <button type="button" id="exportClearAll" class="text-xs font-semibold text-gray-500 hover:text-gray-800 hover:underline px-2 py-1 cursor-pointer">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap gap-2" role="group" aria-label="Audit log categories to download">
+                            <?php
+                                $dotMap = [
+                                    'orange' => 'bg-orange-500',
+                                    'blue' => 'bg-blue-500',
+                                    'purple' => 'bg-purple-500',
+                                    'emerald' => 'bg-emerald-500',
+                                    'teal' => 'bg-teal-500',
+                                    'indigo' => 'bg-indigo-500',
+                                ];
+                            ?>
+                            <?php foreach ($exportCategories as $catKey => $catMeta): ?>
+                            <?php $dotClass = $dotMap[$catMeta['badge'] ?? 'emerald'] ?? 'bg-emerald-500'; ?>
+                            <label class="export-cat-pill inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-200 bg-white hover:border-[#096328] text-xs font-semibold text-gray-800 cursor-pointer select-none transition-all shadow-2xs has-[:checked]:bg-emerald-50 has-[:checked]:border-[#096328] has-[:checked]:text-[#0B5E2E]">
+                                <input type="checkbox" name="categories[]" value="<?= esc($catKey, 'attr') ?>" checked class="export-category-checkbox h-4 w-4 rounded border-gray-300 text-[#096328] focus:ring-[#096328] accent-[#096328] cursor-pointer">
+                                <span class="w-2 h-2 rounded-full <?= $dotClass ?>" aria-hidden="true"></span>
+                                <span><?= esc($catMeta['label']) ?></span>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="submit" id="downloadAuditLogsBtn" class="inline-flex items-center gap-2 px-4 py-2 min-h-[40px] rounded-lg bg-[#096328] hover:bg-[#075826] disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-xs font-bold tracking-wide shadow-sm transition-all cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                <span>Download Excel (.xlsx)</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p id="exportEmptyHint" class="hidden text-xs text-amber-700 font-medium">Select at least one category checkbox above to download audit logs.</p>
+                </form>
+            </section>
             <div class="staff-filter-bar px-6 py-3 flex justify-between items-center bg-white border-b border-gray-100 flex-wrap gap-2">
                 <div class="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm relative">
                     <svg class="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -250,6 +303,59 @@
             document.getElementById('filterDateLogs').value = '';
             applyAuditFilters();
         });
+
+        (function initAuditExportControls() {
+            const panel = document.getElementById('auditExportPanel');
+            const toggleBtn = document.getElementById('toggleExportPanelBtn');
+            const checkboxes = Array.from(document.querySelectorAll('.export-category-checkbox'));
+            const countBadge = document.getElementById('exportSelectedCount');
+            const downloadBtn = document.getElementById('downloadAuditLogsBtn');
+            const emptyHint = document.getElementById('exportEmptyHint');
+            const selectAllBtn = document.getElementById('exportSelectAll');
+            const clearAllBtn = document.getElementById('exportClearAll');
+            const exportForm = document.getElementById('auditExportForm');
+            const exportDateHidden = document.getElementById('exportDateHidden');
+            const filterDateInput = document.getElementById('filterDateLogs');
+
+            function syncExportState() {
+                const checkedCount = checkboxes.filter(cb => cb.checked).length;
+                if (countBadge) countBadge.textContent = checkedCount + ' selected';
+                if (downloadBtn) downloadBtn.disabled = checkedCount === 0;
+                if (emptyHint) emptyHint.classList.toggle('hidden', checkedCount > 0);
+            }
+
+            if (toggleBtn && panel) {
+                toggleBtn.addEventListener('click', function () {
+                    const willShow = panel.classList.contains('hidden');
+                    panel.classList.toggle('hidden', !willShow);
+                    toggleBtn.setAttribute('aria-expanded', willShow ? 'true' : 'false');
+                });
+            }
+
+            checkboxes.forEach(cb => cb.addEventListener('change', syncExportState));
+
+            if (selectAllBtn) {
+                selectAllBtn.addEventListener('click', function () {
+                    checkboxes.forEach(cb => { cb.checked = true; });
+                    syncExportState();
+                });
+            }
+
+            if (clearAllBtn) {
+                clearAllBtn.addEventListener('click', function () {
+                    checkboxes.forEach(cb => { cb.checked = false; });
+                    syncExportState();
+                });
+            }
+
+            if (exportForm && exportDateHidden && filterDateInput) {
+                exportForm.addEventListener('submit', function () {
+                    exportDateHidden.value = filterDateInput.value || '';
+                });
+            }
+
+            syncExportState();
+        })();
     </script>
     <?= view('partials/session_idle_modal') ?>
     <!-- ── Floating Scroll-to-Top Button ── -->

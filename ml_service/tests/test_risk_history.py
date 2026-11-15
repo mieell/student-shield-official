@@ -69,6 +69,55 @@ class RiskHistoryTest(unittest.TestCase):
         self.assertFalse(repeated)
         self.assertEqual("STABLE", trajectory)
 
+    def test_repeated_high_and_critical_vents_flag_escalating_instead_of_stable(self):
+        history = [
+            self.record(3, "HIGH"),
+            self.record(2, "CRITICAL"),
+            self.record(1, "HIGH"),
+        ]
+
+        repeated, trajectory, probability = evaluate_risk_history(
+            history, "CRITICAL", now=self.now
+        )
+
+        self.assertTrue(repeated)
+        self.assertEqual("ESCALATING", trajectory)
+        self.assertGreaterEqual(probability, 0.75)
+
+    def test_clustered_high_vents_within_48_hours_flag_escalating(self):
+        history = [
+            {
+                "risk_level": "HIGH",
+                "created_at": (self.now - timedelta(hours=12)).isoformat(),
+            },
+            {
+                "risk_level": "HIGH",
+                "created_at": (self.now - timedelta(hours=4)).isoformat(),
+            },
+        ]
+
+        repeated, trajectory, probability = evaluate_risk_history(
+            history, "HIGH", now=self.now
+        )
+
+        self.assertTrue(repeated)
+        self.assertEqual("ESCALATING", trajectory)
+        self.assertGreater(probability, 0.5)
+
+    def test_deescalating_history_returns_improving(self):
+        history = [
+            self.record(4, "CRITICAL"),
+            self.record(3, "CRITICAL"),
+            self.record(2, "LOW"),
+        ]
+
+        repeated, trajectory, _ = evaluate_risk_history(
+            history, "LOW", now=self.now
+        )
+
+        self.assertFalse(repeated)
+        self.assertEqual("IMPROVING", trajectory)
+
 
 if __name__ == "__main__":
     unittest.main()

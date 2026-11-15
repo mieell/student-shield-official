@@ -286,9 +286,9 @@
                 var latest = data.timeline[data.timeline.length - 1];
                 if (latest) {
                     var trendLabels = {
-                        ESCALATING: 'upward trend',
-                        IMPROVING: 'downward trend',
-                        STABLE: 'no clear upward or downward trend'
+                        ESCALATING: 'escalating distress pattern (EWMA / repeated high-risk)',
+                        IMPROVING: 'downward / improving trend',
+                        STABLE: 'steady baseline (no acute escalation)'
                     };
                     trajectoryBadge.textContent = 'Latest entry: ' + latest.risk_label + '. ' +
                         (trendLabels[traj]
