@@ -1001,78 +1001,101 @@ final class RoleSeparationTest extends CIUnitTestCase
 
     public function testSharedLoginSendsEveryStaffRoleThroughOtp(): void
     {
+        $_ENV['staffLogin.otpEnabled'] = 'true';
+        try {
+            foreach ([1, 2, 3] as $role) {
+                session()->destroy();
+                $this->rbacDb->table('users')->where('id', $role)->update(['password_hash' => password_hash('StaffPassword!9', PASSWORD_DEFAULT)]);
+                $this->rbacDb->table($role === 1 ? 'counselors' : 'admins')->insert(['user_id' => $role, $role === 1 ? 'counselor_email' : 'email' => 'staff' . $role . '@example.test']);
+                foreach (['Staff ' . $role, 'staff' . $role . '@example.test'] as $identifier) {
+                    session()->destroy();
+                    $response = $this->controller(SharedLoginNoMailController::class, 'login/authenticate', ['identifier' => $identifier, 'password' => 'StaffPassword!9'])->authenticateStudent();
+                    $this->assertStringEndsWith('/admin/otp', $response->getHeaderLine('Location'));
+                    $this->assertFalse((bool) session()->get('isLoggedIn'));
+                    $this->assertSame($role, (int) session()->get('temp_role'));
+                }
+            }
+        } finally {
+            unset($_ENV['staffLogin.otpEnabled']);
+        }
+    }
+
+    public function testAllStaffRolesSkipOtpWhileTemporarilyDisabled(): void
+    {
+        unset($_ENV['staffLogin.otpEnabled']);
         foreach ([1, 2, 3] as $role) {
             session()->destroy();
             $this->rbacDb->table('users')->where('id', $role)->update(['password_hash' => password_hash('StaffPassword!9', PASSWORD_DEFAULT)]);
-            $this->rbacDb->table($role === 1 ? 'counselors' : 'admins')->insert(['user_id' => $role, $role === 1 ? 'counselor_email' : 'email' => 'staff' . $role . '@example.test']);
-            foreach (['Staff ' . $role, 'staff' . $role . '@example.test'] as $identifier) {
-                session()->destroy();
-                $response = $this->controller(SharedLoginNoMailController::class, 'login/authenticate', ['identifier' => $identifier, 'password' => 'StaffPassword!9'])->authenticateStudent();
-                $this->assertStringEndsWith('/admin/otp', $response->getHeaderLine('Location'));
-                $this->assertFalse((bool) session()->get('isLoggedIn'));
-                $this->assertSame($role, (int) session()->get('temp_role'));
-            }
+            $response = $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', ['name' => 'Staff ' . $role, 'password' => 'StaffPassword!9'])->authenticateAdmin();
+            $this->assertStringEndsWith(RoleAccess::home($role), $response->getHeaderLine('Location'));
+            $this->assertTrue((bool) session()->get('isLoggedIn'));
+            $this->assertSame($role, (int) session()->get('user_id'));
+            $this->assertFalse(session()->has('otp'));
         }
     }
 
     public function testAllStaffIncludingNamedAdminAccountsRequireOtpAfterValidPassword(): void
     {
-        $_ENV['staffLogin.otpEnabled'] = 'false';
+        $_ENV['staffLogin.otpEnabled'] = 'true';
         $_ENV['staffLogin.demoOtpBypassEnabled'] = 'true';
 
-        foreach ([
-            ['id' => 3, 'name' => 'Principal', 'role' => 3],
-            ['id' => 1, 'name' => 'Counselor', 'role' => 1],
-            ['id' => 2, 'name' => 'Superadmin', 'role' => 2],
-            ['id' => 2, 'name' => 'SuperAdmin', 'role' => 2],
-        ] as $account) {
-            session()->destroy();
-            $this->rbacDb->table('users')->where('id', $account['id'])->update([
-                'name' => $account['name'],
-                'access_disabled' => 0,
-                'password_hash' => password_hash('DemoTestPassword!9', PASSWORD_DEFAULT),
-            ]);
-            if ($account['role'] !== 1) {
-                $this->rbacDb->table('admins')->where('user_id', $account['id'])->delete();
-                $this->rbacDb->table('admins')->insert([
-                    'user_id' => $account['id'],
-                    'email' => 'staff' . $account['id'] . '@example.test',
+        try {
+            foreach ([
+                ['id' => 3, 'name' => 'Principal', 'role' => 3],
+                ['id' => 1, 'name' => 'Counselor', 'role' => 1],
+                ['id' => 2, 'name' => 'Superadmin', 'role' => 2],
+                ['id' => 2, 'name' => 'SuperAdmin', 'role' => 2],
+            ] as $account) {
+                session()->destroy();
+                $this->rbacDb->table('users')->where('id', $account['id'])->update([
+                    'name' => $account['name'],
+                    'access_disabled' => 0,
+                    'password_hash' => password_hash('DemoTestPassword!9', PASSWORD_DEFAULT),
                 ]);
+                if ($account['role'] !== 1) {
+                    $this->rbacDb->table('admins')->where('user_id', $account['id'])->delete();
+                    $this->rbacDb->table('admins')->insert([
+                        'user_id' => $account['id'],
+                        'email' => 'staff' . $account['id'] . '@example.test',
+                    ]);
+                }
+
+                $response = $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', [
+                    'name' => $account['name'],
+                    'password' => 'DemoTestPassword!9',
+                ])->authenticateAdmin();
+                $this->assertStringEndsWith('/admin/otp', $response->getHeaderLine('Location'));
+                $this->assertFalse((bool) session()->get('isLoggedIn'));
+                $this->assertSame($account['id'], (int) session()->get('temp_user_id'));
+                $this->assertSame($account['role'], (int) session()->get('temp_role'));
+                $otp = (string) session()->get('otp');
+                $this->assertMatchesRegularExpression('/\A[0-9]{6}\z/', $otp);
+                $this->assertSame(0, $this->rbacDb->table('audit_logs')->where('action', 'DEMO_LOGIN_OTP_BYPASS')->countAllResults());
+
+                $verified = $this->controller(SharedLoginNoMailController::class, 'admin/verify-otp', ['otp' => $otp])->verifyOtp();
+                $this->assertStringEndsWith(RoleAccess::home($account['role']), $verified->getHeaderLine('Location'));
+                $this->assertTrue((bool) session()->get('isLoggedIn'));
+                $this->assertSame($account['id'], (int) session()->get('user_id'));
+
+                session()->destroy();
+                session()->remove(['isLoggedIn', 'user_id', 'role', 'role_name', 'auth_version']);
+                $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', [
+                    'name' => $account['name'],
+                    'password' => 'wrong-password',
+                ])->authenticateAdmin();
+                $this->assertFalse((bool) session()->get('isLoggedIn'));
+                $this->assertFalse(session()->has('otp'));
+
+                $this->rbacDb->table('users')->where('id', $account['id'])->update(['access_disabled' => 1]);
+                $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', [
+                    'name' => $account['name'],
+                    'password' => 'DemoTestPassword!9',
+                ])->authenticateAdmin();
+                $this->assertFalse((bool) session()->get('isLoggedIn'));
+                $this->assertFalse(session()->has('otp'));
             }
-
-            $response = $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', [
-                'name' => $account['name'],
-                'password' => 'DemoTestPassword!9',
-            ])->authenticateAdmin();
-            $this->assertStringEndsWith('/admin/otp', $response->getHeaderLine('Location'));
-            $this->assertFalse((bool) session()->get('isLoggedIn'));
-            $this->assertSame($account['id'], (int) session()->get('temp_user_id'));
-            $this->assertSame($account['role'], (int) session()->get('temp_role'));
-            $otp = (string) session()->get('otp');
-            $this->assertMatchesRegularExpression('/\A[0-9]{6}\z/', $otp);
-            $this->assertSame(0, $this->rbacDb->table('audit_logs')->where('action', 'DEMO_LOGIN_OTP_BYPASS')->countAllResults());
-
-            $verified = $this->controller(SharedLoginNoMailController::class, 'admin/verify-otp', ['otp' => $otp])->verifyOtp();
-            $this->assertStringEndsWith(RoleAccess::home($account['role']), $verified->getHeaderLine('Location'));
-            $this->assertTrue((bool) session()->get('isLoggedIn'));
-            $this->assertSame($account['id'], (int) session()->get('user_id'));
-
-            session()->destroy();
-            session()->remove(['isLoggedIn', 'user_id', 'role', 'role_name', 'auth_version']);
-            $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', [
-                'name' => $account['name'],
-                'password' => 'wrong-password',
-            ])->authenticateAdmin();
-            $this->assertFalse((bool) session()->get('isLoggedIn'));
-            $this->assertFalse(session()->has('otp'));
-
-            $this->rbacDb->table('users')->where('id', $account['id'])->update(['access_disabled' => 1]);
-            $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', [
-                'name' => $account['name'],
-                'password' => 'DemoTestPassword!9',
-            ])->authenticateAdmin();
-            $this->assertFalse((bool) session()->get('isLoggedIn'));
-            $this->assertFalse(session()->has('otp'));
+        } finally {
+            unset($_ENV['staffLogin.otpEnabled'], $_ENV['staffLogin.demoOtpBypassEnabled']);
         }
     }
 
@@ -1080,13 +1103,17 @@ final class RoleSeparationTest extends CIUnitTestCase
     {
         $this->assertFalse(method_exists(\App\Controllers\AuthController::class, 'demoOtpBypassAllowed'));
 
-        $_ENV['staffLogin.otpEnabled'] = 'false';
+        $_ENV['staffLogin.otpEnabled'] = 'true';
         $_ENV['staffLogin.demoOtpBypassEnabled'] = 'true';
-        $this->rbacDb->table('users')->where('id', 1)->update(['password_hash' => password_hash('StaffPassword!9', PASSWORD_DEFAULT)]);
-        $response = $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', ['name' => 'Staff 1', 'password' => 'StaffPassword!9'])->authenticateAdmin();
-        $this->assertStringEndsWith('/admin/otp', $response->getHeaderLine('Location'));
-        $this->assertFalse((bool) session()->get('isLoggedIn'));
-        $this->assertTrue(session()->has('otp'));
+        try {
+            $this->rbacDb->table('users')->where('id', 1)->update(['password_hash' => password_hash('StaffPassword!9', PASSWORD_DEFAULT)]);
+            $response = $this->controller(SharedLoginNoMailController::class, 'admin/login/authenticate', ['name' => 'Staff 1', 'password' => 'StaffPassword!9'])->authenticateAdmin();
+            $this->assertStringEndsWith('/admin/otp', $response->getHeaderLine('Location'));
+            $this->assertFalse((bool) session()->get('isLoggedIn'));
+            $this->assertTrue(session()->has('otp'));
+        } finally {
+            unset($_ENV['staffLogin.otpEnabled'], $_ENV['staffLogin.demoOtpBypassEnabled']);
+        }
     }
 
     public function testSharedLoginRejectsDisabledAndPendingStudents(): void

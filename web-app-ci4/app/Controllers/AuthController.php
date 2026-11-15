@@ -135,6 +135,23 @@ class AuthController extends BaseController
         if ($user && $passwordValid && \App\Libraries\RoleAccess::enabled($user)) {
             $roleNames = [1 => 'counselor', 2 => 'super_admin', 3 => 'principal'];
 
+            // Temporary override: skip 6-digit email OTP for all staff logins unless staffLogin.otpEnabled=true.
+            if ($this->staffOtpTemporarilyDisabled()) {
+                $this->clearOtpSession();
+                session()->regenerate();
+                session()->set([
+                    'user_id'       => $user['id'],
+                    'name'          => $user['name'],
+                    'role'          => (int) $user['role'],
+                    'role_name'     => $roleNames[(int) $user['role']] ?? 'counselor',
+                    'auth_version'  => (int) ($user['auth_version'] ?? 1),
+                    'isLoggedIn'    => true,
+                    'last_activity' => time(),
+                ]);
+                $this->logAudit('USER_LOGIN', 'system', $user['id']);
+                return redirect()->to(\App\Libraries\RoleAccess::home((int) $user['role']));
+            }
+
             // ── LAYER 5: TRUSTED DEVICE BYPASS ──
             if (isset($_COOKIE['admin_trusted_device'])) {
                 $cookieData = base64_decode($_COOKIE['admin_trusted_device']);
@@ -207,6 +224,12 @@ class AuthController extends BaseController
         }
 
         return redirect()->back()->with('error', 'Invalid credentials provided.');
+    }
+
+    protected function staffOtpTemporarilyDisabled(): bool
+    {
+        // Set staffLogin.otpEnabled=true in .env (or remove this helper) to restore 2FA OTP.
+        return filter_var(env('staffLogin.otpEnabled', false), FILTER_VALIDATE_BOOLEAN) === false;
     }
 
     public function otpView()
