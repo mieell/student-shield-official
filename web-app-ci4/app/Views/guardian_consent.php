@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <title>Guardian consent | StudentShield</title>
+    <link rel="icon" type="image/png" href="<?= base_url('images/logo.png?v=6') ?>">
+    <link rel="shortcut icon" type="image/png" href="<?= base_url('images/logo.png?v=6') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
@@ -15,30 +17,89 @@
             margin: 0;
             min-height: 100dvh;
             padding: clamp(1.25rem, 5vw, 3.5rem) 1rem;
-            background: linear-gradient(180deg, #f2f7f4 0%, #eaf2ed 100%);
+            background-color: #094d23;
             color: #173a2a;
             font: 400 1rem/1.6 'Inter', system-ui, -apple-system, sans-serif;
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+            isolation: isolate;
+            overflow-x: hidden;
+        }
+        .consent-scene {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            background: linear-gradient(160deg, #128f42 0%, #0b5f30 55%, #06381b 100%);
+        }
+        .consent-scene-art {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 26%;
+        }
+        .consent-scene::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 50% 10%, rgba(217, 170, 46, 0.16) 0%, transparent 55%),
+                linear-gradient(180deg, rgba(9, 58, 28, 0.22) 0%, rgba(6, 44, 21, 0.52) 60%, rgba(4, 29, 14, 0.68) 100%);
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            .consent-scene-art { animation: consent-scene-arrive 700ms ease-out; }
+            @keyframes consent-scene-arrive {
+                from { opacity: 0.78; }
+                to { opacity: 1; }
+            }
         }
         main {
+            position: relative;
+            z-index: 1;
             width: 100%;
             max-width: 42rem;
-            background: #ffffff;
-            border: 1px solid #d5e3da;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(225, 232, 202, 0.85);
             border-top: 5px solid #0f8a3a;
-            border-radius: 18px;
-            box-shadow: 0 18px 40px -24px rgba(10, 62, 31, 0.25);
+            border-radius: 20px;
+            box-shadow:
+                0 28px 64px -20px rgba(4, 28, 14, 0.55),
+                0 4px 16px -4px rgba(5, 52, 24, 0.25);
             padding: clamp(1.35rem, 4vw, 2.5rem);
         }
         .consent-header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
             gap: 14px;
             padding-bottom: 1.15rem;
             margin-bottom: 1.35rem;
             border-bottom: 1px solid #e3ede6;
+        }
+        .consent-identity {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .consent-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            background: #eef7f1;
+            border: 1px solid #cfe3d5;
+            color: #0e5a2b;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
         }
         .consent-logo {
             width: 48px;
@@ -136,6 +197,13 @@
         button.secondary { background: #ffffff; color: #174d30; border-color: #bfd2c5; }
         button.secondary:hover { background: #f2f8f4; border-color: #0f8a3a; }
         button:focus-visible { outline: 2px solid #d9aa2e; outline-offset: 2px; }
+        @media (max-width: 799px) {
+            body {
+                padding-top: clamp(6.5rem, 24vw, 9rem);
+                align-items: flex-start;
+            }
+            .consent-scene-art { object-position: top center; }
+        }
         @media (max-width: 520px) {
             .actions { flex-direction: column; }
             button { width: 100%; }
@@ -143,13 +211,26 @@
     </style>
 </head>
 <body>
+<div class="consent-scene" aria-hidden="true">
+    <?php
+        $campusMain = is_file(FCPATH . 'images/login-campus-quiet.webp') ? filemtime(FCPATH . 'images/login-campus-quiet.webp') : 1;
+        $campusSmall = is_file(FCPATH . 'images/login-campus-quiet-small.webp') ? filemtime(FCPATH . 'images/login-campus-quiet-small.webp') : 1;
+    ?>
+    <img class="consent-scene-art"
+         src="<?= base_url('images/login-campus-quiet.webp?v=' . $campusMain) ?>"
+         srcset="<?= base_url('images/login-campus-quiet-small.webp?v=' . $campusSmall) ?> 800w, <?= base_url('images/login-campus-quiet.webp?v=' . $campusMain) ?> 1600w"
+         sizes="100vw" width="1600" height="900" alt="" decoding="async" fetchpriority="high">
+</div>
 <main>
     <div class="consent-header">
-        <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="consent-logo">
-        <div>
-            <p class="consent-school">St. Vincent Blessed School of Manila, Inc.</p>
-            <div class="brand">Student<span>Shield</span></div>
+        <div class="consent-identity">
+            <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="consent-logo">
+            <div>
+                <p class="consent-school">St. Vincent Blessed School of Manila, Inc.</p>
+                <div class="brand">Student<span>Shield</span></div>
+            </div>
         </div>
+        <span class="consent-badge">&#128274; Official Parent &amp; Guardian Portal</span>
     </div>
     <h1>Guardian consent</h1>
     <?php $flashError = session()->getFlashdata('error'); ?>

@@ -112,6 +112,8 @@ final class GuardianConsentTest extends CIUnitTestCase
         ]);
         self::assertStringContainsString('name="guardian_phone"', $lookupHtml);
         self::assertStringContainsString('name="consent_code"', $lookupHtml);
+        self::assertStringContainsString('consent-scene', $lookupHtml);
+        self::assertStringContainsString('images/login-campus-quiet.webp', $lookupHtml);
     }
 
     public function testQueuedSmsBlocksImmediateResendAndUnlocksAfterFiveMinutes(): void
