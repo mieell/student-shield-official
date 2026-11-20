@@ -1,17 +1,36 @@
-function cleanScreeningText(raw) {
+function cleanScreeningText(raw, finalRisk = '') {
     if (typeof raw !== 'string') return '';
-    const cleaned = raw
-        // Strip internal bracket tags so counselors read a direct, natural explanation.
+    const riskUpper = String(finalRisk || '').toUpperCase();
+    const hadCriticalHistory = /CRITICAL\s+ESCALATION:|Repeated\s+HIGH\s+distress\s+with\s+escalating\s+trajectory\.?/i.test(raw);
+    const hadHighHistory = /HIGH\s+ESCALATION:|Persistent\s+MEDIUM\s+distress\s+with\s+repeated\s+high-risk\s+history\.?|Repeated\s+worsening\s+emotional\s+distress\s+over\s+14\s+days\.?/i.test(raw);
+
+    let cleaned = raw
+        // Strip internal bracket tags and intermediate ML boilerplate so counselors see one consistent explanation.
         .replace(/\[Predictive\s+Recurrence\s+Risk:\s*\d+%\]\s*/gi, '')
         .replace(/\[(?:Groq\s+)?Clinical\s+Escalation(?::\s*[^\]]+|\s*\([^)]*\))?\]\s*/gi, '')
         .replace(/\[(?:Groq\s+)?Context(?:ual)?\s+Clarification(?::\s*[^\]]+|\s*\([^)]*\))?\]\s*/gi, '')
         .replace(/\[(?:Groq\s+Clinical\s+Context|Clinical\s+Review|(?:Groq|Gemini)\s+Fallback)\]\s*/gi, '')
-        .replace(/\b(?:CRITICAL|HIGH)\s+ESCALATION:\s*/g, '')
+        .replace(/\b(?:CRITICAL|HIGH)\s+ESCALATION:\s*/gi, '')
+        .replace(/Repeated\s+HIGH\s+distress\s+with\s+escalating\s+trajectory\.?\s*/gi, '')
+        .replace(/Persistent\s+MEDIUM\s+distress\s+with\s+repeated\s+high-risk\s+history\.?\s*/gi, '')
+        .replace(/Repeated\s+worsening\s+emotional\s+distress\s+over\s+14\s+days\.?\s*/gi, '')
+        .replace(/\b(?:CRITICAL|HIGH|MEDIUM|LOW):\s*Strong negative sentiment\/distress from ML neural networks\.?\s*/gi, '')
+        .replace(/\b(?:CRITICAL|HIGH|MEDIUM|LOW):\s*(?=Academic pressure|Emotional distress|Passive|Explicit)/gi, '')
+        .replace(/\bHigh emotional intensity\.?\s*/gi, '')
+        .replace(/\bModerate negative sentiment\.?\s*/gi, '')
+        .replace(/\bAtypical sentiment pattern flagged by heuristics\.?\s*/gi, '')
         .replace(/\bNLP:\s*/gi, '')
-        .replace(/\bDeterministic safety floor retained\.?/gi, 'Safety safeguards retained the higher review priority.')
+        .replace(/\b(?:Deterministic safety floor retained|Safety safeguards retained the higher review priority)\.?\s*/gi, '')
         .replace(/\b(?:Groq|Gemini)(?:\s+AI)?\b/gi, 'automated context screening')
         .replace(/\s{2,}/g, ' ')
         .trim();
+
+    if (hadCriticalHistory && riskUpper === 'CRITICAL' && !/^Elevated to CRITICAL/i.test(cleaned)) {
+        cleaned = ('Elevated to CRITICAL due to repeated high-risk check-ins over the past 14 days. ' + cleaned).trim();
+    } else if (hadHighHistory && riskUpper === 'HIGH' && !/^Elevated to HIGH/i.test(cleaned)) {
+        cleaned = ('Elevated to HIGH due to worsening distress across recent check-ins over the past 14 days. ' + cleaned).trim();
+    }
+
     if (!cleaned) return '';
     return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
@@ -66,7 +85,7 @@ function showScreeningExplanation(vent) {
         unknown: 'Source unavailable for this entry',
     };
 
-    const cleanedReasoning = cleanScreeningText(vent.screening_analysis?.reasoning);
+    const cleanedReasoning = cleanScreeningText(vent.screening_analysis?.reasoning, riskLevel);
     const explanationBlock = document.createElement('div');
     explanationBlock.className = 'mb-3';
     const explanationTerm = document.createElement('p');

@@ -244,7 +244,7 @@ class GroqTriageUnitTests(unittest.TestCase):
             )
             self.assertIn(risk, ("HIGH", "CRITICAL"))
             self.assertGreaterEqual(percent, 79)
-            self.assertIn("Safety safeguards retained the higher review priority.", reason)
+            self.assertIn(f"Priority kept at {risk} by safety safeguards.", reason)
 
     def test_merge_escalates_subtle_distress_and_clarifies_mild_hyperbole(self) -> None:
         subtle_groq = {

@@ -437,7 +437,7 @@ def merge_groq_assessment(
             final_risk = groq_level
             final_percent = clamp_score_to_band(final_risk, groq_score)
         else:
-            suffix_parts.append("Safety safeguards retained the higher review priority.")
+            suffix_parts.append(f"Priority kept at {final_risk} by safety safeguards.")
     else:
         blended = clamp_score_to_band(final_risk, round(0.45 * baseline_percent + 0.55 * groq_score))
         if strict_lock:
@@ -446,6 +446,11 @@ def merge_groq_assessment(
             final_percent = blended
         if active_flags.get("passive_ideation") or groq_result.get("triage_category") == "passive_ideation_cssrs2":
             final_percent = max(79, final_percent)
+
+    if history_escalated and final_risk == "CRITICAL":
+        suffix_parts.insert(0, "Elevated to CRITICAL due to repeated high-risk check-ins over the past 14 days.")
+    elif history_escalated and final_risk == "HIGH":
+        suffix_parts.insert(0, "Elevated to HIGH due to worsening distress across recent check-ins over the past 14 days.")
 
     combined_reason = " ".join(part for part in suffix_parts if part).strip()
     return final_risk, final_percent, combined_reason

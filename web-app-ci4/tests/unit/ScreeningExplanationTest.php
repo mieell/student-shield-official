@@ -93,5 +93,6 @@ final class ScreeningExplanationTest extends CIUnitTestCase
         self::assertStringNotContainsString('Groq AI fallback', $js);
         self::assertStringNotContainsString('[Clinical Escalation:', $js);
         self::assertStringContainsString('Why this priority was suggested', $js);
+        self::assertStringContainsString('Elevated to CRITICAL due to repeated high-risk check-ins', $js);
     }
 }
