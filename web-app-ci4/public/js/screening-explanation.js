@@ -1,13 +1,19 @@
 function cleanScreeningText(raw) {
     if (typeof raw !== 'string') return '';
-    return raw
-        .replace(/\[Groq\s+Clinical\s+Context\]/gi, '[Clinical Review]')
-        .replace(/\[Groq\s+Clinical\s+Escalation\s*\(([^)]+)\)\]/gi, '[Clinical Escalation: $1]')
-        .replace(/\[Groq\s+Contextual\s+Clarification\s*\(([^)]+)\)\]/gi, '[Context Clarification: $1]')
-        .replace(/\[(?:Groq|Gemini)\s+Fallback\]/gi, '[Clinical Review]')
-        .replace(/\b(?:Groq|Gemini)(?:\s+AI)?\b/gi, 'Clinical AI')
+    const cleaned = raw
+        // Strip internal bracket tags so counselors read a direct, natural explanation.
+        .replace(/\[Predictive\s+Recurrence\s+Risk:\s*\d+%\]\s*/gi, '')
+        .replace(/\[(?:Groq\s+)?Clinical\s+Escalation(?::\s*[^\]]+|\s*\([^)]*\))?\]\s*/gi, '')
+        .replace(/\[(?:Groq\s+)?Context(?:ual)?\s+Clarification(?::\s*[^\]]+|\s*\([^)]*\))?\]\s*/gi, '')
+        .replace(/\[(?:Groq\s+Clinical\s+Context|Clinical\s+Review|(?:Groq|Gemini)\s+Fallback)\]\s*/gi, '')
+        .replace(/\b(?:CRITICAL|HIGH)\s+ESCALATION:\s*/g, '')
+        .replace(/\bNLP:\s*/gi, '')
+        .replace(/\bDeterministic safety floor retained\.?/gi, 'Safety safeguards retained the higher review priority.')
+        .replace(/\b(?:Groq|Gemini)(?:\s+AI)?\b/gi, 'automated context screening')
         .replace(/\s{2,}/g, ' ')
         .trim();
+    if (!cleaned) return '';
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
 function showScreeningExplanation(vent) {
@@ -19,26 +25,72 @@ function showScreeningExplanation(vent) {
         document.getElementById('modalContent').after(panel);
     }
     panel.replaceChildren();
+
     const title = document.createElement('h4');
     title.className = 'font-semibold text-[#164a36] mb-3';
     title.textContent = 'Screening analysis';
     panel.append(title);
+
+    const riskLevel = (vent.risk_level || 'UNAVAILABLE').toUpperCase();
+    const numericScore = Number(vent.risk_percent);
+    const formattedScore = Number.isFinite(numericScore) ? `${Math.round(numericScore)}%` : '—';
+    const badgeStyles = {
+        CRITICAL: 'bg-red-100 text-red-800 border-red-200',
+        HIGH: 'bg-orange-100 text-orange-800 border-orange-200',
+        MEDIUM: 'bg-amber-100 text-amber-900 border-amber-200',
+        LOW: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    };
+
+    const priorityBlock = document.createElement('div');
+    priorityBlock.className = 'mb-3';
+    const priorityTerm = document.createElement('p');
+    priorityTerm.className = 'text-xs font-semibold text-[#435e51] mb-1.5';
+    priorityTerm.textContent = 'Review priority';
+    const priorityRow = document.createElement('div');
+    priorityRow.className = 'flex items-center flex-wrap gap-2';
+    const priorityBadge = document.createElement('span');
+    priorityBadge.className = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeStyles[riskLevel] || 'bg-gray-100 text-gray-800 border-gray-200'}`;
+    priorityBadge.textContent = riskLevel;
+    const priorityScore = document.createElement('span');
+    priorityScore.className = 'text-sm font-medium text-[#203d30]';
+    priorityScore.textContent = `Severity score: ${formattedScore}`;
+    priorityRow.append(priorityBadge, priorityScore);
+    priorityBlock.append(priorityTerm, priorityRow);
+    panel.append(priorityBlock);
+
     const sources = {
-        model: 'ML + Clinical Assessment with PHP safety rules',
-        groq: 'Clinical Assessment with PHP safety rules',
-        gemini: 'Legacy Clinical Assessment with PHP safety rules',
-        local: 'Local keyword fallback',
+        model: 'Automated ML + Context Screening',
+        groq: 'Automated Context Screening',
+        gemini: 'Automated Context Screening',
+        local: 'Keyword Safety Screening',
         unknown: 'Source unavailable for this entry',
     };
+
     const cleanedReasoning = cleanScreeningText(vent.screening_analysis?.reasoning);
-    const rows = [
-        ['Review priority', `${vent.risk_level || 'Unavailable'} · Recorded score ${vent.risk_percent ?? '—'}%`],
+    const explanationBlock = document.createElement('div');
+    explanationBlock.className = 'mb-3';
+    const explanationTerm = document.createElement('p');
+    explanationTerm.className = 'text-xs font-semibold text-[#435e51] mb-1.5';
+    explanationTerm.textContent = 'Why this priority was suggested';
+    const explanationBox = document.createElement('p');
+    explanationBox.className = 'text-sm text-[#1b3629] leading-relaxed whitespace-pre-line bg-white border border-[#dce8e0] rounded-lg px-3.5 py-2.5';
+    explanationBox.textContent = cleanedReasoning || 'No detailed explanation was recorded for this entry. Review the student message directly.';
+    explanationBlock.append(explanationTerm, explanationBox);
+    panel.append(explanationBlock);
+
+    const metaRows = [
         ['Analysis source', sources[vent.analysis_source] || sources.unknown],
-        ['Recorded explanation', cleanedReasoning || 'An explanation was not recorded for this entry. Review the original message with the student.'],
     ];
-    const trajectories = {ESCALATING: 'Escalating', IMPROVING: 'Improving', STABLE: 'Stable'};
-    if (trajectories[vent.trajectory]) rows.push(['Recorded recent pattern', trajectories[vent.trajectory]]);
-    rows.forEach(([label, value]) => {
+    const trajectories = {
+        ESCALATING: 'Escalating (repeated high-risk check-ins)',
+        IMPROVING: 'Improving',
+        STABLE: 'Stable',
+    };
+    if (trajectories[vent.trajectory]) {
+        metaRows.push(['Recent 14-day pattern', trajectories[vent.trajectory]]);
+    }
+
+    metaRows.forEach(([label, value]) => {
         const block = document.createElement('div');
         block.className = 'mb-3 last:mb-0';
         const term = document.createElement('p');
@@ -50,8 +102,9 @@ function showScreeningExplanation(vent) {
         block.append(term, detail);
         panel.append(block);
     });
+
     const note = document.createElement('p');
-    note.className = 'text-xs text-[#435e51] border-t border-[#cfe0d5] pt-3';
+    note.className = 'text-xs text-[#435e51] border-t border-[#cfe0d5] pt-3 mt-1';
     const reminderLabel = document.createElement('strong');
     reminderLabel.className = 'font-semibold text-[#164a36]';
     reminderLabel.textContent = 'Clinical reminder: ';

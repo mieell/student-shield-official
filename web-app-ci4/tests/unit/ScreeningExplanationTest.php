@@ -91,5 +91,7 @@ final class ScreeningExplanationTest extends CIUnitTestCase
         self::assertStringContainsString('Clinical reminder:', $js);
         self::assertStringContainsString('does not replace a licensed psychologist', $js);
         self::assertStringNotContainsString('Groq AI fallback', $js);
+        self::assertStringNotContainsString('[Clinical Escalation:', $js);
+        self::assertStringContainsString('Why this priority was suggested', $js);
     }
 }

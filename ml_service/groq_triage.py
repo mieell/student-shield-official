@@ -74,8 +74,8 @@ _SYSTEM_INSTRUCTION = (
     "Return ONLY valid JSON with these exact keys:\n"
     '{"triage_category": "<positive_or_banter|mild_or_single_distress|passive_ideation_cssrs2|compound_distress_or_bullying|explicit_self_harm_or_suicide|violent_threat|sexual_abuse_or_harassment>", '
     '"risk_level": "<LOW|MEDIUM|HIGH|CRITICAL>", "risk_score": <integer 1-100>, '
-    '"sarcasm_or_hyperbole": <true|false>, "taglish_nuance": "<optional 2-5 word Taglish/dialect phrase only if not already in reasoning, else empty string>", '
-    '"counselor_reasoning": "<ONE ultra-concise clinical sentence (max 22 words) for a school counselor stating the core psychological stressor/risk vs. protective/idiom context and urgency; integrate cultural nuance inline; never mention AI, models, or vendors; never include PII>"}.'
+    '"sarcasm_or_hyperbole": <true|false>, "taglish_nuance": "<optional brief Taglish/dialect context only if helpful, else empty string>", '
+    '"counselor_reasoning": "<1-2 clear, plain-English sentences (max 42 words) directly grounded in what the student actually wrote in this vent: name the specific situation, feeling, or phrase from the vent, explain why it fits this priority level (including any Taglish/idiom meaning naturally inline), and suggest an appropriate counselor check-in tone. Never use generic boilerplate, bracket tags, or jargon like Clinical Escalation; never mention AI, models, or vendors; never include PII>"}.'
 )
 
 
@@ -360,11 +360,18 @@ _RECURRENCE_PREFIX_RE = re.compile(r"\[Predictive Recurrence Risk:\s*\d+%\]")
 
 def _format_concise_clinical_note(note: str, nuance: str) -> str:
     cleaned_note = note.strip()
-    if nuance and nuance.lower() not in cleaned_note.lower():
-        if cleaned_note.endswith((".", "!", "?")):
-            return f"{cleaned_note[:-1]} ({nuance}){cleaned_note[-1]}"
-        return f"{cleaned_note} ({nuance})."
-    return cleaned_note if cleaned_note.endswith((".", "!", "?")) else f"{cleaned_note}."
+    cleaned_nuance = nuance.strip()
+    if not cleaned_note:
+        return cleaned_nuance if cleaned_nuance.endswith((".", "!", "?")) else (f"{cleaned_nuance}." if cleaned_nuance else "")
+    if not cleaned_note.endswith((".", "!", "?")):
+        cleaned_note = f"{cleaned_note}."
+    # Only append nuance as a natural clause if it adds meaningful context not already in the note.
+    if cleaned_nuance and len(cleaned_nuance.split()) >= 3 and cleaned_nuance.lower() not in cleaned_note.lower():
+        nuance_sentence = cleaned_nuance[0].upper() + cleaned_nuance[1:]
+        if not nuance_sentence.endswith((".", "!", "?")):
+            nuance_sentence += "."
+        return f"{cleaned_note} Context note: {nuance_sentence}"
+    return cleaned_note
 
 
 def merge_groq_assessment(
@@ -421,19 +428,16 @@ def merge_groq_assessment(
 
     final_risk = baseline_risk
     final_percent = int(baseline_percent)
-    tag = "Clinical Review"
 
     if RISK_RANK[groq_level] > RISK_RANK[baseline_risk]:
         final_risk = groq_level
         final_percent = clamp_score_to_band(final_risk, groq_score)
-        tag = f"Clinical Escalation: {baseline_risk} -> {final_risk}"
     elif RISK_RANK[groq_level] < RISK_RANK[baseline_risk]:
         if allow_downgrade and groq_result.get("sarcasm_or_hyperbole", False):
             final_risk = groq_level
             final_percent = clamp_score_to_band(final_risk, groq_score)
-            tag = f"Context Clarification: {baseline_risk} -> {final_risk}"
         else:
-            suffix_parts.append("Deterministic safety floor retained.")
+            suffix_parts.append("Safety safeguards retained the higher review priority.")
     else:
         blended = clamp_score_to_band(final_risk, round(0.45 * baseline_percent + 0.55 * groq_score))
         if strict_lock:
@@ -443,12 +447,5 @@ def merge_groq_assessment(
         if active_flags.get("passive_ideation") or groq_result.get("triage_category") == "passive_ideation_cssrs2":
             final_percent = max(79, final_percent)
 
-    clinical_segment = f"[{tag}] {' '.join(suffix_parts)}".strip()
-    if strict_lock or history_escalated:
-        combined_reason = f"{baseline_reason} {clinical_segment}".strip()
-    else:
-        recurrence_match = _RECURRENCE_PREFIX_RE.search(baseline_reason or "")
-        prefix = f"{recurrence_match.group(0)} " if recurrence_match else ""
-        combined_reason = f"{prefix}{clinical_segment}".strip()
-
+    combined_reason = " ".join(part for part in suffix_parts if part).strip()
     return final_risk, final_percent, combined_reason

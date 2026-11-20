@@ -244,7 +244,7 @@ class GroqTriageUnitTests(unittest.TestCase):
             )
             self.assertIn(risk, ("HIGH", "CRITICAL"))
             self.assertGreaterEqual(percent, 79)
-            self.assertIn("Deterministic safety floor retained.", reason)
+            self.assertIn("Safety safeguards retained the higher review priority.", reason)
 
     def test_merge_escalates_subtle_distress_and_clarifies_mild_hyperbole(self) -> None:
         subtle_groq = {
@@ -262,7 +262,8 @@ class GroqTriageUnitTests(unittest.TestCase):
         )
         self.assertEqual(risk, "CRITICAL")
         self.assertEqual(percent, 91)
-        self.assertIn("Clinical Escalation: LOW -> CRITICAL", reason)
+        self.assertNotIn("Clinical Escalation", reason)
+        self.assertIn("Student signals readiness to vanish", reason)
         self.assertIn("Bisaya passive disappearance expression", reason)
         self.assertNotIn("Minimal baseline distress.", reason)
         self.assertNotIn("groq", reason.lower())
@@ -285,8 +286,9 @@ class GroqTriageUnitTests(unittest.TestCase):
         )
         self.assertEqual(risk, "LOW")
         self.assertEqual(percent, 18)
-        self.assertIn("[Predictive Recurrence Risk: 70%]", reason)
-        self.assertIn("Context Clarification: MEDIUM -> LOW", reason)
+        self.assertNotIn("[Predictive Recurrence Risk:", reason)
+        self.assertNotIn("Context Clarification", reason)
+        self.assertIn("Exaggerated frustration over difficult quiz", reason)
         self.assertNotIn("Academic pressure detected.", reason)
         self.assertNotIn("groq", reason.lower())
 
@@ -306,7 +308,8 @@ class GroqTriageUnitTests(unittest.TestCase):
         )
         self.assertEqual(agree_risk, "LOW")
         self.assertEqual(agree_pct, 18)
-        self.assertTrue(agree_reason.startswith("[Clinical Review] "))
+        self.assertTrue(agree_reason.startswith("Playful academic worry"))
+        self.assertNotIn("[Clinical Review]", agree_reason)
         self.assertNotIn("NLP: Positive/grateful", agree_reason)
         self.assertNotIn("groq", agree_reason.lower())
 
