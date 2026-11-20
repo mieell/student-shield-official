@@ -1,23 +1,64 @@
-/* Structured spacing, alignment, and control affordance for SVBSM Student Registration. */
+/* Structured spacing, alignment, and illustrated campus theme matching Login (login-illustrated.css). */
 html:has(body.student-registration) {
-    background-color: #09682D;
+    background-color: #0f8a3a;
 }
 
 body.student-registration {
-    padding: 24px 16px;
+    padding: 28px 16px;
+    background: #0f8a3a;
+    isolation: isolate;
+}
+
+/* Illustrated SVBSM campus backdrop matching Login */
+body.student-registration.registration-illustrated .login-scene {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: #4b6948;
+}
+
+body.student-registration.registration-illustrated .login-scene-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 26%;
+}
+
+body.student-registration.registration-illustrated .login-scene::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(16, 48, 29, 0.16) 0%, rgba(16, 48, 29, 0.34) 100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    body.student-registration.registration-illustrated .login-scene-art {
+        animation: school-scene-arrive 800ms ease-out;
+    }
+    @keyframes school-scene-arrive {
+        from { opacity: 0.8; }
+        to { opacity: 1; }
+    }
 }
 
 body.student-registration .registration-shell {
-    max-width: 960px;
+    max-width: 920px;
 }
 
+/* Match Login card surface, cream-gold border, and deep elevation */
 body.student-registration .student-card {
-    background: rgba(10, 110, 48, 0.88);
-    backdrop-filter: blur(26px);
-    -webkit-backdrop-filter: blur(26px);
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    box-shadow: 0 24px 56px -18px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.16);
-    padding: 32px 36px;
+    background: #0b5f30;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid #e1e8ca;
+    border-radius: 24px;
+    box-shadow:
+        0 5px 12px -5px #0534184d,
+        0 26px 60px -24px #053418a6,
+        inset 0 1px #ffffff26;
+    padding: 32px 38px;
 }
 
 body.student-registration .registration-heading {
@@ -27,14 +68,15 @@ body.student-registration .registration-heading {
     gap: 18px;
     text-align: left;
     padding-bottom: 22px;
-    margin-bottom: 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    margin-bottom: 22px;
+    border-bottom: 1px solid #dce8bc55;
 }
 
 body.student-registration .registration-heading .registration-logo {
-    width: 68px;
-    height: 68px;
+    width: 72px;
+    height: 72px;
     flex-shrink: 0;
+    filter: drop-shadow(0 4px 8px #05341840);
 }
 
 body.student-registration .registration-heading-copy {
@@ -45,6 +87,7 @@ body.student-registration .registration-school {
     font-size: 13px;
     line-height: 1.3;
     margin: 0;
+    color: rgba(255, 255, 255, 0.92);
 }
 
 body.student-registration .registration-heading h1 {
@@ -56,19 +99,53 @@ body.student-registration .registration-heading h1 {
 body.student-registration .registration-subtitle {
     font-size: 13.5px;
     line-height: 1.5;
-    max-width: 50ch;
+    max-width: 52ch;
     margin: 0;
-    color: rgba(255, 255, 255, 0.86);
+    color: rgba(237, 247, 240, 0.86);
+}
+
+body.student-registration .registration-security {
+    background: #06401e;
+    border: 1px solid #c7dba033;
 }
 
 body.student-registration .text-gold {
-    color: #f3d975;
+    color: #eac255;
 }
 
 body.student-registration .registration-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
+    gap: 16px;
+}
+
+body.student-registration .registration-section-divider {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+    margin-bottom: -4px;
+}
+
+body.student-registration .registration-section-divider:first-of-type {
+    margin-top: 0;
+}
+
+body.student-registration .registration-section-divider span {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #fff0a8;
+    white-space: nowrap;
+}
+
+body.student-registration .registration-section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #dce8bc33;
 }
 
 body.student-registration .registration-field {
@@ -80,7 +157,7 @@ body.student-registration .registration-field {
 
 body.student-registration .registration-label {
     display: block;
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 700;
     line-height: 1.35;
     color: rgba(255, 255, 255, 0.94);
@@ -94,25 +171,26 @@ body.student-registration .registration-optional {
     color: #d6eadc;
 }
 
+/* Match Login dark-emerald input controls */
 body.student-registration .registration-control {
     height: 48px;
     min-height: 48px;
-    background: rgba(5, 36, 17, 0.42);
-    border: 1.5px solid rgba(255, 255, 255, 0.22);
+    background: #064923;
+    border: 1.5px solid #b9d8c1;
     border-radius: 12px;
     color: #ffffff;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.14);
+    box-shadow: inset 0 2px 3px #05341826;
 }
 
 body.student-registration .registration-control::placeholder {
-    color: rgba(235, 247, 239, 0.62);
+    color: rgba(237, 247, 240, 0.72);
     font-weight: 500;
 }
 
 body.student-registration .registration-control:focus {
-    background: rgba(5, 36, 17, 0.56);
-    border-color: #f5d259;
-    box-shadow: 0 0 0 3px rgba(245, 210, 89, 0.22);
+    background: #064b25;
+    border-color: #fff4c7;
+    box-shadow: 0 0 0 3px #fff4c72e;
 }
 
 body.student-registration .input-dark:focus-visible {
@@ -131,6 +209,10 @@ body.student-registration .registration-input-icon {
     justify-content: center;
 }
 
+body.student-registration .registration-input-icon i {
+    color: rgba(237, 247, 240, 0.82);
+}
+
 body.student-registration .registration-lrn-badge {
     position: absolute;
     right: 10px;
@@ -141,35 +223,31 @@ body.student-registration .registration-lrn-badge {
     font-size: 11px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    color: rgba(255, 255, 255, 0.85);
+    background: #0b5f30;
+    border: 1px solid #b9d8c166;
+    color: #edf7f0;
     pointer-events: none;
     transition: all 160ms ease;
 }
 
 body.student-registration .registration-lrn-badge.is-complete {
-    background: rgba(243, 217, 117, 0.2);
-    border-color: rgba(243, 217, 117, 0.55);
-    color: #fff4c7;
+    background: #eac255;
+    border-color: #f5d875;
+    color: #164c2c;
 }
 
 body.student-registration .registration-school-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px 12px;
+    gap: 14px 16px;
     align-items: start;
     min-width: 0;
-}
-
-body.student-registration .registration-school-help {
-    grid-column: 1 / -1;
 }
 
 body.student-registration .registration-guardian-fields {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
+    gap: 16px;
     min-width: 0;
 }
 
@@ -182,7 +260,7 @@ body.student-registration .registration-select {
 }
 
 body.student-registration select option {
-    background: #0e4b27;
+    background: #064923;
     color: #ffffff;
 }
 
@@ -192,13 +270,13 @@ body.student-registration .registration-select-chevron {
     top: 50%;
     transform: translateY(-50%);
     display: inline-flex;
-    color: rgba(255, 255, 255, 0.72);
+    color: #edf7f0;
 }
 
 body.student-registration .registration-help {
     font-size: 12px;
     line-height: 1.45;
-    color: rgba(235, 247, 239, 0.84);
+    color: #d6eadc;
     margin: 0 0 0 2px;
 }
 
@@ -224,15 +302,15 @@ body.student-registration .registration-chip {
     font-size: 12px;
     font-weight: 600;
     line-height: 1.2;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    color: rgba(255, 255, 255, 0.88);
+    background: #06401e;
+    border: 1px solid #c7dba033;
+    color: rgba(255, 255, 255, 0.9);
     transition: all 160ms ease;
 }
 
 body.student-registration .registration-chip.is-met {
-    background: rgba(52, 211, 153, 0.18);
-    border-color: rgba(110, 231, 183, 0.48);
+    background: rgba(52, 211, 153, 0.2);
+    border-color: rgba(110, 231, 183, 0.6);
     color: #d1fae5;
 }
 
@@ -240,6 +318,7 @@ body.student-registration .password-control input {
     padding-right: 76px !important;
 }
 
+/* Match Login password visibility button */
 body.student-registration .password-control .password-visibility {
     right: 6px;
     min-width: 52px;
@@ -250,15 +329,24 @@ body.student-registration .password-control .password-visibility {
     font-weight: 700;
     letter-spacing: 0.02em;
     color: #fff4c7;
-    background: rgba(255, 255, 255, 0.08);
+    background: #064923;
+    border: 1px solid rgba(255, 244, 199, 0.2);
 }
 
 body.student-registration .password-control .password-visibility:hover {
-    background: rgba(255, 255, 255, 0.16);
+    background: #0b5f30;
 }
 
 body.student-registration .registration-consent {
     margin-top: 2px;
+    padding: 4px 6px;
+    border-radius: 14px;
+    background: #06401e80;
+    border: 1px solid #c7dba026;
+}
+
+body.student-registration .registration-consent button {
+    color: #fff0a8;
 }
 
 body.student-registration #terms:focus-visible + div {
@@ -270,7 +358,7 @@ body.student-registration .registration-form > .registration-feedback {
     grid-column: 1 / -1;
     border: 1px solid #edb6aa;
     border-radius: 12px;
-    background: #5e2922;
+    background: #06401e;
     color: #fff2ed;
     padding: 12px 14px;
     font-size: 14px;
@@ -285,11 +373,23 @@ body.student-registration .registration-form > div:has([role=alert]) {
     grid-column: 1 / -1;
 }
 
+/* Match Login gold submit button */
 body.student-registration .registration-form #submitBtn {
     height: 52px;
     min-height: 52px;
-    border-radius: 12px;
-    margin-top: 6px;
+    border-radius: 14px;
+    margin-top: 4px;
+    background: #eac255;
+    border: 1px solid #f5d875;
+    color: #164c2c;
+    box-shadow: 0 5px 12px -7px #05341880, inset 0 1px #fff4c780;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    body.student-registration .registration-form #submitBtn:hover:not(:disabled) {
+        background: #f5d875;
+        box-shadow: 0 7px 16px -7px #05341880, inset 0 1px #fff4c780;
+    }
 }
 
 body.student-registration .registration-form #submitBtn:disabled {
@@ -299,19 +399,25 @@ body.student-registration .registration-form #submitBtn:disabled {
 }
 
 body.student-registration .student-card > .registration-footer {
-    margin-top: 14px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #dce8bc2e;
+}
+
+body.student-registration .student-card > .registration-footer a {
+    color: #fff0a8;
 }
 
 body.student-registration ::selection {
-    background: #f0d06b;
-    color: #123921;
+    background: #eac255;
+    color: #164c2c;
 }
 
 body.student-registration .confirm-summary-list {
     margin: 0;
     border-radius: 14px;
-    background: rgba(5, 36, 17, 0.42);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: #064923;
+    border: 1px solid #b9d8c155;
     overflow: hidden;
 }
 
@@ -366,8 +472,8 @@ body.student-registration .confirm-modal-note {
     margin: 0;
     padding: 8px 11px;
     border-radius: 12px;
-    background: rgba(255, 244, 199, 0.08);
-    border: 1px solid rgba(243, 217, 117, 0.28);
+    background: #06401e;
+    border: 1px solid #eac25555;
     font-size: 12px;
     line-height: 1.4;
     color: rgba(255, 255, 255, 0.92);
@@ -383,14 +489,14 @@ body.student-registration .confirm-modal-note {
 }
 
 body.student-registration .confirm-btn-secondary {
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: #064923;
+    border: 1px solid #b9d8c188;
     color: #ffffff;
 }
 
 body.student-registration .confirm-btn-secondary:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.42);
+    background: #0d6c37;
+    border-color: #e1e8ca;
 }
 
 body.student-registration .confirm-btn-secondary:disabled,
@@ -403,19 +509,19 @@ body.student-registration #confirmSubmitBtn:disabled {
 @media (min-width: 1024px) {
     body.student-registration .registration-form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 20px 24px;
+        gap: 18px 24px;
     }
 
     body.student-registration .registration-school-fields {
         grid-column: 1 / -1;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 6px 24px;
+        gap: 18px 24px;
     }
 
     body.student-registration .registration-guardian-fields {
         grid-column: 1 / -1;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 20px 24px;
+        gap: 18px 24px;
         align-items: start;
     }
 
@@ -424,16 +530,28 @@ body.student-registration #confirmSubmitBtn:disabled {
     }
 }
 
-@media (max-width: 767px) {
-    body.student-registration {
-        padding: 16px 12px;
+@media (max-width: 799px) {
+    body.student-registration.registration-illustrated {
+        --campus-header-height: clamp(128px, 34vw, 172px);
+        padding: calc(var(--campus-header-height) - 28px) 12px 24px;
+        justify-content: flex-start;
+    }
+
+    body.student-registration.registration-illustrated .login-scene-art {
+        object-position: top center;
+    }
+
+    body.student-registration.registration-illustrated .login-scene::after {
+        background: #23483214;
     }
 
     body.student-registration .registration-shell {
         max-width: 600px;
+        margin-block: 0;
     }
 
     body.student-registration .student-card {
+        border-radius: 20px;
         padding: 24px 20px;
     }
 
@@ -442,7 +560,12 @@ body.student-registration #confirmSubmitBtn:disabled {
         text-align: center;
         gap: 12px;
         padding-bottom: 18px;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
+    }
+
+    body.student-registration .registration-heading .registration-logo {
+        width: 58px;
+        height: 58px;
     }
 
     body.student-registration .registration-subtitle {

@@ -152,26 +152,35 @@ $selectedSection = (string) set_value('section');
 <?= view('partials/ui_polish') ?>
 <link rel="stylesheet" href="<?= base_url('css/registration.css?v=' . filemtime(FCPATH . 'css/registration.css')) ?>">
 </head>
-<body class="student-registration bg-student min-h-[100dvh] w-full flex flex-col items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-x-hidden overflow-y-auto" onmousemove="updateSpotlight(event)">
+<body class="student-registration registration-illustrated bg-student min-h-[100dvh] w-full flex flex-col items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-x-hidden overflow-y-auto" onmousemove="updateSpotlight(event)">
 
-    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="login-scene" aria-hidden="true">
+        <?php
+            $campusMain = is_file(FCPATH . 'images/login-campus-quiet.webp') ? filemtime(FCPATH . 'images/login-campus-quiet.webp') : 1;
+            $campusSmall = is_file(FCPATH . 'images/login-campus-quiet-small.webp') ? filemtime(FCPATH . 'images/login-campus-quiet-small.webp') : 1;
+        ?>
+        <img class="login-scene-art"
+             src="<?= base_url('images/login-campus-quiet.webp?v=' . $campusMain) ?>"
+             srcset="<?= base_url('images/login-campus-quiet-small.webp?v=' . $campusSmall) ?> 800w, <?= base_url('images/login-campus-quiet.webp?v=' . $campusMain) ?> 1600w"
+             sizes="100vw" width="1600" height="900" alt="" decoding="async" fetchpriority="high">
         <div id="spotlight-overlay" class="spotlight absolute inset-0 z-10"></div>
-        <div class="bg-grid absolute inset-0"></div>
-        <div class="glow-blob bg-gold w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] top-[-5%] right-[-10%] mix-blend-screen"></div>
-        <div class="glow-blob bg-primary-light w-[400px] h-[400px] sm:w-[600px] sm:h-[600px] bottom-[-10%] left-[-15%] mix-blend-screen" style="animation-delay: -5s; animation-direction: alternate-reverse;"></div>
     </div>
 
     <div class="registration-shell w-full z-20 relative animate-[fadeInUp_0.32s_ease-out] my-auto">
         
-        <!-- Responsive Card Density: structured 8px rhythm across breakpoints -->
+        <!-- Responsive Card Density: matches Login illustrated card styling -->
         <div class="student-card p-5 sm:p-8 md:p-9 rounded-2xl sm:rounded-3xl relative overflow-hidden group transition-shadow duration-500">
             
             <div class="registration-heading">
-                <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="registration-logo object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.45)]">
+                <img src="<?= base_url('images/logo.png?v=6') ?>" alt="SVBSM Logo" class="registration-logo object-contain">
                 <div class="registration-heading-copy">
                     <p class="registration-school text-white/90 font-semibold tracking-wide">St. Vincent Blessed School of Manila, Inc.</p>
                     <h1 class="font-heading font-extrabold tracking-tight text-white leading-tight">Student <span class="text-gold">Registration</span></h1>
                     <p class="registration-subtitle text-white/85 font-medium">Use your school details. Guardian consent and Guidance Office approval are needed before you can sign in.</p>
+                    <div class="registration-security inline-flex items-center gap-2 px-3.5 py-1 rounded-full mt-2.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="text-[11px] font-bold text-white uppercase tracking-widest whitespace-nowrap">🔒 Secure &amp; Confidential</span>
+                    </div>
                 </div>
             </div>
 
@@ -195,7 +204,9 @@ $selectedSection = (string) set_value('section');
             <!-- Registration Form -->
             <form action="<?= base_url('register/process') ?>" method="post" class="registration-form relative z-10 w-full">
                 <?= csrf_field() ?>
-                
+
+                <div class="registration-section-divider"><span>Student information</span></div>
+
                 <div class="registration-field">
                     <label for="name" class="registration-label">Full Name</label>
                     <div class="relative group/input">
@@ -253,9 +264,11 @@ $selectedSection = (string) set_value('section');
                                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 7.5l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </span>
                         </div>
+                        <p id="sectionHelp" class="registration-help" role="status">Choose your grade first.</p>
                     </div>
-                    <p id="sectionHelp" class="registration-help registration-school-help" role="status">Choose your grade first.</p>
                 </div>
+
+                <div class="registration-section-divider"><span>Parent or guardian contact</span></div>
 
                 <div class="registration-guardian-fields">
                     <div class="registration-guardian registration-field">
@@ -284,6 +297,8 @@ $selectedSection = (string) set_value('section');
                         <p id="guardian-email-help" class="registration-help">Optional. If entered, Guidance staff can also email the consent link and safety alerts.</p>
                     </div>
                 </div>
+
+                <div class="registration-section-divider"><span>Account security</span></div>
 
                 <div class="registration-password-fields grid grid-cols-1 md:grid-cols-2">
                     <div class="registration-field">
