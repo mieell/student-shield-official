@@ -161,7 +161,7 @@
     <!-- Header Navigation (Non-print) -->
     <header class="glass-header no-print bg-primary border-b-4 border-[#EAB308] text-white py-3 px-4 sm:px-6 md:px-8 flex flex-wrap justify-between items-center gap-3 shadow-md">
         <div class="flex items-center gap-3 min-w-0 flex-1">
-            <a href="/admin/dashboard" class="text-white hover:text-[#EAB308] transition-colors flex items-center gap-2 shrink-0 min-h-[36px]">
+            <a href="<?= esc(base_url('admin/dashboard'), 'attr') ?>" class="text-white hover:text-[#EAB308] transition-colors flex items-center gap-2 shrink-0 min-h-[36px]">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
@@ -545,10 +545,33 @@
     <!-- Scripting & AJAX Orchestration -->
     <script>
         const studentId = <?= $studentId ?>;
-        const apiBaseUrl = "/admin/api/case-summary";
-        const formBaseUrl = "/admin/case-summary";
+        const apiBaseUrl = "<?= esc(base_url('admin/api/case-summary'), 'js') ?>";
+        const formBaseUrl = "<?= esc(base_url('admin/case-summary'), 'js') ?>";
         let wellnessChart = null;
         let emotionChart = null;
+
+        function showCaseToast(message, type = 'info') {
+            const existing = document.getElementById('caseToastBanner');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'caseToastBanner';
+            toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+            const palette = type === 'error'
+                ? 'bg-red-600 text-white border-red-700'
+                : (type === 'success' ? 'bg-emerald-700 text-white border-emerald-800' : 'bg-slate-800 text-white border-slate-900');
+            toast.className = `no-print fixed bottom-6 right-6 z-50 max-w-md rounded-xl border px-4 py-3 text-sm font-semibold shadow-xl flex items-center gap-3 ${palette}`;
+            const textSpan = document.createElement('span');
+            textSpan.textContent = message;
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.setAttribute('aria-label', 'Dismiss notice');
+            closeBtn.className = 'text-white/80 hover:text-white font-bold leading-none ml-2 cursor-pointer bg-transparent border-0';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => toast.remove();
+            toast.append(textSpan, closeBtn);
+            document.body.appendChild(toast);
+            setTimeout(() => { if (toast.isConnected) toast.remove(); }, 5000);
+        }
 
         // Set date in print footer
         document.querySelectorAll('.print-date').forEach(el => {
@@ -558,7 +581,7 @@
         // Check if student has a pending session request
         let currentHostJoinUrl = null;
         function checkPendingRequest() {
-            fetch(`/admin/api/case-summary/${studentId}/meeting/pending`, {
+            fetch(`${apiBaseUrl}/${studentId}/meeting/pending`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
             .then(r => r.json())
@@ -664,7 +687,7 @@
                 })
                 .catch(err => {
                     console.error("Failed to load case data:", err);
-                    alert("Failed to load case data. Please try again.");
+                    showCaseToast("Failed to load case data. Please refresh and try again.", "error");
                 });
         }
 
@@ -1015,12 +1038,17 @@
         // Note Form Submission
         function submitNote(e) {
             e.preventDefault();
+            const form = document.getElementById('noteForm');
+            const submitBtn = form?.querySelector('button[type="submit"]');
+            if (submitBtn?.disabled) return;
             const noteType = document.getElementById('noteType').value;
             const content = document.getElementById('noteContent').value;
 
             const formData = new FormData();
             formData.append('note_type', noteType);
             formData.append('content', content);
+
+            if (submitBtn) submitBtn.disabled = true;
 
             fetch(`${formBaseUrl}/${studentId}/note`, {
                 method: 'POST',
@@ -1033,11 +1061,15 @@
             })
             .then(data => {
                 document.getElementById('noteContent').value = '';
+                showCaseToast('Counseling note saved.', 'success');
                 loadCaseData();
             })
             .catch(err => {
                 console.error("Note submit error:", err);
-                alert("Failed to submit note. Please try again.");
+                showCaseToast("Failed to submit note. Please try again.", "error");
+            })
+            .finally(() => {
+                if (submitBtn) submitBtn.disabled = false;
             });
         }
 
@@ -1045,7 +1077,7 @@
         function deleteNote(id) {
             if (!confirm("Are you sure you want to delete this counseling note? This action will archive it from active view.")) return;
 
-            fetch("/admin/case-summary/note/delete/" + id, {
+            fetch(`${formBaseUrl}/note/delete/${id}`, {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' }
             })
@@ -1054,11 +1086,12 @@
                 return res.json();
             })
             .then(data => {
+                showCaseToast('Counseling note archived.', 'success');
                 loadCaseData();
             })
             .catch(err => {
                 console.error("Delete note error:", err);
-                alert("Failed to delete note.");
+                showCaseToast("Failed to delete note. Please try again.", "error");
             });
         }
 
@@ -1076,7 +1109,7 @@
 
         function joinGoogleMeeting() {
             if (currentHostJoinUrl) window.open(currentHostJoinUrl, '_blank', 'noopener,noreferrer');
-            else alert('This session is unavailable. Refresh the page and try again.');
+            else showCaseToast('This session is unavailable. Refresh the page and try again.', 'error');
         }
 
         async function endVideoMeeting() {
@@ -1084,7 +1117,7 @@
             const button = document.getElementById('btnEndVideoMeeting');
             button.disabled = true;
             try {
-                const response = await fetch(`/admin/case-summary/${studentId}/meeting/cancel`, {
+                const response = await fetch(`${formBaseUrl}/${studentId}/meeting/cancel`, {
                     method: 'POST',
                     headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''}
                 });
@@ -1093,8 +1126,8 @@
                 currentHostJoinUrl = null;
                 document.getElementById('btnJoinGoogleMeeting').classList.add('hidden');
                 checkPendingRequest();
-                alert(data.message);
-            } catch (e) { alert(e.message); }
+                showCaseToast(data.message || 'Session access closed.', 'success');
+            } catch (e) { showCaseToast(e.message || 'Unable to close the session.', 'error'); }
             finally { button.disabled = false; }
         }
 
@@ -1106,7 +1139,7 @@
             button.textContent = 'Publishing...';
             error.classList.add('hidden');
             const body = new URLSearchParams(new FormData(document.getElementById('googleMeetForm')));
-            fetch(`/admin/case-summary/${studentId}/meeting/start`, {
+            fetch(`${formBaseUrl}/${studentId}/meeting/start`, {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
                 body

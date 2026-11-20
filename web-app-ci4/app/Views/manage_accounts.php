@@ -16,7 +16,7 @@
 <?= csrf_field() ?>
 <label>Account name<input name="name" required maxlength="255" autocomplete="off" placeholder="e.g. Guidance Counselor 1"></label>
 <label>Role<select name="role"><?php foreach (\App\Libraries\RoleAccess::NAMES as $value => $label): ?><option value="<?= $value ?>"><?= esc($label) ?></option><?php endforeach; ?></select></label>
-<label>Password<input name="passcode" type="password" data-password-toggle minlength="8" required autocomplete="new-password" placeholder="Minimum 8 characters"></label>
+<label>Password<input name="passcode" type="password" data-password-toggle minlength="8" maxlength="72" required autocomplete="new-password" placeholder="8+ chars (upper, lower, number, symbol)"></label>
 <?= view('partials/account_contacts', ['contactAccount' => []]) ?>
 <p>New Student accounts remain pending until a Counselor approves them.</p>
 <button type="submit">Create account</button>
@@ -51,6 +51,9 @@
 <div role="cell" class="directory-role"><span class="role-badge <?= $roleBadgeClass ?>"><?= esc($roleLabel) ?></span></div>
 <div role="cell" class="directory-status">
         <span class="status-badge <?= $user['access_disabled'] ? 'badge-disabled' : 'badge-enabled' ?>"><?= $user['access_disabled'] ? 'Disabled' : 'Enabled' ?></span>
+        <?php if ($role === 0 && !empty($user['is_locked'])): ?>
+            <span class="status-badge badge-disabled">Reporting locked</span>
+        <?php endif; ?>
         <?php if ($role === 0 && !empty($user['registration_status'])): ?>
             <small><?= esc(ucfirst($user['registration_status'])) ?> registration</small>
         <?php endif; ?>
@@ -62,9 +65,12 @@
 <?= csrf_field() ?>
 <?php if ($role !== 0): ?><label>Account name<input name="name" value="<?= esc($user['name'], 'attr') ?>" maxlength="255" required></label><?php endif; ?>
 <label>Role<select name="role"><?php foreach (\App\Libraries\RoleAccess::NAMES as $value => $label): ?><option value="<?= $value ?>" <?= $role === $value ? 'selected' : '' ?>><?= esc($label) ?></option><?php endforeach; ?></select></label>
-<label>Reset password<input name="passcode" type="password" data-password-toggle minlength="8" autocomplete="new-password" placeholder="Leave blank to keep current"></label>
+<label>Reset password<input name="passcode" type="password" data-password-toggle minlength="8" maxlength="72" autocomplete="new-password" placeholder="Leave blank to keep (8+ chars, upper/lower/num/symbol)"></label>
 <?= view('partials/account_contacts', ['contactAccount' => $user]) ?>
 <button type="submit">Save account</button></form>
+<?php if ($role === 0 && !empty($user['is_locked'])): ?>
+<form method="post" action="<?= base_url('admin/users/unlock/' . (int) $user['id']) ?>" class="account-unlock"><?= csrf_field() ?><button type="submit" class="secondary">Unlock reporting</button></form>
+<?php endif; ?>
 <?php if ((int) $user['id'] !== (int) session()->get('user_id')): ?>
 <form method="post" action="<?= base_url('admin/users/access/' . (int) $user['id']) ?>" class="account-access"><?= csrf_field() ?><input type="hidden" name="disabled" value="<?= $user['access_disabled'] ? '0' : '1' ?>"><button type="submit" class="secondary"><?= $user['access_disabled'] ? 'Enable account' : 'Disable account' ?></button></form>
 <?php endif; ?>

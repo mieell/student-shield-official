@@ -541,6 +541,27 @@ $pageDescriptions = [
     <!-- Main Content -->
     <main id="staffMain" class="staff-main container mx-auto px-3 sm:px-6 max-w-full flex-1 animate-fade-in pt-4 sm:pt-6">
 
+        <?php $dashSuccess = session()->getFlashdata('message') ?? session()->getFlashdata('success'); ?>
+        <?php $dashError = session()->getFlashdata('error'); ?>
+        <?php if ($dashSuccess): ?>
+        <div role="status" class="mb-5 flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 shadow-sm">
+            <div class="flex items-start gap-2.5">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                <span><?= esc($dashSuccess) ?></span>
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" aria-label="Dismiss notification" class="text-emerald-700 hover:text-emerald-950 font-bold leading-none px-1 cursor-pointer bg-transparent border-0">&times;</button>
+        </div>
+        <?php endif; ?>
+        <?php if ($dashError): ?>
+        <div role="alert" class="mb-5 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-900 shadow-sm">
+            <div class="flex items-start gap-2.5">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                <span><?= esc($dashError) ?></span>
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" aria-label="Dismiss error" class="text-red-700 hover:text-red-950 font-bold leading-none px-1 cursor-pointer bg-transparent border-0">&times;</button>
+        </div>
+        <?php endif; ?>
+
         <!-- Welcome Metric Row -->
         <div class="staff-page-intro mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slide-up"
             style="animation-delay: 0.1s">

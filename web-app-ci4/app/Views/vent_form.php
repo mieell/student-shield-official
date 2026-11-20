@@ -295,11 +295,25 @@
         document.getElementById('ventForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
+            if (btn.disabled) return;
             const text = document.getElementById('btnText');
             const icon = document.getElementById('btnIcon');
             const spinner = document.getElementById('btnSpinner');
             const form = document.getElementById('ventForm');
 
+            function showVentErrorToast(message) {
+                const errToast = document.createElement('div');
+                errToast.setAttribute('role', 'alert');
+                errToast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3.5 rounded-xl shadow-xl shadow-red-500/20 text-sm font-semibold flex items-center gap-2.5 z-[110]';
+                errToast.innerHTML = '<svg class="w-5 h-5 text-white shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>';
+                const msgSpan = document.createElement('span');
+                msgSpan.textContent = message;
+                errToast.appendChild(msgSpan);
+                document.body.appendChild(errToast);
+                setTimeout(() => { errToast.style.opacity = '0'; errToast.style.transition = 'opacity 0.4s'; setTimeout(() => errToast.remove(), 400); }, 4500);
+            }
+
+            btn.disabled = true;
             btn.classList.add('opacity-90', 'cursor-wait');
             text.innerText = 'Encrypting & Sending...';
             icon.classList.add('hidden');
@@ -317,13 +331,15 @@
             .then(r => {
                 // Session expired: server returned a non-JSON redirect or 401
                 if (r.status === 401) {
+                    btn.disabled = false;
                     btn.classList.remove('opacity-90', 'cursor-wait');
                     text.innerText = 'Submit securely';
                     spinner.classList.add('hidden');
                     icon.classList.remove('hidden');
                     const errToast = document.createElement('div');
+                    errToast.setAttribute('role', 'alert');
                     errToast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-6 py-3.5 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-2.5 z-[110]';
-                    errToast.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg> Your session expired. <a href="/login" class="underline font-bold ml-1">Click here to log in again</a>.';
+                    errToast.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg> Your session expired. <a href="<?= esc(base_url('login'), 'attr') ?>" class="underline font-bold ml-1">Click here to log in again</a>.';
                     document.body.appendChild(errToast);
                     setTimeout(() => { errToast.style.opacity = '0'; errToast.style.transition = 'opacity 0.4s'; setTimeout(() => errToast.remove(), 400); }, 7000);
                     throw new Error('session_expired'); // stop the chain
@@ -336,16 +352,12 @@
             .then(data => {
                 // QA BUG FIX: Do not clear textarea or show 'Success' if backend returns error/rate-limit!
                 if (data.status === 'error') {
+                    btn.disabled = false;
                     btn.classList.remove('opacity-90', 'cursor-wait');
                     text.innerText = 'Submit securely';
                     spinner.classList.add('hidden');
                     icon.classList.remove('hidden');
-                    
-                    const errToast = document.createElement('div');
-                    errToast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3.5 rounded-xl shadow-xl shadow-red-500/20 text-sm font-semibold flex items-center gap-2.5 z-[110] animate-[slideUp_0.4s_ease-out]';
-                    errToast.innerHTML = '<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg> ' + data.message;
-                    document.body.appendChild(errToast);
-                    setTimeout(() => { errToast.style.opacity = '0'; errToast.style.transition = 'opacity 0.4s'; setTimeout(() => errToast.remove(), 400); }, 4000);
+                    showVentErrorToast(data.message || 'Could not send your check-in. Please try again.');
                     return;
                 }
 
@@ -380,26 +392,20 @@
                     document.body.appendChild(toast);
                     setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.5s'; setTimeout(() => toast.remove(), 500); }, 3500);
                 }
-                setTimeout(() => { btn.style.background = ''; text.innerText = 'Submit securely'; icon.classList.remove('hidden'); }, 3000);
+                setTimeout(() => { btn.disabled = false; btn.style.background = ''; text.innerText = 'Submit securely'; icon.classList.remove('hidden'); }, 3000);
             })
             .catch(err => {
                 if (err.message === 'session_expired') return; // already handled above
                 console.error('Vent submission error:', err);
+                btn.disabled = false;
                 text.innerText = 'Submit securely'; spinner.classList.add('hidden'); icon.classList.remove('hidden');
                 btn.classList.remove('opacity-90', 'cursor-wait');
-                // Distinguish: SyntaxError = response wasn't JSON (unexpected server crash)
-                // err.message starts with 'Server error' = we got an HTTP error back
-                // Everything else = true network failure
                 let userMsg = err instanceof SyntaxError
                     ? 'Server error. Your vent was not sent. Please try again.'
                     : (err.message && err.message.startsWith('Server error')
                         ? err.message.replace(/^Server error \d+:\s*/, '').trim() || 'Server error. Please try again.'
                         : 'Network error. Please check your connection and try again.');
-                const errToast = document.createElement('div');
-                errToast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3.5 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-2.5 z-[110]';
-                errToast.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg> ' + userMsg;
-                document.body.appendChild(errToast);
-                setTimeout(() => { errToast.style.opacity = '0'; errToast.style.transition = 'opacity 0.4s'; setTimeout(() => errToast.remove(), 400); }, 5000);
+                showVentErrorToast(userMsg);
             });
         });
 

@@ -77,10 +77,29 @@
             const name = form.querySelector('[name=name]')?.value || form.dataset.accountName || 'this account';
             if (changes.length && !window.confirm(`Confirm contact details for ${name}\n\n${changes.join('\n')}\n\nSave these changes?`)) {
                 event.preventDefault();
+                return;
+            }
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn && !submitBtn.disabled) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Saving...';
             }
         });
         accountRole.addEventListener('change', updateContactFields);
         updateContactFields();
+    });
+
+    workspace.querySelectorAll('.account-access, .account-unlock').forEach(form => {
+        form.addEventListener('submit', event => {
+            const btn = form.querySelector('button[type="submit"]');
+            if (!btn) return;
+            if (btn.disabled) {
+                event.preventDefault();
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+        });
     });
 
     function closeInspector(returnFocus = false) {

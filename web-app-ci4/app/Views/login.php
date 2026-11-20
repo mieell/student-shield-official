@@ -211,6 +211,19 @@
             </div>
 
             <div class="login-fields">
+            <!-- Success / Notice Flash -->
+            <?php $loginSuccess = session()->getFlashdata('success') ?? session()->getFlashdata('message'); ?>
+            <?php if ($loginSuccess): ?>
+                <div role="status" class="bg-emerald-500/15 backdrop-blur-md border border-emerald-400/35 p-3.5 sm:p-4 mb-5 sm:mb-6 rounded-2xl shadow-lg">
+                    <div class="flex items-start gap-3">
+                        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-400/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-check text-emerald-300 text-sm"></i>
+                        </div>
+                        <p class="text-[13px] sm:text-[14px] font-bold text-emerald-100 leading-snug tracking-tight pt-1 pr-1"><?= esc($loginSuccess) ?></p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- Error Flash -->
             <?php if (session()->getFlashdata('error')): ?>
                 <div role="alert" class="auth-error bg-red-500/10 backdrop-blur-md border border-red-500/30 p-3.5 sm:p-4 mb-5 sm:mb-8 rounded-2xl shadow-lg">
@@ -276,6 +289,9 @@
 
                 <div class="text-center mt-4 sm:mt-5 space-y-1">
                     <p class="text-white/70 text-[13px]">
+                        <button type="button" id="forgotPasswordBtn" class="inline-block py-1.5 px-2 text-white/85 hover:text-gold font-semibold underline underline-offset-2 transition-colors duration-200 cursor-pointer bg-transparent border-0">Forgot password?</button>
+                    </p>
+                    <p class="text-white/70 text-[13px]">
                         New student?
                         <a href="<?= base_url('register') ?>" class="inline-block py-2 px-1 text-gold-light hover:text-gold font-bold underline underline-offset-2 transition-colors duration-200 min-h-[44px]">Register here</a>
                     </p>
@@ -289,6 +305,24 @@
             
         </div>
         
+    </div>
+
+    <!-- Forgot Password Guidance Modal -->
+    <div id="forgotPasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
+        <div class="bg-[#0b5f30] border border-[#e1e8ca]/40 text-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <h2 id="forgotPasswordTitle" class="text-lg font-heading font-extrabold text-white">Need a password reset?</h2>
+                <button type="button" id="closeForgotPasswordModal" aria-label="Close password reset help" class="text-white/75 hover:text-white text-xl leading-none px-2 py-1 cursor-pointer bg-transparent border-0">&times;</button>
+            </div>
+            <p class="text-sm text-white/85 leading-relaxed mb-3">
+                For student safety and identity protection, StudentShield passwords are reset only after school verification:
+            </p>
+            <ul class="text-sm text-white/90 space-y-2 mb-5 pl-4 list-disc">
+                <li><strong>Students:</strong> Visit or contact the <strong>SVBSM Guidance Office</strong> with your Student ID or LRN.</li>
+                <li><strong>Counselors &amp; Staff:</strong> Contact your <strong>System Administrator</strong> to reset your account password.</li>
+            </ul>
+            <button type="button" id="dismissForgotPasswordModal" class="w-full py-2.5 px-4 rounded-xl bg-[#eac255] hover:bg-[#f5d875] text-[#164c2c] font-bold text-sm transition-colors cursor-pointer">Understood</button>
+        </div>
     </div>
 
 <script>
@@ -358,11 +392,31 @@
         });
     })();
 
-    document.querySelector('form').addEventListener('submit', function() {
+    (function () {
+        const modal = document.getElementById('forgotPasswordModal');
+        const openBtn = document.getElementById('forgotPasswordBtn');
+        const closeBtn = document.getElementById('closeForgotPasswordModal');
+        const dismissBtn = document.getElementById('dismissForgotPasswordModal');
+        if (!modal || !openBtn) return;
+        const open = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); closeBtn?.focus(); };
+        const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); openBtn.focus(); };
+        openBtn.addEventListener('click', open);
+        closeBtn?.addEventListener('click', close);
+        dismissBtn?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) close(); });
+    })();
+
+    document.querySelector('form').addEventListener('submit', function(e) {
         const btn = document.getElementById('submitBtn');
+        if (btn.disabled) {
+            e.preventDefault();
+            return;
+        }
         const text = document.getElementById('btnText');
         const icon = document.getElementById('btnIcon');
         const spinner = document.getElementById('btnSpinner');
+        btn.disabled = true;
         btn.classList.add('opacity-80', 'cursor-wait', 'scale-[0.98]');
         text.innerText = 'Authenticating...';
         icon.classList.add('hidden');

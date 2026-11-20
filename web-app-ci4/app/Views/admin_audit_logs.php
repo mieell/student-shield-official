@@ -61,6 +61,26 @@
     <?= view('partials/staff_navigation', ['staffPage' => 'audit-logs', 'staffPageLabel' => 'Audit Logs']) ?>
 
     <main id="staffMain" class="staff-main container mx-auto px-6 py-8">
+        <?php
+            $auditSuccess = session()->getFlashdata('success') ?? session()->getFlashdata('message');
+            $auditError = session()->getFlashdata('error');
+            $filterSearch = (string) ($filterSearch ?? '');
+            $filterCategory = (string) ($filterCategory ?? 'all');
+            $filterDate = (string) ($filterDate ?? '');
+            $hasActiveServerFilters = ($filterSearch !== '' || $filterCategory !== 'all' || $filterDate !== '');
+        ?>
+        <?php if ($auditSuccess): ?>
+        <div role="status" class="mb-5 flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 shadow-sm">
+            <span><?= esc($auditSuccess) ?></span>
+            <button type="button" onclick="this.parentElement.remove()" aria-label="Dismiss notification" class="text-emerald-700 hover:text-emerald-950 font-bold leading-none px-1 cursor-pointer bg-transparent border-0">&times;</button>
+        </div>
+        <?php endif; ?>
+        <?php if ($auditError): ?>
+        <div role="alert" class="mb-5 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-900 shadow-sm">
+            <span><?= esc($auditError) ?></span>
+            <button type="button" onclick="this.parentElement.remove()" aria-label="Dismiss error" class="text-red-700 hover:text-red-950 font-bold leading-none px-1 cursor-pointer bg-transparent border-0">&times;</button>
+        </div>
+        <?php endif; ?>
         <div class="staff-page-heading flex items-center justify-between mb-8">
             <div>
                 <h2 class="text-2xl font-heading font-bold text-gray-900"><?= $isCounselorView ? 'Guidance Audit Logs' : 'System Audit Logs' ?></h2>
@@ -133,28 +153,29 @@
                     <p id="exportEmptyHint" class="hidden text-xs text-amber-700 font-medium">Select at least one category checkbox above to download audit logs.</p>
                 </form>
             </section>
-            <div class="staff-filter-bar px-6 py-3 flex justify-between items-center bg-white border-b border-gray-100 flex-wrap gap-2">
+            <form method="get" action="<?= esc(base_url('admin/audit-logs'), 'attr') ?>" id="auditFilterForm" class="staff-filter-bar px-6 py-3 flex justify-between items-center bg-white border-b border-gray-100 flex-wrap gap-2">
                 <div class="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm relative">
                     <svg class="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    <input type="text" id="searchLogs" aria-label="Search logs" placeholder="<?= $isCounselorView ? 'Search actor, action, or time...' : 'Search actor, action, IP, or time...' ?>" class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 transition-all">
+                    <input type="text" name="q" id="searchLogs" value="<?= esc($filterSearch, 'attr') ?>" aria-label="Search logs" placeholder="<?= $isCounselorView ? 'Search actor, action, or ID...' : 'Search actor, action, IP, or ID...' ?>" class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 transition-all">
                 </div>
                 <div class="staff-filter-controls flex items-center gap-2 flex-wrap">
-                    <select id="filterCategoryLogs" aria-label="Filter audit category" class="text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 bg-white cursor-pointer transition-all">
-                        <option value="all">All Categories</option>
-                        <option value="INCIDENT">Incident</option>
-                        <option value="VENT">Vent</option>
-                        <option value="STUDENT">Case &amp; Student</option>
-                        <option value="MEETING">Session</option>
-                        <option value="COUNSELOR_NOTE">Counselor Note</option>
-                        <option value="USER"><?= $isCounselorView ? 'Registration &amp; Consent' : 'User' ?></option>
+                    <select name="category" id="filterCategoryLogs" aria-label="Filter audit category" class="text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 bg-white cursor-pointer transition-all">
+                        <option value="all" <?= $filterCategory === 'all' ? 'selected' : '' ?>>All Categories</option>
+                        <option value="INCIDENT" <?= $filterCategory === 'INCIDENT' ? 'selected' : '' ?>>Incident</option>
+                        <option value="VENT" <?= $filterCategory === 'VENT' ? 'selected' : '' ?>>Vent</option>
+                        <option value="STUDENT" <?= $filterCategory === 'STUDENT' ? 'selected' : '' ?>>Case &amp; Student</option>
+                        <option value="MEETING" <?= $filterCategory === 'MEETING' ? 'selected' : '' ?>>Session</option>
+                        <option value="COUNSELOR_NOTE" <?= $filterCategory === 'COUNSELOR_NOTE' ? 'selected' : '' ?>>Counselor Note</option>
+                        <option value="USER" <?= $filterCategory === 'USER' ? 'selected' : '' ?>><?= $isCounselorView ? 'Registration &amp; Consent' : 'User' ?></option>
                         <?php if (!$isCounselorView): ?>
-                        <option value="SYSTEM">System (Login/Logout)</option>
+                        <option value="SYSTEM" <?= $filterCategory === 'SYSTEM' ? 'selected' : '' ?>>System (Login/Logout)</option>
                         <?php endif; ?>
                     </select>
-                    <input type="date" id="filterDateLogs" aria-label="Filter audit date" class="text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 text-gray-700 bg-white cursor-pointer transition-all">
-                    <button type="button" id="clearFiltersLogs" class="text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 px-3.5 py-2 min-h-[38px] rounded-lg border border-gray-200 transition-colors cursor-pointer">✕ Clear</button>
+                    <input type="date" name="date" id="filterDateLogs" value="<?= esc($filterDate, 'attr') ?>" aria-label="Filter audit date" class="text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#0B5E2E] focus:ring-2 focus:ring-[#0B5E2E]/20 text-gray-700 bg-white cursor-pointer transition-all">
+                    <button type="submit" id="applyFiltersLogs" class="text-xs font-semibold text-white bg-[#096328] hover:bg-[#075826] px-3.5 py-2 min-h-[38px] rounded-lg transition-colors cursor-pointer">Filter all pages</button>
+                    <a href="<?= esc(base_url('admin/audit-logs'), 'attr') ?>" id="clearFiltersLogs" class="inline-flex items-center justify-center text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 px-3.5 py-2 min-h-[38px] rounded-lg border border-gray-200 transition-colors cursor-pointer">✕ Clear</a>
                 </div>
-            </div>
+            </form>
             
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse" id="logsTable">
@@ -295,13 +316,11 @@
         }
 
         document.getElementById('searchLogs').addEventListener('input', applyAuditFilters);
-        document.getElementById('filterCategoryLogs').addEventListener('change', applyAuditFilters);
-        document.getElementById('filterDateLogs').addEventListener('change', applyAuditFilters);
-        document.getElementById('clearFiltersLogs').addEventListener('click', function() {
-            document.getElementById('searchLogs').value = '';
-            document.getElementById('filterCategoryLogs').value = 'all';
-            document.getElementById('filterDateLogs').value = '';
-            applyAuditFilters();
+        document.getElementById('filterCategoryLogs').addEventListener('change', function() {
+            document.getElementById('auditFilterForm').submit();
+        });
+        document.getElementById('filterDateLogs').addEventListener('change', function() {
+            document.getElementById('auditFilterForm').submit();
         });
 
         (function initAuditExportControls() {

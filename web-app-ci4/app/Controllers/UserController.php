@@ -8,7 +8,7 @@ class UserController extends BaseController
         if (!$this->hasRole(2)) return $this->forbidden();
         // Account and guardian contacts are available only to Super Admins.
         $users = \Config\Database::connect()->table('users')
-            ->select('users.id, users.name, users.role, users.access_disabled, users.registration_status, users.created_at, students.student_id, students.grade_level, students.section, students.adviser_name, students.parent_phone, students.parent_email')
+            ->select('users.id, users.name, users.role, users.access_disabled, users.is_locked, users.registration_status, users.created_at, students.student_id, students.grade_level, students.section, students.adviser_name, students.parent_phone, students.parent_email')
             ->select('SUBSTR(students.lrn, -4) AS lrn_suffix', false)
             ->select('CASE WHEN users.role = 1 THEN counselors.counselor_phone ELSE admins.phone END AS phone, CASE WHEN users.role = 1 THEN counselors.counselor_email ELSE admins.email END AS email', false)
             ->join('students', 'students.user_id = users.id AND users.role = 0', 'left')
@@ -66,8 +66,14 @@ class UserController extends BaseController
         }
         $removeEmail = $removeEmail === '1';
         $removePhone = $removePhone === '1';
-        if (($id === null || $password !== '') && strlen($password) < 8) {
-            return redirect()->to('/admin/users')->with('error', 'Use a password of at least 8 characters.');
+        if ($id === null || $password !== '') {
+            if (strlen($password) < 8 || strlen($password) > 72
+                || !preg_match('/[A-Z]/', $password)
+                || !preg_match('/[a-z]/', $password)
+                || !preg_match('/[0-9]/', $password)
+                || !preg_match('/[\W_]/', $password)) {
+                return redirect()->to('/admin/users')->with('error', 'Use 8–72 characters with at least one uppercase letter, lowercase letter, number, and special character.');
+            }
         }
         if ($id === (int) session()->get('user_id') && $role !== 2) return redirect()->to('/admin/users')->with('error', 'You cannot demote your own account.');
         $duplicate = $db->table('users')->where('name', $name);

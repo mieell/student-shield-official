@@ -269,5 +269,36 @@
         <a class="nav-link" href="<?= esc(site_url('login'), 'attr') ?>">Return to StudentShield sign-in</a>
     <?php endif; ?>
 </main>
+<script>
+document.querySelectorAll('main form').forEach(form => {
+    let clickedSubmitter = null;
+    form.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => { clickedSubmitter = btn; });
+    });
+    form.addEventListener('submit', event => {
+        if (form.dataset.submitting === '1') {
+            event.preventDefault();
+            return;
+        }
+        form.dataset.submitting = '1';
+        const submitter = event.submitter || clickedSubmitter;
+        if (submitter && submitter.name) {
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = submitter.name;
+            hidden.value = submitter.value;
+            form.appendChild(hidden);
+        }
+        form.querySelectorAll('button').forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.75';
+            btn.style.cursor = 'wait';
+        });
+        if (submitter) {
+            submitter.textContent = 'Submitting...';
+        }
+    });
+});
+</script>
 </body>
 </html>

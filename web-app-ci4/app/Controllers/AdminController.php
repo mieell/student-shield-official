@@ -102,6 +102,14 @@ class AdminController extends BaseController
         $db = \Config\Database::connect();
         \App\Libraries\ManilaTime::syncDatabaseSession($db);
 
+        $exportCategories = \App\Libraries\AuditLogExport::categoriesForRole($role);
+        $allowedCategories = array_keys($exportCategories);
+        $filterSearch = trim((string) ($this->request->getGet('q') ?? ''));
+        $rawCategory = strtoupper(trim((string) ($this->request->getGet('category') ?? 'all')));
+        $filterCategory = in_array($rawCategory, $allowedCategories, true) ? $rawCategory : 'all';
+        $rawDate = trim((string) ($this->request->getGet('date') ?? ''));
+        $filterDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDate) === 1 ? $rawDate : '';
+
         $pager = null;
         $logs = [];
         if ($db->tableExists('audit_logs')) {
@@ -126,6 +134,26 @@ class AdminController extends BaseController
                 ->groupEnd();
             }
 
+            if ($filterCategory !== 'all') {
+                $auditModel->where('audit_logs.entity_type', strtolower($filterCategory));
+            }
+            if ($filterDate !== '') {
+                $auditModel->where('DATE(audit_logs.created_at) =', $filterDate);
+            }
+            if ($filterSearch !== '') {
+                $auditModel->groupStart()
+                    ->like('audit_logs.action', $filterSearch)
+                    ->orLike('audit_logs.entity_type', $filterSearch)
+                    ->orLike('users.name', $filterSearch);
+                if (!$isCounselorView) {
+                    $auditModel->orLike('audit_logs.ip_address', $filterSearch);
+                }
+                if (ctype_digit($filterSearch)) {
+                    $auditModel->orWhere('audit_logs.entity_id', (int) $filterSearch);
+                }
+                $auditModel->groupEnd();
+            }
+
             $logs = $auditModel
                 ->orderBy('audit_logs.created_at', 'DESC')
                 ->orderBy('audit_logs.id', 'DESC')
@@ -138,7 +166,10 @@ class AdminController extends BaseController
             'logs' => $logs,
             'pager' => $pager,
             'isCounselorView' => $isCounselorView,
-            'exportCategories' => \App\Libraries\AuditLogExport::categoriesForRole($role),
+            'exportCategories' => $exportCategories,
+            'filterSearch' => $filterSearch,
+            'filterCategory' => $filterCategory,
+            'filterDate' => $filterDate,
         ]);
     }
 

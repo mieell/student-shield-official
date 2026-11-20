@@ -33,6 +33,15 @@ $description = ['profile' => 'Your identity and access within StudentShield.', '
 <p id="profilePasswordHint" class="profile-field-hint">Confirm your password to save these changes.</p>
 <div class="profile-save-actions"><button type="submit">Save profile</button><button type="reset" class="secondary">Reset changes</button></div>
 </form></section>
+<section class="account-surface"><div class="account-section-title"><h2>Change password</h2><span>Account security</span></div>
+<form method="post" action="<?= base_url('staff/password') ?>" class="profile-edit-form" id="staffPasswordForm">
+<?= csrf_field() ?>
+<label for="changeCurrentPassword">Current password<input id="changeCurrentPassword" name="current_password" type="password" data-password-toggle autocomplete="current-password" required></label>
+<label for="changeNewPassword">New password<input id="changeNewPassword" name="new_password" type="password" data-password-toggle minlength="8" maxlength="72" autocomplete="new-password" required aria-describedby="newPasswordHint"></label>
+<p id="newPasswordHint" class="profile-field-hint">Use 8–72 characters with uppercase, lowercase, a number, and a special character.</p>
+<label for="changeConfirmPassword">Confirm new password<input id="changeConfirmPassword" name="new_password_confirm" type="password" data-password-toggle minlength="8" maxlength="72" autocomplete="new-password" required></label>
+<div class="profile-save-actions"><button type="submit">Update password</button></div>
+</form></section>
 <section class="account-surface"><h2>Your workspace access</h2><p><?= $role === 2 ? 'Account management and system audit activity.' : ($role === 1 ? 'Student case review, consultations, registration decisions and guidance audit logs.' : 'School-level analytics and aggregate report exports.') ?></p><div class="account-access-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3l8 4v6c0 5-8 8-8 8s-8-3-8-8V7zM8 12l3 3 5-6"/></svg><span>Access follows your assigned role. Student clinical details are restricted to the guidance office.</span></div></section>
 </div></div>
 <?php endif; ?>

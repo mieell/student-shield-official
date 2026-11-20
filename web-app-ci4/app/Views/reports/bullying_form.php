@@ -97,6 +97,14 @@
                 <div class="student-report-panel" <?= $showReportHistory ? 'hidden' : '' ?>>
                 <div class="vent-workspace">
                 <div class="vent-composer">
+                <div id="bullyingClientError" role="alert" hidden class="bg-red-50 border-l-4 border-red-400 p-4 mb-5 rounded-r-xl flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <svg class="h-5 w-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        <p id="bullyingClientErrorText" class="font-medium text-sm text-red-700"></p>
+                    </div>
+                    <button type="button" onclick="document.getElementById('bullyingClientError').hidden = true" aria-label="Dismiss error" class="text-red-600 hover:text-red-900 font-bold leading-none px-1 cursor-pointer bg-transparent border-0">&times;</button>
+                </div>
+
                 <!-- Incident Report Form -->
                 <form action="<?= base_url('report-bullying/submit') ?>" method="POST" id="bullyingForm" enctype="multipart/form-data" class="student-entry-form">
                     <div class="hidden"><?= csrf_field() ?></div>
@@ -147,7 +155,10 @@
                         </div>
                         
                         <div class="report-evidence">
-                            <label id="evidenceLabel" for="evidence_file">Attach evidence (optional)</label>
+                            <div class="flex items-center justify-between gap-2">
+                                <label id="evidenceLabel" for="evidence_file">Attach evidence (optional)</label>
+                                <button type="button" id="clearEvidenceBtn" hidden class="text-xs font-semibold text-red-600 hover:text-red-800 hover:underline bg-transparent border-0 cursor-pointer">Remove file</button>
+                            </div>
                             <div class="report-upload">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3M12 16V3m-5 5 5-5 5 5"/></svg>
                                 <span class="report-upload-copy"><span id="evidenceFileName" role="status">Choose a photo or video</span><span id="evidenceHelp">Maximum file size: 10 MB</span></span>
@@ -328,16 +339,58 @@
             }
         });
 
-        document.getElementById('evidence_file').addEventListener('change', function () {
-            document.getElementById('evidenceFileName').textContent = this.files[0]?.name || 'Choose a photo or video';
+        function showBullyingValidationError(message) {
+            const box = document.getElementById('bullyingClientError');
+            const textEl = document.getElementById('bullyingClientErrorText');
+            if (!box || !textEl) return;
+            textEl.textContent = message;
+            box.hidden = false;
+            box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        const evidenceInput = document.getElementById('evidence_file');
+        const evidenceFileName = document.getElementById('evidenceFileName');
+        const clearEvidenceBtn = document.getElementById('clearEvidenceBtn');
+        const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
+
+        evidenceInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) {
+                evidenceFileName.textContent = 'Choose a photo or video';
+                if (clearEvidenceBtn) clearEvidenceBtn.hidden = true;
+                return;
+            }
+            if (file.size > MAX_EVIDENCE_BYTES) {
+                this.value = '';
+                evidenceFileName.textContent = 'Choose a photo or video';
+                if (clearEvidenceBtn) clearEvidenceBtn.hidden = true;
+                showBullyingValidationError('Evidence file must be 10 MB or smaller.');
+                return;
+            }
+            evidenceFileName.textContent = file.name;
+            if (clearEvidenceBtn) clearEvidenceBtn.hidden = false;
+            const box = document.getElementById('bullyingClientError');
+            if (box) box.hidden = true;
+        });
+
+        clearEvidenceBtn?.addEventListener('click', function () {
+            evidenceInput.value = '';
+            evidenceFileName.textContent = 'Choose a photo or video';
+            clearEvidenceBtn.hidden = true;
         });
 
         // Form Submit Handler
         document.getElementById('bullyingForm').addEventListener('submit', function(e) {
             const btn = document.getElementById('submitBtn');
+            if (btn.disabled) {
+                e.preventDefault();
+                return;
+            }
             const text = document.getElementById('btnText');
             const icon = document.getElementById('btnIcon');
             const spinner = document.getElementById('btnSpinner');
+            const errBox = document.getElementById('bullyingClientError');
+            if (errBox) errBox.hidden = true;
 
             // Client-side validation
             const aggressor = document.getElementById('aggressor_name').value.trim();
@@ -345,9 +398,9 @@
             const role = document.getElementById('roleInput').value;
             const victimName = document.getElementById('victim_name').value.trim();
 
-            if (!document.getElementById('bully-student').value || (document.getElementById('bully-student').value === 'unknown' && !aggressor)) { e.preventDefault(); alert("Please tell us who is doing the bullying."); const picker = document.querySelector('.student-picker[data-person=bully]'); (picker.querySelector('.directory-description:not([hidden])') || picker.querySelector('.directory-search:not(:disabled)') || picker.querySelector('.directory-grade')).focus(); return; }
-            if (!details) { e.preventDefault(); alert('Please describe what happened.'); document.getElementById('incident_details').focus(); return; }
-            if (role === 'bystander' && (!document.getElementById('victim-student').value || (document.getElementById('victim-student').value === 'unknown' && !victimName))) { e.preventDefault(); alert("Please enter the victim's name."); const picker = document.querySelector('.student-picker[data-person=victim]'); (picker.querySelector('.directory-description:not([hidden])') || picker.querySelector('.directory-search:not(:disabled)') || picker.querySelector('.directory-grade')).focus(); return; }
+            if (!document.getElementById('bully-student').value || (document.getElementById('bully-student').value === 'unknown' && !aggressor)) { e.preventDefault(); showBullyingValidationError('Please tell us who is doing the bullying.'); const picker = document.querySelector('.student-picker[data-person=bully]'); (picker.querySelector('.directory-description:not([hidden])') || picker.querySelector('.directory-search:not(:disabled)') || picker.querySelector('.directory-grade')).focus(); return; }
+            if (!details) { e.preventDefault(); showBullyingValidationError('Please describe what happened.'); document.getElementById('incident_details').focus(); return; }
+            if (role === 'bystander' && (!document.getElementById('victim-student').value || (document.getElementById('victim-student').value === 'unknown' && !victimName))) { e.preventDefault(); showBullyingValidationError("Please enter the victim's name."); const picker = document.querySelector('.student-picker[data-person=victim]'); (picker.querySelector('.directory-description:not([hidden])') || picker.querySelector('.directory-search:not(:disabled)') || picker.querySelector('.directory-grade')).focus(); return; }
 
             // Show loading state — form will submit natively via POST redirect
             btn.disabled = true;
