@@ -701,7 +701,7 @@
                 return;
             }
 
-            chartEl.innerHTML = '';
+            chartEl.replaceChildren();
 
             const options = {
                 series: [{ name: 'Wellness Status', data: timelineData }],
@@ -786,7 +786,7 @@
                 return;
             }
 
-            chartEl.innerHTML = '';
+            chartEl.replaceChildren();
 
             const options = {
                 series: [{ name: 'Count', data: seriesData }],
@@ -822,7 +822,7 @@
         // Render Bullying Incidents Table
         function renderIncidentsTable(reports) {
             const tbody = document.getElementById('incidentsTableBody');
-            tbody.innerHTML = '';
+            tbody.replaceChildren();
 
             if (!reports || reports.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="py-4 px-2.5 text-left sm:text-center text-gray-400 text-xs">No incident involvement recorded.</td></tr>';
@@ -871,7 +871,7 @@
         // Render Notifications Table
         function renderNotificationsTable(smsLogs, emailLogs) {
             const tbody = document.getElementById('notificationsTableBody');
-            tbody.innerHTML = '';
+            tbody.replaceChildren();
 
             const allNotifs = [];
             smsLogs.forEach(s => allNotifs.push({ ...s, type: 'SMS', recipient: s.parent_number, timestamp: s.timestamp }));
@@ -902,7 +902,7 @@
         // Render Combined Chronological Event Feed
         function renderTimeline(timeline) {
             const feed = document.getElementById('chronTimeline');
-            feed.innerHTML = '';
+            feed.replaceChildren();
 
             if (!timeline || timeline.length === 0) {
                 feed.innerHTML = '<div class="text-center py-6 text-gray-400 text-sm">No documented events.</div>';
@@ -954,7 +954,7 @@
         // Render Counselor Notes
         function renderNotes(notes) {
             const container = document.getElementById('notesContainer');
-            container.innerHTML = '';
+            container.replaceChildren();
 
             if (!notes || notes.length === 0) {
                 container.innerHTML = '<div class="text-center py-8 text-gray-400 text-xs">No counselor documentation logged.</div>';
@@ -995,7 +995,7 @@
         // Render Previous case status history (read-only)
         function renderStatusHistoryTable(history) {
             const tbody = document.getElementById('statusHistoryTableBody');
-            tbody.innerHTML = '';
+            tbody.replaceChildren();
 
             if (!history || history.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-400 text-xs">No status change events logged.</td></tr>';

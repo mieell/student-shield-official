@@ -381,7 +381,7 @@
         }
 
         // Clear container
-        chartEl.innerHTML = '';
+        chartEl.replaceChildren();
 
         // Helper: map stepped value to human-readable status
         function getRiskName(val) {
@@ -492,7 +492,7 @@
 
     function renderHistoryFeed(vents, incidents) {
         var feed = document.getElementById('spHistoryFeed');
-        feed.innerHTML = '';
+        feed.replaceChildren();
 
         var allItems = [];
 

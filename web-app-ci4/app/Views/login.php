@@ -49,7 +49,9 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet"
+          integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm"
+          crossorigin="anonymous" referrerpolicy="no-referrer">
     <style>
         /* Responsive scaling */
         @media (max-width: 1440px) { html { font-size: 15px; } }
@@ -308,11 +310,12 @@
     </div>
 
     <!-- Forgot Password Guidance Modal -->
-    <div id="forgotPasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
-        <div class="bg-[#0b5f30] border border-[#e1e8ca]/40 text-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+    <dialog id="forgotPasswordModal" closedby="any" aria-labelledby="forgotPasswordTitle"
+            class="bg-[#0b5f30] border border-[#e1e8ca]/40 text-white rounded-2xl shadow-2xl">
+        <form method="dialog" class="p-6">
             <div class="flex items-start justify-between gap-3 mb-3">
                 <h2 id="forgotPasswordTitle" class="text-lg font-heading font-extrabold text-white">Need a password reset?</h2>
-                <button type="button" id="closeForgotPasswordModal" aria-label="Close password reset help" class="text-white/75 hover:text-white text-xl leading-none px-2 py-1 cursor-pointer bg-transparent border-0">&times;</button>
+                <button type="submit" id="closeForgotPasswordModal" autofocus aria-label="Close password reset help" class="text-white/75 hover:text-white text-xl leading-none px-2 py-1 cursor-pointer bg-transparent border-0">&times;</button>
             </div>
             <p class="text-sm text-white/85 leading-relaxed mb-3">
                 For student safety and identity protection, StudentShield passwords are reset only after school verification:
@@ -321,9 +324,9 @@
                 <li><strong>Students:</strong> Visit or contact the <strong>SVBSM Guidance Office</strong> with your Student ID or LRN.</li>
                 <li><strong>Counselors &amp; Staff:</strong> Contact your <strong>System Administrator</strong> to reset your account password.</li>
             </ul>
-            <button type="button" id="dismissForgotPasswordModal" class="w-full py-2.5 px-4 rounded-xl bg-[#eac255] hover:bg-[#f5d875] text-[#164c2c] font-bold text-sm transition-colors cursor-pointer">Understood</button>
-        </div>
-    </div>
+            <button type="submit" id="dismissForgotPasswordModal" class="w-full py-2.5 px-4 rounded-xl bg-[#eac255] hover:bg-[#f5d875] text-[#164c2c] font-bold text-sm transition-colors cursor-pointer">Understood</button>
+        </form>
+    </dialog>
 
 <script>
             document.addEventListener("DOMContentLoaded", function() {
@@ -395,19 +398,25 @@
     (function () {
         const modal = document.getElementById('forgotPasswordModal');
         const openBtn = document.getElementById('forgotPasswordBtn');
-        const closeBtn = document.getElementById('closeForgotPasswordModal');
-        const dismissBtn = document.getElementById('dismissForgotPasswordModal');
         if (!modal || !openBtn) return;
-        const open = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); closeBtn?.focus(); };
-        const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); openBtn.focus(); };
-        openBtn.addEventListener('click', open);
-        closeBtn?.addEventListener('click', close);
-        dismissBtn?.addEventListener('click', close);
-        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) close(); });
+        openBtn.addEventListener('click', () => modal.showModal());
+
+        if (!('closedBy' in HTMLDialogElement.prototype)) {
+            const isOutside = (event) => {
+                const bounds = modal.getBoundingClientRect();
+                return event.clientX < bounds.left || event.clientX > bounds.right
+                    || event.clientY < bounds.top || event.clientY > bounds.bottom;
+            };
+            let pressedOutside = false;
+            modal.addEventListener('pointerdown', (event) => { pressedOutside = isOutside(event); });
+            modal.addEventListener('pointerup', (event) => {
+                if (pressedOutside && isOutside(event)) modal.close();
+                pressedOutside = false;
+            });
+        }
     })();
 
-    document.querySelector('form').addEventListener('submit', function(e) {
+    document.querySelector('.login-form').addEventListener('submit', function(e) {
         const btn = document.getElementById('submitBtn');
         if (btn.disabled) {
             e.preventDefault();

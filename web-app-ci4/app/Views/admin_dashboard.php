@@ -23,7 +23,9 @@ $pageDescriptions = [
     <?= view('partials/school_brand', ['studentPalette' => true]) ?>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK"
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -1945,7 +1947,7 @@ $pageDescriptions = [
             const checkboxes = document.querySelectorAll('.vent-checkbox:checked');
             if (checkboxes.length === 0) return;
             const container = document.getElementById('bulkDeleteVentsInputs');
-            container.innerHTML = '';
+            container.replaceChildren();
             checkboxes.forEach(cb => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
@@ -1961,7 +1963,7 @@ $pageDescriptions = [
             const checkboxes = document.querySelectorAll('.incident-checkbox:checked');
             if (checkboxes.length === 0) return;
             const container = document.getElementById('bulkDeleteIncidentsInputs');
-            container.innerHTML = '';
+            container.replaceChildren();
             checkboxes.forEach(cb => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
@@ -2063,7 +2065,7 @@ $pageDescriptions = [
                 if (!requests.length) {
                     emptySection.classList.remove('hidden');
                     sectionList.classList.add('hidden');
-                    sectionList.innerHTML = '';
+                    sectionList.replaceChildren();
                     return;
                 }
 

@@ -32,6 +32,16 @@ body.student-login.login-illustrated .password-toggle:hover { background: #0b5f3
 body.student-login.login-illustrated .login-form a { color: #fff0a8; }
 body.student-login.login-illustrated #remember { border-color: #cde3d3; }
 body.student-login.login-illustrated .auth-error { background: #06401e; }
+.login-illustrated #forgotPasswordModal {
+    width: min(calc(100% - 2rem), 28rem);
+    max-height: calc(100% - 2rem);
+    margin: auto;
+    overflow: auto;
+}
+.login-illustrated #forgotPasswordModal::backdrop {
+    background: rgb(0 0 0 / 60%);
+    backdrop-filter: blur(4px);
+}
 @media (hover:hover) and (pointer:fine) {
     body.student-login.login-illustrated .login-form .submit-btn:hover { background: #f5d875; box-shadow: 0 7px 16px -7px #05341880, inset 0 1px #fff4c780; }
 }

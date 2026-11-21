@@ -168,10 +168,22 @@
     async function refreshRegistrations() {
         if (busy || document.hidden) return;
         busy = true;
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+        let fallbackTimeout;
         try {
-            const response = await fetch(notice.dataset.countUrl, {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}, signal: controller.signal});
+            let signal;
+            if (typeof AbortSignal.timeout === 'function') {
+                signal = AbortSignal.timeout(10000);
+            } else {
+                const controller = new AbortController();
+                fallbackTimeout = setTimeout(() => controller.abort(), 10000);
+                signal = controller.signal;
+            }
+            const response = await fetch(notice.dataset.countUrl, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {'Accept': 'application/json'},
+                signal
+            });
             if (!response.ok) throw new Error('Registration updates unavailable');
             const data = await response.json();
             if (!Number.isSafeInteger(data.count) || data.count < 0) throw new Error('Invalid count');
@@ -187,7 +199,7 @@
         } catch (error) {
             notice.title = 'Registration updates unavailable. Open registrations to review.';
         } finally {
-            clearTimeout(timeout);
+            clearTimeout(fallbackTimeout);
             busy = false;
         }
     }

@@ -81,9 +81,16 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(11, 94, 46, 0.3);
         }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f5f7f5; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c8dac8; border-radius: 10px; }
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #c8dac8 #f5f7f5;
+        }
+        @supports not (scrollbar-color: auto) {
+            .custom-scrollbar { scrollbar-width: auto; }
+            .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+            .custom-scrollbar::-webkit-scrollbar-track { background: #f5f7f5; border-radius: 10px; }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: #c8dac8; border-radius: 10px; }
+        }
         .live-dot { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
         .registration-table { width: 100%; }

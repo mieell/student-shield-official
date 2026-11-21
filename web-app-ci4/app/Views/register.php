@@ -54,7 +54,9 @@ $selectedSection = (string) set_value('section');
             }
         }
     </script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet"
+          integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm"
+          crossorigin="anonymous" referrerpolicy="no-referrer">
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #0F8A3A; overflow-x: hidden; }
         h1, h2, h3, .font-heading { font-family: 'Nunito', sans-serif; }
