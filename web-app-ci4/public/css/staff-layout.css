@@ -82,8 +82,7 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
 .staff-student-details > div { padding: 8px; border: 1px solid #e2e8e5; border-radius: 7px; background: #f6faf7; }
 .staff-student-details > div > span { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .staff-layout .staff-vents-table td[data-label="Review priority"] { width: 29%; min-width: 220px; }
-.staff-review-summary { overflow-wrap: break-word; }
-.staff-action-row { text-align: left; }
+.staff-action-row { max-inline-size: 14rem; text-align: left; }
 .staff-layout .staff-review-button { display: flex; align-items: center; justify-content: center; width: calc(100% - 52px); min-height: 44px; padding: 6px 10px; border: 1px solid #235d3a; border-radius: 7px; background: white; color: #235d3a; font-size: 12px; font-weight: 600; margin: 0; }
 .staff-layout .staff-review-button:hover { background: #edf6ef; }
 /* Keep expanded actions in the row so scroll containers cannot clip them. */

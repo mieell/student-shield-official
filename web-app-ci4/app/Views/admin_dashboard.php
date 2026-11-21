@@ -1329,14 +1329,9 @@ $pageDescriptions = [
                                 <div class="text-xs text-gray-600">${dayName}, ${dateStr}</div>
                             </td>
                             <td data-label="Review priority" class="px-6 py-4">
-                                <div class="staff-review-summary">
-                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${badgeClass}">
-                                        ${escapeHtml(vent.risk_level || 'Unclassified')}
-                                    </span>
-                                    <p class="mt-1.5 mb-2.5 text-xs leading-relaxed text-[#435e51] line-clamp-2">
-                                        ${escapeHtml(cleanScreeningText(vent.screening_analysis?.reasoning, vent.risk_level) || 'Open the entry to review the student’s message.')}
-                                    </p>
-                                </div>
+                                <span class="mb-2 px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${badgeClass}">
+                                    ${escapeHtml(vent.risk_level || 'Unclassified')}
+                                </span>
                                 <div class="staff-action-row">
                                 <button type="button" class="staff-review-button" onclick="openVentModal(${vent.id})">Review entry</button>
                                 <details class="staff-entry-actions">
