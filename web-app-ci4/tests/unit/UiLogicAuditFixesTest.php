@@ -18,6 +18,19 @@ final class UiLogicAuditFixesTest extends CIUnitTestCase
         $this->assertStringContainsString('btn.disabled = true', $html);
     }
 
+    public function testLoginShowsRegistrationHandoffAfterSubmission(): void
+    {
+        helper(['url', 'form']);
+        $this->assertStringNotContainsString('id="registrationReceiptTitle"', view('login'));
+
+        session()->setFlashdata('registration_submitted', true);
+        $html = view('login');
+        $this->assertStringContainsString('Registration submitted</h2>', $html);
+        $this->assertStringContainsString('Waiting for guardian contact verification', $html);
+        $this->assertStringContainsString('You can sign in once your account is approved.', $html);
+        session()->remove('registration_submitted');
+    }
+
     public function testManageAccountsShowsUnlockControlOnlyForLockedStudents(): void
     {
         helper(['url', 'form']);

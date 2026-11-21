@@ -167,7 +167,8 @@ final class GuardianConsentTest extends CIUnitTestCase
         ]);
         self::assertStringContainsString('+639188564586', $html);
         self::assertStringContainsString('Verified', $html);
-        self::assertStringContainsString('SMS sent to carrier · awaiting guardian', $html);
+        self::assertStringContainsString('Awaiting guardian consent', $html);
+        self::assertStringContainsString('Submitted to the SMS carrier', $html);
         self::assertStringNotContainsString('SMS queued · awaiting guardian', $html);
         session()->remove(['isLoggedIn', 'role', 'user_id']);
     }
@@ -391,7 +392,7 @@ final class GuardianConsentTest extends CIUnitTestCase
             ]);
             self::assertStringContainsString('id="registration-dialog-92"', $unverifiedHtml);
             self::assertStringContainsString('aria-label="Close modal"', $unverifiedHtml);
-            self::assertStringContainsString('Contact needs verification', $unverifiedHtml);
+            self::assertStringContainsString('Waiting for guardian contact verification', $unverifiedHtml);
             self::assertStringContainsString('class="guardian-actions"', $unverifiedHtml);
             self::assertStringContainsString('Send consent code by SMS', $unverifiedHtml);
             self::assertStringContainsString('Generate link for private sharing', $unverifiedHtml);
@@ -485,7 +486,8 @@ final class GuardianConsentTest extends CIUnitTestCase
                 'canVerifyContact' => true,
                 'registrationStatus' => 'pending',
             ]);
-            self::assertStringContainsString('Consent link emailed · awaiting guardian', $emailSentHtml);
+            self::assertStringContainsString('Awaiting guardian consent', $emailSentHtml);
+            self::assertStringContainsString('Consent link emailed.', $emailSentHtml);
             self::assertStringContainsString('Guardian email on record', $emailSentHtml);
             self::assertStringContainsString('parent.clara@example.com', $emailSentHtml);
             self::assertStringContainsString('Resend email (wait ', $emailSentHtml);
@@ -496,7 +498,16 @@ final class GuardianConsentTest extends CIUnitTestCase
                 'canVerifyContact' => true,
                 'registrationStatus' => 'pending',
             ]);
+            self::assertStringContainsString('Consent delivery unsuccessful', $emailFailedHtml);
             self::assertStringContainsString('Consent email failed', $emailFailedHtml);
+
+            $acceptedHtml = view('admin_pending_registrations', [
+                'pendingUsers' => [array_merge($baseStudent, ['response' => 'accepted'])],
+                'canVerifyContact' => false,
+                'registrationStatus' => 'pending',
+            ]);
+            self::assertStringContainsString('Ready for counselor approval', $acceptedHtml);
+            self::assertStringContainsString('>Approve</span>', $acceptedHtml);
             self::assertStringContainsString('Send consent link by Email', $emailFailedHtml);
         } finally {
             session()->remove(['isLoggedIn', 'role', 'user_id']);

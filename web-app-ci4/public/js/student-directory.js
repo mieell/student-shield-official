@@ -79,6 +79,19 @@ document.querySelectorAll('.student-picker').forEach((picker) => {
             }
         }, 150);
     });
+    picker.addEventListener('keydown', (event) => {
+        if (popup.hidden || (event.target !== search && !popup.contains(event.target))) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            popup.hidden = true;
+            search.focus();
+            status.textContent = 'Search results closed. Edit the name to search again.';
+        } else if (event.key === 'ArrowDown' && event.target === search) {
+            event.preventDefault();
+            matches.querySelector('button')?.focus();
+        }
+    });
+
     unlisted.addEventListener('click', () => {
         if (choice.value === 'unknown') {
             description.focus();

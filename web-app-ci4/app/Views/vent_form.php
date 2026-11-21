@@ -98,9 +98,9 @@
                     <div class="vent-writing-field flex flex-col">
                         <div class="field-heading">
                             <label for="vent_text">What's on your mind?</label>
-                            <span id="charCount" class="char-count">0 / 2000</span>
+                            <span id="charCount" class="char-count">0 / 2,000 characters</span>
                         </div>
-                        <textarea id="vent_text" name="vent_text" maxlength="2000" aria-describedby="ventStorageNote" placeholder="Start wherever you feel comfortable…"
+                        <textarea id="vent_text" name="vent_text" maxlength="2000" aria-describedby="ventStorageNote charCount" placeholder="Start wherever you feel comfortable…"
                                   class="textarea-field" required></textarea>
                     </div>
 
@@ -217,7 +217,7 @@
         const charCount = document.getElementById('charCount');
         textarea.addEventListener('input', function() {
             const len = this.value.length;
-            charCount.textContent = len + ' / 2000';
+            charCount.textContent = len.toLocaleString('en-PH') + ' / 2,000 characters';
             if (len > 1800) charCount.style.color = '#B3261E';
             else if (len > 1200) charCount.style.color = '#8A5700';
             else charCount.style.color = '#526259';
@@ -362,7 +362,7 @@
                 }
 
                 textarea.value = '';
-                charCount.textContent = '0 / 2000';
+                charCount.textContent = '0 / 2,000 characters';
                 btn.classList.remove('opacity-90', 'cursor-wait');
                 btn.style.background = 'var(--form-primary)';
                 text.innerText = 'Submitted Securely';

@@ -145,7 +145,7 @@
                 How can we help you today?
             </h1>
             <p class="text-white/90 text-[15px] sm:text-base max-w-xl mx-auto leading-relaxed font-normal">
-                Pick what fits right now. Want to get something off your chest? Use Safe Space. Is someone bullying you or someone else? Make a report. Either way, someone is here to help.
+                Share how you’re feeling in Safe Space, or report bullying you experienced or witnessed.
             </p>
         </div>
 
@@ -160,7 +160,7 @@
                     </svg>
                 </div>
                 
-                <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3 group-hover:text-primary transition-colors">Safe Space (Vent)</h2>
+                <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3 group-hover:text-primary transition-colors">Safe Space</h2>
                 <p class="text-gray-600 text-sm leading-relaxed mb-8 flex-1">
                     Write down how you feel, what worries you, or what made today hard. It is encrypted and judgment-free, and only your connected counselors can read what you write.
                 </p>
@@ -187,7 +187,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
-                <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3">Incident Report</h2>
+                <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3">Report Bullying</h2>
                 <p class="text-gray-600 text-sm leading-relaxed mb-8 flex-1">
                     Reporting is paused on your account after several reports were marked as false. Please visit the Guidance Office to get it back.
                 </p>
@@ -204,7 +204,7 @@
                     </svg>
                 </div>
                 
-                <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3 group-hover:text-red-700 transition-colors">Incident Report</h2>
+                <h2 class="text-2xl font-heading font-extrabold text-gray-900 mb-3 group-hover:text-red-700 transition-colors">Report Bullying</h2>
                 <p class="text-gray-600 text-sm leading-relaxed mb-8 flex-1">
                     Use this if you or someone you know is dealing with <strong>bullying, serious harassment, threats, or danger</strong>. Your guidance counselor will review your report and help with the next steps.
                 </p>

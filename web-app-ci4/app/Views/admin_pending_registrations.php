@@ -356,42 +356,43 @@
                                 </td>
                                 <td data-label="Status" class="registration-status px-6 py-4 text-center">
                                     <?php
-                                        $rowBadge = $registrationStatus === 'approved' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : ($registrationStatus === 'rejected' ? 'bg-rose-50 text-rose-800 border-rose-200' : 'badge-pending');
-                                        $rowDot = $registrationStatus === 'approved' ? 'bg-emerald-500' : ($registrationStatus === 'rejected' ? 'bg-rose-500' : 'bg-amber-400');
+                                        $consentStatus = match (true) {
+                                            $registrationStatus !== 'pending' => ucfirst($registrationStatus),
+                                            ($student['response'] ?? '') === 'accepted' => 'Ready for counselor approval',
+                                            ($student['response'] ?? '') === 'declined' => 'Consent declined',
+                                            empty($student['verified_phone']) => 'Waiting for guardian contact verification',
+                                            empty($student['requested_at']) => 'Ready to request guardian consent',
+                                            (\App\Libraries\ManilaTime::unix($student['expires_at'] ?? '') ?? 0) <= time() => 'Consent request expired',
+                                            in_array($student['sms_state'] ?? '', ['Queued', 'EmailSent', 'Manual'], true) => 'Awaiting guardian consent',
+                                            ($student['sms_state'] ?? '') === 'EmailPending' => 'Consent email pending',
+                                            ($student['sms_state'] ?? '') === 'Unknown' => 'Consent delivery uncertain',
+                                            default => 'Consent delivery unsuccessful',
+                                        };
+                                        $statusTone = match ($consentStatus) {
+                                            'Approved', 'Ready for counselor approval' => 'bg-emerald-50 text-[#0B5E2E] border-emerald-200',
+                                            'Rejected', 'Consent declined', 'Consent request expired', 'Consent delivery unsuccessful' => 'bg-rose-50 text-rose-800 border-rose-200',
+                                            'Archived' => 'bg-gray-50 text-gray-700 border-gray-200',
+                                            default => 'bg-amber-50 text-amber-900 border-amber-200',
+                                        };
+                                        $nextStep = match ($consentStatus) {
+                                            'Waiting for guardian contact verification' => 'Super Admin checks the guardian name and mobile number against school records.',
+                                            'Ready to request guardian consent' => 'Super Admin can issue a consent request using the verified contact.',
+                                            'Awaiting guardian consent' => 'The verified guardian needs to respond to the consent request.',
+                                            'Ready for counselor approval' => 'Consent is recorded. The Guidance Counselor can approve the account.',
+                                            'Consent declined' => 'The guardian declined. The account remains inactive.',
+                                            'Consent email pending' => 'The consent email is being processed.',
+                                            'Consent delivery uncertain' => 'Follow up with the verified guardian to confirm whether they received the request.',
+                                            default => 'Super Admin can follow up with the verified guardian and issue a replacement request.',
+                                        };
                                     ?>
-                                    <span class="<?= $rowBadge ?> inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border">
-                                        <span class="w-1.5 h-1.5 rounded-full <?= $rowDot ?>"></span>
-                                        <?= esc(ucfirst($registrationStatus)) ?>
+                                    <span class="<?= $statusTone ?> inline-flex max-w-48 rounded-lg border px-2.5 py-1.5 text-xs font-semibold leading-snug">
+                                        <?= esc($consentStatus) ?>
                                     </span>
                                 </td>
                                 <td data-label="Action" class="registration-actions px-6 py-4 text-center">
-                                    <?php
-                                        $consentStatus = empty($student['verified_phone']) ? 'Contact needs verification' : match ($student['response']) {
-                                            'accepted' => 'Consent accepted',
-                                            'declined' => 'Consent declined',
-                                            default => (\App\Libraries\ManilaTime::unix($student['expires_at'] ?? '') ?? 0) <= time() ? 'Consent request expired' : match ($student['sms_state']) {
-                                                'Queued' => 'SMS sent to carrier · awaiting guardian',
-                                                'EmailSent' => 'Consent link emailed · awaiting guardian',
-                                                'EmailFailed' => 'Consent email failed',
-                                                'EmailPending' => 'Consent email pending',
-                                                'Unknown' => 'SMS status uncertain',
-                                                'Manual' => 'Manual link generated; awaiting guardian',
-                                                default => 'SMS was not queued',
-                                            },
-                                        };
-                                        $consentBadgeStyle = match (true) {
-                                            $consentStatus === 'Consent accepted' => ['pill' => 'bg-emerald-50 text-[#0B5E2E] border-emerald-200', 'dot' => 'bg-[#128f42]'],
-                                            in_array($consentStatus, ['Consent declined', 'Consent request expired', 'SMS was not queued', 'Consent email failed'], true) => ['pill' => 'bg-rose-50 text-rose-800 border-rose-200', 'dot' => 'bg-rose-500'],
-                                            default => ['pill' => 'bg-amber-50 text-amber-800 border-amber-200', 'dot' => 'bg-amber-500'],
-                                        };
-                                    ?>
                                     <?php if ($registrationStatus === 'pending'): ?>
                                     <div class="registration-manage">
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold <?= $consentBadgeStyle['pill'] ?>">
-                                            <span class="w-1.5 h-1.5 rounded-full <?= $consentBadgeStyle['dot'] ?>"></span>
-                                            <?= esc($consentStatus) ?>
-                                        </span>
-                                        <button type="button" class="inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3.5 py-1.5 rounded-lg border border-[#cfe2d4] bg-white hover:bg-[#eaf4ed] hover:border-[#9ec5aa] text-[#15492c] text-xs font-bold shadow-2xs transition-colors cursor-pointer whitespace-nowrap" aria-haspopup="dialog" aria-controls="registration-dialog-<?= $uid ?>" onclick="document.getElementById(this.getAttribute('aria-controls')).showModal()">
+                                        <button type="button" class="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 py-1.5 rounded-lg border border-[#cfe2d4] bg-white hover:bg-[#eaf4ed] hover:border-[#9ec5aa] text-[#15492c] text-xs font-bold shadow-2xs transition-colors cursor-pointer whitespace-nowrap" aria-haspopup="dialog" aria-controls="registration-dialog-<?= $uid ?>" onclick="document.getElementById(this.getAttribute('aria-controls')).showModal()">
                                             <span>Manage</span>
                                             <svg class="w-3.5 h-3.5 text-[#3e5948]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                                         </button>
@@ -400,10 +401,7 @@
                                                 <div class="h-1.5 w-full bg-gradient-to-r from-[#096328] via-[#128f42] to-[#D9AA2E] flex-shrink-0"></div>
                                                 <div class="px-5 sm:px-6 pt-4 pb-3.5 border-b border-[#edf2ed] flex-shrink-0">
                                                     <div class="flex items-start justify-between gap-3">
-                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold tracking-wide <?= $consentBadgeStyle['pill'] ?>">
-                                                            <span class="w-1.5 h-1.5 rounded-full <?= $consentBadgeStyle['dot'] ?>"></span>
-                                                            <?= esc($consentStatus) ?>
-                                                        </span>
+                                                        <span class="<?= $statusTone ?> inline-flex rounded-lg border px-2.5 py-1.5 text-xs font-semibold leading-snug"><?= esc($consentStatus) ?></span>
                                                         <button type="button" autofocus onclick="this.closest('dialog').close()" aria-label="Close modal" title="Close" class="dialog-close-btn w-9 h-9 min-w-[36px] min-h-[36px] rounded-full bg-[#f4f7f4] hover:bg-[#e7efe7] text-[#3e5948] flex items-center justify-center transition-colors cursor-pointer">
                                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                         </button>
@@ -418,6 +416,7 @@
                                                     <?php endif; ?>
                                                 </div>
                                                 <div class="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto custom-scrollbar">
+                                                    <p class="rounded-lg border border-[#dce7df] bg-[#f4f8f5] px-3.5 py-2.5 text-sm text-[#173a2a]"><?= esc($nextStep) ?></p>
                                     <?php endif; ?>
                                     <?php if (!empty($student['verified_phone'])): ?>
                                         <div class="rounded-xl bg-[#f8faf6] border border-[#e3ebe3] p-3.5 text-xs space-y-2.5 leading-relaxed">
@@ -441,6 +440,8 @@
                                                 <p class="text-[11px] text-[#526b5b] pt-2 border-t border-[#e7efe7]">Submitted to the SMS carrier; live delivery receipts are unavailable. You can resend after 5 minutes or generate a link below.</p>
                                             <?php elseif (empty($student['response']) && ($student['sms_state'] ?? '') === 'EmailSent' && (\App\Libraries\ManilaTime::unix($student['expires_at'] ?? '') ?? 0) > time()): ?>
                                                 <p class="text-[11px] text-[#526b5b] pt-2 border-t border-[#e7efe7]">Consent link emailed. You can resend by email after 5 minutes, send a follow-up SMS, or generate a replacement link below.</p>
+                                            <?php elseif ($consentStatus === 'Consent delivery unsuccessful' && ($student['sms_state'] ?? '') === 'EmailFailed'): ?>
+                                                <p class="text-xs text-rose-800 pt-2 border-t border-[#e7efe7]">Consent email failed.</p>
                                             <?php endif; ?>
                                             <?php if ($student['guardian_name']): ?>
                                                 <p class="text-[#15492c] font-semibold pt-2 border-t border-[#e7efe7]">Signed by <?= esc($student['guardian_name']) ?> · <?= esc(\App\Libraries\ManilaTime::format($student['responded_at'] ?? '', 'M d, Y g:i A \P\H\T')) ?></p>
@@ -546,7 +547,6 @@
                                         <?php endif; ?>
                                     <?php endif; ?>
                                     <?php if (!$canVerifyContact): ?>
-                                    <?php if (!$student['requested_at']): ?><p class="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900">Waiting for Super Admin to verify the guardian contact.</p><?php elseif (empty($student['response'])): ?><p class="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900">Awaiting guardian response.</p><?php endif; ?>
                                     <div class="flex flex-wrap items-center justify-end gap-2.5 pt-1">
                                         <?php if ($student['response'] === 'accepted'): ?>
                                         <button type="button" onclick="handleAction('approve', <?= $uid ?>, '<?= esc(addslashes($student['name'])) ?>', this)" class="approve-btn inline-flex items-center gap-1.5 px-4 py-2 min-h-[42px] rounded-lg text-xs font-bold uppercase tracking-wide shadow-sm cursor-pointer">
@@ -563,8 +563,6 @@
                                             <span>Reject</span>
                                         </button>
                                     </div>
-                                    <?php elseif ($student['response'] === 'accepted'): ?>
-                                        <p class="rounded-xl bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 text-xs font-medium text-[#0B5E2E]">Waiting for counselor approval.</p>
                                     <?php endif; ?>
                                                 </div>
                                                 <?php if ($canVerifyContact): ?>

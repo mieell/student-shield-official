@@ -51,8 +51,13 @@ function showScreeningExplanation(vent) {
     panel.append(title);
 
     const riskLevel = (vent.risk_level || 'UNAVAILABLE').toUpperCase();
-    const numericScore = Number(vent.risk_percent);
-    const formattedScore = Number.isFinite(numericScore) ? `${Math.round(numericScore)}%` : '—';
+    const storedScore = String(vent.risk_percent ?? '').trim();
+    const numericScore = storedScore === '' ? NaN : Number(storedScore);
+    // Older entries used a sentiment score from -1 (high distress) to 1 (low distress).
+    const severity = Math.abs(numericScore) <= 1 && numericScore !== 0 && storedScore.includes('.')
+        ? Math.round(((1 - numericScore) / 2) * 99) + 1
+        : Math.round(numericScore);
+    const formattedScore = Number.isFinite(severity) ? `${severity}%` : '—';
     const badgeStyles = {
         CRITICAL: 'bg-red-100 text-red-800 border-red-200',
         HIGH: 'bg-orange-100 text-orange-800 border-orange-200',

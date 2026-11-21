@@ -81,7 +81,8 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
 .staff-student-details summary { color: #235d3a; font-size: 11px; padding: 5px 0; cursor: pointer; }
 .staff-student-details > div { padding: 8px; border: 1px solid #e2e8e5; border-radius: 7px; background: #f6faf7; }
 .staff-student-details > div > span { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.staff-layout .staff-vents-table td[data-label="Action"] { min-width: 188px; }
+.staff-layout .staff-vents-table td[data-label="Review priority"] { width: 29%; min-width: 220px; }
+.staff-review-summary { overflow-wrap: break-word; }
 .staff-action-row { text-align: left; }
 .staff-layout .staff-review-button { display: flex; align-items: center; justify-content: center; width: calc(100% - 52px); min-height: 44px; padding: 6px 10px; border: 1px solid #235d3a; border-radius: 7px; background: white; color: #235d3a; font-size: 12px; font-weight: 600; margin: 0; }
 .staff-layout .staff-review-button:hover { background: #edf6ef; }
@@ -173,19 +174,14 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout .staff-vents-table td[data-label="Select"]::before, .staff-layout .staff-vents-table td[data-label="Student"]::before { display: none; }
     .staff-layout .staff-vents-table td[data-label="Student"] > div { align-items: flex-start; }
     .staff-layout .staff-vents-table td[data-label="Student"] > div > div:last-child { min-width: 0; max-width: none; white-space: normal; }
-    .staff-layout .staff-vents-table td[data-label="Threat Level"] { grid-column: 1; grid-row: 2; align-items: flex-start; justify-content: center; }
-    .staff-layout .staff-vents-table td[data-label="Threat Level"]::before { display: none; }
-    .staff-layout .staff-vents-table td[data-label="Risk Indicator"] { grid-column: 2; grid-row: 2; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 6px; }
-    .staff-layout .staff-vents-table td[data-label="Risk Indicator"]::before { content: 'Risk score'; }
-    .staff-layout .staff-vents-table td[data-label="Risk Indicator"] > span { min-width: 0; padding: 3px 6px; font-family: Inter, sans-serif; font-size: 12px; }
     .staff-layout .staff-vents-table td[data-label="NLP Extract"] { grid-row: 3; padding: 10px 0 !important; border-top: 1px solid #edf1ee; }
     .staff-layout .staff-vents-table td[data-label="NLP Extract"]::before { content: 'Entry'; }
     .staff-layout .staff-vents-table td[data-label="NLP Extract"] p { font-size: 14px; line-height: 1.5; }
     .staff-layout .staff-vents-table td[data-label="Timestamp"] { grid-row: 4; flex-direction: row; align-items: center; gap: 8px; }
     .staff-layout .staff-vents-table td[data-label="Timestamp"]::before { display: none; }
     .staff-layout .staff-vents-table td[data-label="Timestamp"] > div { font-size: 11px; font-weight: 400; color: #61756b; }
-    .staff-layout .staff-vents-table td[data-label="Action"] { grid-row: 5; display: block; background: transparent; padding-top: 8px !important; }
-    .staff-layout .staff-vents-table td[data-label="Action"]::before { display: none; }
+    .staff-layout .staff-vents-table td[data-label="Review priority"] { grid-row: 5; display: block; background: transparent; padding-top: 8px !important; }
+    .staff-layout .staff-vents-table td[data-label="Review priority"]::before { content: "Review priority"; display: block; margin-bottom: 5px; }
     .staff-layout .staff-review-button { background: #0e7c38; color: white; border-color: #0e7c38; font-size: 13px; }
     .staff-layout .staff-review-button:hover { background: #09652c; }
     .staff-layout .mobile-card-table td::before { text-transform: none; letter-spacing: 0; font-size: 11px; color: #61756b; font-weight: 500; }

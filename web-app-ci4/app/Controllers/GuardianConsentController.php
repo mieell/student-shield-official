@@ -446,7 +446,9 @@ class GuardianConsentController extends BaseController
             log_message('error', 'Guardian consent response could not be saved.');
             return $this->page('The response could not be recorded. Try again later.', 503);
         }
-        return $this->page('Your response was recorded. The school guidance office will review the registration.');
+        return $this->page($choice === 'accepted'
+            ? 'Consent recorded. The registration is ready for the Guidance Counselor to review for approval.'
+            : 'Consent declined. The student account remains inactive. Contact the Guidance Office if you have questions.');
     }
 
     private function activeRequest(string $token): ?array

@@ -676,16 +676,14 @@ $pageDescriptions = [
                                     class="rounded border-white/40 text-[#F2C300]"></th>
                             <th class="px-6 py-4">Student</th>
                             <th class="px-6 py-4 w-1/3">Entry preview</th>
-                            <th class="px-6 py-4 text-center" title="Rule-adjusted screening severity indicator (1-100%, not calibrated clinical probability)">Screening score</th>
-                            <th class="px-6 py-4 text-center">Risk level</th>
                             <th class="px-6 py-4">Timestamp</th>
-                            <th class="px-6 py-4 text-center">Action</th>
+                            <th class="px-6 py-4">Review priority</th>
                         </tr>
                     </thead>
                     <tbody id="ventsTableBody" class="divide-y divide-gray-100">
                         <!-- Populated by AJAX -->
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
                                 <svg class="animate-spin h-8 w-8 mx-auto mb-4 text-[#235D3A]"
                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
@@ -1263,7 +1261,7 @@ $pageDescriptions = [
                     window.ventsDataMap = {};
 
                     if (data.length === 0) {
-                        html = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-600">No entries found yet.</td></tr>`;
+                        html = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-600">No entries found yet.</td></tr>`;
                     } else {
                         data.forEach((vent, index) => {
                             window.ventsDataMap[vent.id] = vent;
@@ -1275,10 +1273,10 @@ $pageDescriptions = [
                             // Threat logic (Color-coded Triage)
                             if (vent.risk_level === 'CRITICAL') {
                                 bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#E04B3F] relative';
-                                badgeClass = 'bg-[#E04B3F] text-white font-bold border-none';
+                                badgeClass = 'bg-red-100 text-red-800 border border-red-200';
                             } else if (vent.risk_level === 'HIGH') {
                                 bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#F59E0B] relative';
-                                badgeClass = 'bg-[#F59E0B] text-white font-bold border-none';
+                                badgeClass = 'bg-amber-100 text-amber-900 border border-amber-200';
                             } else if (vent.risk_level === 'MEDIUM') {
                                 bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#2A5DB0]';
                                 badgeClass = 'bg-[#2A5DB0]/10 text-[#2A5DB0] border border-[#2A5DB0]/20 font-semibold';
@@ -1326,43 +1324,19 @@ $pageDescriptions = [
                             <td data-label="NLP Extract" class="px-6 py-4 cursor-pointer group" onclick="openVentModal(${vent.id})">
                                 <p class="text-sm text-gray-600 italic line-clamp-2">"${escapeHtml(textSnippet)}"</p>
                             </td>
-                            <td data-label="Risk Indicator" class="px-6 py-4 whitespace-nowrap text-center">
-                                ${(() => {
-                                    let s = vent.risk_percent;
-                                    let s_float = parseFloat(s);
-
-                                    // Fallback UI mapping for legacy database records (decimals)
-                                    if (Math.abs(s_float) <= 1 && s_float !== 0 && s.toString().indexOf('.') !== -1) {
-                                        // Legacy: -1 was bad, 1 was good
-                                        // Convert to new Threat Percentage where 100 is bad, 1 is good
-                                        s = Math.round(((1.0 - s_float) / 2.0) * 99) + 1;
-                                    } else {
-                                        s = Math.round(s_float);
-                                    }
-
-                                    // Align score pill styling with clinical risk bands (CRITICAL red, HIGH amber, MEDIUM blue, LOW green)
-                                    const level = (vent.risk_level || '').toUpperCase();
-                                    let c = 'text-[#235D3A] bg-[#235D3A]/10';
-                                    if (level === 'CRITICAL' || (!level && s >= 86)) {
-                                        c = 'text-[#E04B3F] bg-[#E04B3F]/10';
-                                    } else if (level === 'HIGH' || (!level && s >= 61)) {
-                                        c = 'text-[#D97706] bg-[#F59E0B]/15';
-                                    } else if (level === 'MEDIUM' || (!level && s >= 31)) {
-                                        c = 'text-[#2A5DB0] bg-[#2A5DB0]/10';
-                                    }
-                                    return `<span class="text-sm font-mono font-medium ${c} px-2 py-1 rounded min-w-[3rem] inline-block">${s}%</span>`;
-                                })()}
-                            </td>
-                            <td data-label="Threat Level" class="px-6 py-4 whitespace-nowrap text-center">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${badgeClass} shadow-sm">
-                                    ${escapeHtml(vent.risk_level)}
-                                </span>
-                            </td>
                             <td data-label="Timestamp" class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-semibold text-gray-800">${timeStr}</div>
                                 <div class="text-xs text-gray-600">${dayName}, ${dateStr}</div>
                             </td>
-                            <td data-label="Action" class="px-6 py-4 whitespace-nowrap text-center">
+                            <td data-label="Review priority" class="px-6 py-4">
+                                <div class="staff-review-summary">
+                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${badgeClass}">
+                                        ${escapeHtml(vent.risk_level || 'Unclassified')}
+                                    </span>
+                                    <p class="mt-1.5 mb-2.5 text-xs leading-relaxed text-[#435e51] line-clamp-2">
+                                        ${escapeHtml(cleanScreeningText(vent.screening_analysis?.reasoning, vent.risk_level) || 'Open the entry to review the student’s message.')}
+                                    </p>
+                                </div>
                                 <div class="staff-action-row">
                                 <button type="button" class="staff-review-button" onclick="openVentModal(${vent.id})">Review entry</button>
                                 <details class="staff-entry-actions">
@@ -1752,13 +1726,13 @@ $pageDescriptions = [
             if (vent.adviser_name) senderInfo += `\nAdviser: ${vent.adviser_name}`;
 
             const badgeClass = vent.risk_level === 'CRITICAL'
-                ? 'bg-[#E04B3F] text-white border-transparent'
+                ? 'bg-red-100 text-red-800 border-red-200'
                 : (vent.risk_level === 'HIGH'
-                    ? 'bg-[#F59E0B] text-white border-transparent'
+                    ? 'bg-amber-100 text-amber-900 border-amber-200'
                     : (vent.risk_level === 'MEDIUM'
                         ? 'bg-[#2A5DB0]/10 text-[#2A5DB0] border-[#2A5DB0]/20'
                         : 'bg-[#235D3A]/10 text-[#235D3A] border-[#235D3A]/20'));
-            openDetailModal('Safe Space Vent Entry', senderInfo, `${dateStr} ${timeStr}`, vent.raw_text, `Threat Level: ${vent.risk_level}`, badgeClass);
+            openDetailModal('Safe Space Vent Entry', senderInfo, `${dateStr} ${timeStr}`, vent.raw_text, `Review priority: ${vent.risk_level || 'Unclassified'}`, badgeClass);
             showScreeningExplanation(vent);
         }
 
@@ -1861,7 +1835,7 @@ $pageDescriptions = [
                     this.hidden = !(matchesSearch && matchesStatus && matchesDate);
                     this.style.removeProperty('display');
                 });
-                collapseRows('ventsTableBody', 5, 7, 'section-vents');
+                collapseRows('ventsTableBody', 5, 5, 'section-vents');
             };
 
             window.applyIncidentsFilter = function () {

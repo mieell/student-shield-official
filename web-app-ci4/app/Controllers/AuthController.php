@@ -667,7 +667,7 @@ class AuthController extends BaseController
 
         \App\Libraries\AuditTrail::record('USER_REGISTERED', 'user', (int) $userId, (int) $userId);
 
-        return redirect()->to('/login')->with('success', 'Registration submitted. School staff will verify your guardian contact and the Guidance Office will review consent before approving your account.');
+        return redirect()->to('/login')->with('registration_submitted', true);
     }
 
     private function registrationFailure(string $message)

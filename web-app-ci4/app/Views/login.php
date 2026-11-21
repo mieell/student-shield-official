@@ -215,7 +215,17 @@
             <div class="login-fields">
             <!-- Success / Notice Flash -->
             <?php $loginSuccess = session()->getFlashdata('success') ?? session()->getFlashdata('message'); ?>
-            <?php if ($loginSuccess): ?>
+            <?php if (session()->getFlashdata('registration_submitted')): ?>
+                <section role="status" aria-labelledby="registrationReceiptTitle" class="mb-5 rounded-2xl border border-[#d6e8c2]/55 bg-[#06401e] px-4 py-3.5 text-sm leading-relaxed text-white">
+                    <h2 id="registrationReceiptTitle" class="font-heading font-extrabold text-[#fff0a8]">Registration submitted</h2>
+                    <p class="mt-1 font-semibold">Waiting for guardian contact verification</p>
+                    <ol class="mt-2 list-decimal space-y-1 pl-5 text-white/90">
+                        <li>School staff verify your guardian's contact details.</li>
+                        <li>Your guardian reviews and responds to the consent request.</li>
+                        <li>The Guidance Office reviews the request. You can sign in once your account is approved.</li>
+                    </ol>
+                </section>
+            <?php elseif ($loginSuccess): ?>
                 <div role="status" class="bg-emerald-500/15 backdrop-blur-md border border-emerald-400/35 p-3.5 sm:p-4 mb-5 sm:mb-6 rounded-2xl shadow-lg">
                     <div class="flex items-start gap-3">
                         <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-400/20 flex items-center justify-center flex-shrink-0 mt-0.5">

@@ -18,15 +18,15 @@ $inputName = $kind === 'victim' ? 'victim_name' : 'bully_name';
     </div>
     <label for="<?= $kind ?>-search" class="text-xs block mb-1">Search student name</label>
     <div class="directory-search-wrap">
-        <input id="<?= $kind ?>-search" type="search" maxlength="80" autocomplete="off" class="directory-search w-full border rounded-xl px-3 py-3 mb-3" placeholder="Type at least 2 letters" disabled>
+        <input id="<?= $kind ?>-search" type="search" maxlength="80" autocomplete="off" aria-controls="<?= $kind ?>-matches" aria-describedby="<?= $kind ?>-status" class="directory-search w-full border rounded-xl px-3 py-3 mb-3" placeholder="Type at least 2 letters" disabled>
         <div class="directory-popup" hidden>
             <div class="directory-popup-label">Matching students</div>
-            <div class="directory-matches" role="group" aria-label="Matching students"></div>
+            <div id="<?= $kind ?>-matches" class="directory-matches" role="group" aria-label="Matching students"></div>
         </div>
     </div>
     <input type="hidden" id="<?= $kind ?>-student" name="<?= $kind ?>_student_id" class="directory-choice">
     <button type="button" class="directory-unlisted text-sm font-semibold text-calm-700 underline" aria-pressed="false">I don't know / not listed</button>
-    <p class="directory-status text-xs text-gray-600 mt-1" aria-live="polite">Choose a grade and section to search, or select “not listed”.</p>
+    <p id="<?= $kind ?>-status" class="directory-status text-xs text-gray-600 mt-1" role="status">Choose a grade and section to search, or select “not listed”.</p>
     <label class="directory-description-label text-xs block mt-2" for="<?= $inputId ?>" hidden>Name or description of the person</label>
     <input id="<?= $inputId ?>" name="<?= $inputName ?>" type="text" maxlength="160" class="directory-description w-full border rounded-xl px-3 py-3 mt-1" hidden disabled placeholder="What do you know about this person?">
 </div>
