@@ -638,7 +638,10 @@ $pageDescriptions = [
         <?php if ($dashboardPage === 'vents'): ?>
         <div id="section-vents" class="dashboard-card overflow-hidden animate-slide-up flex flex-col"
             style="animation-delay: 0.2s">
-            <div class="queue-heading"><h3>Entries</h3></div>
+            <div class="queue-heading flex items-center justify-between flex-wrap gap-2">
+                <h3>Entries</h3>
+                <span id="ventsUrgentSummary" class="staff-urgent-summary hidden" role="status"></span>
+            </div>
             <!-- Table Container -->
             <div class="overflow-x-auto custom-scrollbar flex flex-col">
                 <div
@@ -653,6 +656,11 @@ $pageDescriptions = [
                             class="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#235D3A] focus:ring-1 focus:ring-[#235D3A]/20 transition-all">
                     </div>
                     <div class="staff-filter-controls flex items-center gap-2 flex-wrap">
+                        <select id="sortVents" aria-label="Sort entries"
+                            class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#235D3A] bg-white text-gray-700 font-medium">
+                            <option value="urgent" selected>Most Urgent First</option>
+                            <option value="newest">Newest First</option>
+                        </select>
                         <select id="filterStatusVents" aria-label="Filter entry status"
                             class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#235D3A]">
                             <option value="all">All Statuses</option>
@@ -1133,7 +1141,7 @@ $pageDescriptions = [
             data.forEach(v => {
                 if (v.risk_level === 'CRITICAL') {
                     critical++;
-                    if (v.status !== 'Resolved') criticalPending++;
+                    if (!isVentResolvedStatus(v.status)) criticalPending++;
                 }
                 else if (v.risk_level === 'HIGH') high++;
                 else if (v.risk_level === 'MEDIUM') medium++;
@@ -1240,73 +1248,214 @@ $pageDescriptions = [
             tbody.querySelectorAll('tr[data-entry-id]').forEach(row => row.querySelectorAll('details').forEach((detail, index) => { detail.open = open.has(row.dataset.entryId + ':' + index); }));
         }
 
-        function fetchLiveVents() {
-            if (!document.getElementById('ventsTableBody') && !document.getElementById('riskPieChart')) return;
-            const requestVersion = ++ventsRequestVersion;
-            const archived = showArchivedVents;
-            $.ajax({
-                url: API_URL + (archived ? "?archived=1" : ""),
-                dataType: 'json',
-                success: function (data) {
-                    if (requestVersion !== ventsRequestVersion || archived !== showArchivedVents) return;
-                    const feedStatus = document.getElementById('feedUpdatedAt');
-                    if (feedStatus) feedStatus.textContent = 'Updated ' + formatPHDate(new Date(), { hour: '2-digit', minute: '2-digit' });
-                    let currentDataString = JSON.stringify(data);
-                    if (currentDataString === previousVentsDataString) return;
-                    previousVentsDataString = currentDataString;
-                    if (!document.getElementById('ventsTableBody')) {
-                        updateCharts(data);
-                        return;
+        const VENT_RISK_PRIORITY = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+        window.latestVentsData = [];
+
+        function getVentsSortMode() {
+            const select = document.getElementById('sortVents');
+            return (select && select.value === 'newest') ? 'newest' : 'urgent';
+        }
+
+        function isVentResolvedStatus(status) {
+            return status === 'Resolved' || status === 'Reviewed';
+        }
+
+        function sortVentsList(entries, sortMode) {
+            const list = Array.isArray(entries) ? [...entries] : [];
+            if (sortMode === 'newest') {
+                return list.sort((a, b) => {
+                    const timeDiff = parsePHDate(b.created_at).getTime() - parsePHDate(a.created_at).getTime();
+                    return timeDiff !== 0 ? timeDiff : (Number(b.id) || 0) - (Number(a.id) || 0);
+                });
+            }
+            return list.sort((a, b) => {
+                const resA = isVentResolvedStatus(a.status) ? 1 : 0;
+                const resB = isVentResolvedStatus(b.status) ? 1 : 0;
+                if (resA !== resB) return resA - resB;
+
+                const rankA = VENT_RISK_PRIORITY[(a.risk_level || '').toUpperCase()] || 0;
+                const rankB = VENT_RISK_PRIORITY[(b.risk_level || '').toUpperCase()] || 0;
+                if (rankA !== rankB) return rankB - rankA;
+
+                if (resA === 0) {
+                    const escA = (a.trajectory || '').toUpperCase() === 'ESCALATING' ? 1 : 0;
+                    const escB = (b.trajectory || '').toUpperCase() === 'ESCALATING' ? 1 : 0;
+                    if (escA !== escB) return escB - escA;
+
+                    // Oldest waiting unresolved entry first within the same urgency tier.
+                    const waitDiff = parsePHDate(a.created_at).getTime() - parsePHDate(b.created_at).getTime();
+                    if (waitDiff !== 0) return waitDiff;
+                } else {
+                    const recentDiff = parsePHDate(b.created_at).getTime() - parsePHDate(a.created_at).getTime();
+                    if (recentDiff !== 0) return recentDiff;
+                }
+
+                const scoreDiff = (parseFloat(b.risk_percent) || 0) - (parseFloat(a.risk_percent) || 0);
+                if (scoreDiff !== 0) return scoreDiff;
+                return (Number(b.id) || 0) - (Number(a.id) || 0);
+            });
+        }
+
+        function formatVentElapsed(dateValue, nowMs = Date.now()) {
+            const dateObj = dateValue instanceof Date ? dateValue : parsePHDate(dateValue);
+            const diffSec = Math.max(0, Math.floor((nowMs - dateObj.getTime()) / 1000));
+            if (diffSec < 60) return 'Just now';
+            const mins = Math.floor(diffSec / 60);
+            if (mins < 60) return `${mins}m`;
+            const hours = Math.floor(mins / 60);
+            const remMins = mins % 60;
+            if (hours < 6 && remMins > 0) return `${hours}h ${remMins}m`;
+            if (hours < 24) return `${hours}h`;
+            const days = Math.floor(hours / 24);
+            const remHours = hours % 24;
+            if (days < 2 && remHours > 0) return `${days}d ${remHours}h`;
+            return `${days}d`;
+        }
+
+        function formatVentElapsedCaption(dateValue, isResolved, nowMs = Date.now()) {
+            const elapsed = formatVentElapsed(dateValue, nowMs);
+            if (elapsed === 'Just now') {
+                return isResolved ? 'Submitted just now' : 'Waiting · just now';
+            }
+            return isResolved ? `Submitted ${elapsed} ago` : `Waiting ${elapsed}`;
+        }
+
+        function getVentUrgencyCue(riskLevel, isResolved, trajectory) {
+            if (isResolved) {
+                return { label: '✓ Reviewed', cls: 'text-[#235D3A]' };
+            }
+            const level = (riskLevel || '').toUpperCase();
+            if (level === 'CRITICAL') {
+                return { label: 'Immediate review', cls: 'text-[#B3261E] font-semibold' };
+            }
+            if (level === 'HIGH') {
+                return { label: 'Priority check-in', cls: 'text-[#B45309] font-semibold' };
+            }
+            if (level === 'MEDIUM' && (trajectory || '').toUpperCase() === 'ESCALATING') {
+                return { label: 'Escalating · Follow up', cls: 'text-[#B45309] font-semibold' };
+            }
+            if (level === 'MEDIUM') {
+                return { label: 'Standard review', cls: 'text-[#2A5DB0]' };
+            }
+            return { label: 'Routine', cls: 'text-gray-500' };
+        }
+
+        function refreshVentElapsedLabels() {
+            const nowMs = Date.now();
+            document.querySelectorAll('[data-vent-elapsed]').forEach(el => {
+                const createdAt = el.getAttribute('data-created-at');
+                const isResolved = el.getAttribute('data-resolved') === '1';
+                if (createdAt) {
+                    el.textContent = formatVentElapsedCaption(createdAt, isResolved, nowMs);
+                }
+            });
+        }
+
+        function updateVentsUrgentSummary(data) {
+            const summaryEl = document.getElementById('ventsUrgentSummary');
+            if (!summaryEl) return;
+            if (showArchivedVents || !Array.isArray(data) || data.length === 0) {
+                summaryEl.classList.add('hidden');
+                summaryEl.textContent = '';
+                return;
+            }
+            let criticalOpen = 0;
+            let highOpen = 0;
+            data.forEach(vent => {
+                if (isVentResolvedStatus(vent.status)) return;
+                const level = (vent.risk_level || '').toUpperCase();
+                if (level === 'CRITICAL') criticalOpen++;
+                else if (level === 'HIGH') highOpen++;
+            });
+            const parts = [];
+            if (criticalOpen > 0) parts.push(`${criticalOpen} critical`);
+            if (highOpen > 0) parts.push(`${highOpen} high`);
+            if (parts.length === 0) {
+                summaryEl.classList.add('hidden');
+                summaryEl.textContent = '';
+                return;
+            }
+            summaryEl.textContent = `${parts.join(' · ')} awaiting review`;
+            summaryEl.classList.remove('hidden');
+            summaryEl.dataset.severity = criticalOpen > 0 ? 'critical' : 'high';
+        }
+
+        function renderVentsTable(data) {
+            const tbody = document.getElementById('ventsTableBody');
+            if (!tbody) return;
+
+            const sortedData = sortVentsList(data, getVentsSortMode());
+            let html = '';
+            window.ventsDataMap = {};
+            const nowMs = Date.now();
+
+            if (sortedData.length === 0) {
+                html = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-600">No entries found yet.</td></tr>`;
+            } else {
+                sortedData.forEach((vent, index) => {
+                    window.ventsDataMap[vent.id] = vent;
+                    const splitPreview = typeof splitVentFollowUp === 'function'
+                        ? splitVentFollowUp(vent.raw_text)
+                        : { mainText: vent.raw_text || '', followUpText: '' };
+                    const previewSource = splitPreview.mainText || vent.raw_text || '';
+                    let textSnippet = previewSource.length > 55 ? previewSource.substring(0, 55) + '...' : previewSource;
+                    const selectedFeelings = typeof parseStudentEmotions === 'function'
+                        ? parseStudentEmotions(vent.emotions)
+                        : (vent.emotions ? String(vent.emotions).split(',').map(s => s.trim()).filter(Boolean) : []);
+                    const previewMeta = [];
+                    if (selectedFeelings.length > 0) {
+                        previewMeta.push(`${selectedFeelings.length} ${selectedFeelings.length === 1 ? 'feeling' : 'feelings'}`);
+                    }
+                    if (splitPreview.followUpText) {
+                        previewMeta.push('Follow-up added');
                     }
 
-                    let html = '';
-                    window.ventsDataMap = {};
+                    let bgColor = 'bg-white';
+                    let badgeClass = 'bg-gray-100 text-gray-800';
 
-                    if (data.length === 0) {
-                        html = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-600">No entries found yet.</td></tr>`;
+                    // Threat logic (Color-coded Triage)
+                    if (vent.risk_level === 'CRITICAL') {
+                        bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#E04B3F] relative';
+                        badgeClass = 'bg-[#E04B3F] text-white font-bold border-none';
+                    } else if (vent.risk_level === 'HIGH') {
+                        bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#F59E0B] relative';
+                        badgeClass = 'bg-[#F59E0B] text-white font-bold border-none';
+                    } else if (vent.risk_level === 'MEDIUM') {
+                        bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#2A5DB0]';
+                        badgeClass = 'bg-[#2A5DB0]/10 text-[#2A5DB0] border border-[#2A5DB0]/20 font-semibold';
                     } else {
-                        data.forEach((vent, index) => {
-                            window.ventsDataMap[vent.id] = vent;
-                            let textSnippet = vent.raw_text.length > 55 ? vent.raw_text.substring(0, 55) + '...' : vent.raw_text;
-                            let bgColor = 'bg-white';
-                            let badgeClass = 'bg-gray-100 text-gray-800';
-                            let statusIcon = '';
+                        bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#235D3A]';
+                        badgeClass = 'bg-[#235D3A]/10 text-[#235D3A] border border-[#235D3A]/20';
+                    }
 
-                            // Threat logic (Color-coded Triage)
-                            if (vent.risk_level === 'CRITICAL') {
-                                bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#E04B3F] relative';
-                                badgeClass = 'bg-[#E04B3F] text-white font-bold border-none';
-                            } else if (vent.risk_level === 'HIGH') {
-                                bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#F59E0B] relative';
-                                badgeClass = 'bg-[#F59E0B] text-white font-bold border-none';
-                            } else if (vent.risk_level === 'MEDIUM') {
-                                bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#2A5DB0]';
-                                badgeClass = 'bg-[#2A5DB0]/10 text-[#2A5DB0] border border-[#2A5DB0]/20 font-semibold';
-                            } else {
-                                bgColor = 'bg-white hover:bg-gray-50 border-l-4 border-l-[#235D3A]';
-                                badgeClass = 'bg-[#235D3A]/10 text-[#235D3A] border border-[#235D3A]/20';
-                            }
+                    // Status formatting
+                    const isResolved = isVentResolvedStatus(vent.status);
+                    const statusColor = isResolved ? 'text-[#235D3A] bg-[#235D3A]/10' : 'text-gray-600 bg-gray-50';
+                    const urgencyCue = getVentUrgencyCue(vent.risk_level, isResolved, vent.trajectory);
 
-                            // Status formatting
-                            let isResolved = vent.status === 'Resolved' || vent.status === 'Reviewed';
-                            let statusColor = isResolved ? 'text-[#235D3A] bg-[#235D3A]/10' : 'text-gray-600 bg-gray-50';
+                    // Formatting dates with day name for Philippine context
+                    const dateObj = parsePHDate(vent.created_at);
+                    const timeStr = formatPHDate(dateObj, { hour: '2-digit', minute: '2-digit' });
+                    const dayName = formatPHDate(dateObj, { weekday: 'short' });
+                    const dateStr = formatPHDate(dateObj, { month: 'short', day: 'numeric' });
+                    const elapsedCaption = formatVentElapsedCaption(dateObj, isResolved, nowMs);
+                    const elapsedClass = isResolved
+                        ? 'text-gray-500'
+                        : (vent.risk_level === 'CRITICAL'
+                            ? 'text-[#B3261E] font-semibold'
+                            : (vent.risk_level === 'HIGH' ? 'text-[#B45309] font-semibold' : 'text-gray-500'));
 
-                            // Formatting dates with day name for Philippine context
-                            const dateObj = parsePHDate(vent.created_at);
-                            const timeStr = formatPHDate(dateObj, { hour: '2-digit', minute: '2-digit' });
-                            const dayName = formatPHDate(dateObj, { weekday: 'short' });
-                            const dateStr = formatPHDate(dateObj, { month: 'short', day: 'numeric' });
+                    // Animation delay for new loads
+                    const animDelay = isFirstLoadVents ? `style="animation-delay: ${index * 0.05}s"` : '';
+                    const animClass = isFirstLoadVents ? 'animate-slide-up opacity-0' : '';
 
-                            // Animation delay for new loads
-                            const animDelay = isFirstLoadVents ? `style="animation-delay: ${index * 0.05}s"` : '';
-                            const animClass = isFirstLoadVents ? 'animate-slide-up opacity-0' : '';
-
-                            const contactDetails = `                                        ${vent.adviser_name ? `<span class="text-[11px] text-gray-600 font-bold block mb-1">Adviser: <span class="font-normal text-gray-600">${escapeHtml(vent.adviser_name)}</span></span>` : ''}
+                    const contactDetails = `                                        ${vent.adviser_name ? `<span class="text-[11px] text-gray-600 font-bold block mb-1">Adviser: <span class="font-normal text-gray-600">${escapeHtml(vent.adviser_name)}</span></span>` : ''}
                                         ${vent.parent_phone ? `<span class="text-[10px] text-gray-500 block pt-0.5 border-t border-gray-200 mt-1">📞 ${escapeHtml(vent.parent_phone)}</span>` : ''}
                                         ${vent.parent_email ? `<span class="text-[10px] text-gray-500 block">✉️ ${escapeHtml(vent.parent_email)}</span>` : ''}`;
 
-                            const rawDate = formatPHIsoDate(dateObj); const ventStatus = isResolved ? "resolved" : "unresolved"; html += `<tr data-entry-id="${vent.id}" data-status="${ventStatus}" data-date="${rawDate}" data-risk="${escapeHtml(vent.risk_level)}" class="transition-all duration-300 transform hover:-translate-y-[1px] ${bgColor} ${animClass}" ${animDelay}>
-                            ${vent.risk_level === 'CRITICAL' && !isResolved ? `` : ''}
+                    const rawDate = formatPHIsoDate(dateObj);
+                    const ventStatus = isResolved ? "resolved" : "unresolved";
+                    html += `<tr data-entry-id="${vent.id}" data-status="${ventStatus}" data-date="${rawDate}" data-risk="${escapeHtml(vent.risk_level)}" class="transition-all duration-300 transform hover:-translate-y-[1px] ${bgColor} ${animClass}" ${animDelay}>
                             <td data-label="Select" class="px-4 py-4 whitespace-nowrap text-center relative z-10">
                                 <label class="staff-entry-select"><input type="checkbox" name="vent_ids[]" value="${vent.id}" aria-label="Select entry by ${escapeHtml(vent.name)}" class="vent-checkbox rounded border-gray-300 text-primary h-4 w-4"></label>
                             </td>
@@ -1325,6 +1474,7 @@ $pageDescriptions = [
                             </td>
                             <td data-label="NLP Extract" class="px-6 py-4 cursor-pointer group" onclick="openVentModal(${vent.id})">
                                 <p class="text-sm text-gray-600 italic line-clamp-2">"${escapeHtml(textSnippet)}"</p>
+                                ${previewMeta.length > 0 ? `<p class="text-[11px] text-[#435e51] font-medium mt-1">${escapeHtml(previewMeta.join(' · '))}</p>` : ''}
                             </td>
                             <td data-label="Risk Indicator" class="px-6 py-4 whitespace-nowrap text-center">
                                 ${(() => {
@@ -1357,10 +1507,12 @@ $pageDescriptions = [
                                 <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${badgeClass} shadow-sm">
                                     ${escapeHtml(vent.risk_level)}
                                 </span>
+                                <span class="block text-[11px] mt-1 ${urgencyCue.cls}">${escapeHtml(urgencyCue.label)}</span>
                             </td>
                             <td data-label="Timestamp" class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-semibold text-gray-800">${timeStr}</div>
                                 <div class="text-xs text-gray-600">${dayName}, ${dateStr}</div>
+                                <div class="text-[11px] mt-0.5 ${elapsedClass}" data-vent-elapsed="1" data-created-at="${escapeHtml(vent.created_at || '')}" data-resolved="${isResolved ? '1' : '0'}">${escapeHtml(elapsedCaption)}</div>
                             </td>
                             <td data-label="Action" class="px-6 py-4 whitespace-nowrap text-center">
                                 <div class="staff-action-row">
@@ -1402,16 +1554,41 @@ $pageDescriptions = [
                                 </div>
                             </td>
                         </tr>`;
-                        });
+                });
+            }
+
+            refreshTable('ventsTableBody', html);
+            updateVentsUrgentSummary(data);
+            isFirstLoadVents = false;
+            toggleDeleteBtn('.vent-checkbox', '.delete-btn-vents');
+            applyVentsFilter();
+        }
+
+        function fetchLiveVents() {
+            if (!document.getElementById('ventsTableBody') && !document.getElementById('riskPieChart')) return;
+            const requestVersion = ++ventsRequestVersion;
+            const archived = showArchivedVents;
+            $.ajax({
+                url: API_URL + (archived ? "?archived=1" : ""),
+                dataType: 'json',
+                success: function (data) {
+                    if (requestVersion !== ventsRequestVersion || archived !== showArchivedVents) return;
+                    const feedStatus = document.getElementById('feedUpdatedAt');
+                    if (feedStatus) feedStatus.textContent = 'Updated ' + formatPHDate(new Date(), { hour: '2-digit', minute: '2-digit' });
+                    let currentDataString = JSON.stringify(data);
+                    if (currentDataString === previousVentsDataString) {
+                        refreshVentElapsedLabels();
+                        return;
+                    }
+                    previousVentsDataString = currentDataString;
+                    window.latestVentsData = data;
+                    if (!document.getElementById('ventsTableBody')) {
+                        updateCharts(data);
+                        return;
                     }
 
-                    refreshTable('ventsTableBody', html);
-
+                    renderVentsTable(data);
                     updateCharts(data);
-                    isFirstLoadVents = false;
-
-                    toggleDeleteBtn('.vent-checkbox', '.delete-btn-vents');
-                    applyVentsFilter();
                 },
                 error: function (xhr) {
                     if (requestVersion !== ventsRequestVersion || archived !== showArchivedVents) return;
@@ -1710,6 +1887,8 @@ $pageDescriptions = [
         }
 
         function openDetailModal(type, sender, timeStr, fullText, badgeText, badgeClass) {
+            document.getElementById('modalFollowUpContext')?.remove();
+            document.getElementById('modalStudentFeelings')?.remove();
             document.getElementById('screeningExplanation')?.remove();
             document.getElementById('modalTitle').innerText = type;
             document.getElementById('modalSender').innerText = sender;
@@ -1746,6 +1925,8 @@ $pageDescriptions = [
             const dateObj = parsePHDate(vent.created_at);
             const timeStr = formatPHDate(dateObj, { hour: '2-digit', minute: '2-digit' });
             const dateStr = formatPHDate(dateObj, { weekday: 'long', month: 'short', day: 'numeric' });
+            const isResolved = isVentResolvedStatus(vent.status);
+            const elapsedNote = formatVentElapsedCaption(dateObj, isResolved);
 
             let senderInfo = vent.name || 'Anonymous';
             if (vent.section) senderInfo += `\nSection: ${vent.section}`;
@@ -1758,7 +1939,7 @@ $pageDescriptions = [
                     : (vent.risk_level === 'MEDIUM'
                         ? 'bg-[#2A5DB0]/10 text-[#2A5DB0] border-[#2A5DB0]/20'
                         : 'bg-[#235D3A]/10 text-[#235D3A] border-[#235D3A]/20'));
-            openDetailModal('Safe Space Vent Entry', senderInfo, `${dateStr} ${timeStr}`, vent.raw_text, `Threat Level: ${vent.risk_level}`, badgeClass);
+            openDetailModal('Safe Space Vent Entry', senderInfo, `${dateStr} ${timeStr} · ${elapsedNote}`, vent.raw_text, `Threat Level: ${vent.risk_level}`, badgeClass);
             showScreeningExplanation(vent);
         }
 
@@ -1880,12 +2061,25 @@ $pageDescriptions = [
                 collapseRows('incidentsTableBody', 5, 8, 'section-incidents');
             };
 
-            // Restore filter state from localStorage if exists
+            // Restore filter & sort state from localStorage if exists
+            const savedVentsSort = localStorage.getItem('ventsSortOrder');
+            if (savedVentsSort === 'urgent' || savedVentsSort === 'newest') {
+                $('#sortVents').val(savedVentsSort);
+            } else {
+                $('#sortVents').val('urgent');
+            }
             if (localStorage.getItem('ventsFilterStatus')) $('#filterStatusVents').val(localStorage.getItem('ventsFilterStatus'));
             if (localStorage.getItem('ventsFilterDate')) $('#filterDateVents').val(localStorage.getItem('ventsFilterDate'));
             if (localStorage.getItem('incidentsFilterStatus')) $('#filterStatusIncidents').val(localStorage.getItem('incidentsFilterStatus'));
             if (localStorage.getItem('incidentsFilterDate')) $('#filterDateIncidents').val(localStorage.getItem('incidentsFilterDate'));
 
+            $('#sortVents').on('change', function () {
+                const mode = $(this).val() === 'newest' ? 'newest' : 'urgent';
+                localStorage.setItem('ventsSortOrder', mode);
+                if (Array.isArray(window.latestVentsData) && window.latestVentsData.length > 0) {
+                    renderVentsTable(window.latestVentsData);
+                }
+            });
             $('#searchVents').on('input', applyVentsFilter);
             $('#filterStatusVents').on('change', function () {
                 let val = $(this).val();

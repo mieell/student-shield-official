@@ -1,3 +1,49 @@
+const STUDENT_FEELING_EMOJIS = {
+    okay: '😐',
+    calm: '😌',
+    happy: '😊',
+    hopeful: '🙂',
+    sad: '😔',
+    angry: '😠',
+    anxious: '😰',
+    lonely: '🥺',
+    overwhelmed: '😵',
+    hurt: '🤕',
+    numb: '😶',
+    scared: '😨',
+};
+
+function parseStudentEmotions(raw) {
+    const items = Array.isArray(raw)
+        ? raw
+        : (typeof raw === 'string' ? raw.split(',') : []);
+    const seen = new Set();
+    const list = [];
+    items.forEach(item => {
+        const label = String(item || '').replace(/\s+/g, ' ').trim();
+        const key = label.toLowerCase();
+        if (!label || seen.has(key)) return;
+        seen.add(key);
+        list.push({
+            label,
+            emoji: STUDENT_FEELING_EMOJIS[key] || '',
+        });
+    });
+    return list;
+}
+
+function splitVentFollowUp(rawText) {
+    const text = typeof rawText === 'string' ? rawText : '';
+    const match = /\r?\n\r?\nAdditional context:\s*([\s\S]+)$/i.exec(text);
+    if (!match) {
+        return { mainText: text, followUpText: '' };
+    }
+    return {
+        mainText: text.slice(0, match.index).trim(),
+        followUpText: match[1].trim(),
+    };
+}
+
 function cleanScreeningText(raw, finalRisk = '') {
     if (typeof raw !== 'string') return '';
     const riskUpper = String(finalRisk || '').toUpperCase();
@@ -36,13 +82,78 @@ function cleanScreeningText(raw, finalRisk = '') {
 }
 
 function showScreeningExplanation(vent) {
+    const modalContent = document.getElementById('modalContent');
+    if (!modalContent) return;
+
+    document.getElementById('modalFollowUpContext')?.remove();
+    document.getElementById('modalStudentFeelings')?.remove();
+
+    let anchor = modalContent;
+
+    const { mainText, followUpText } = splitVentFollowUp(vent.raw_text);
+    if (followUpText) {
+        modalContent.textContent = mainText || vent.raw_text || '';
+        const followUpSection = document.createElement('section');
+        followUpSection.id = 'modalFollowUpContext';
+        followUpSection.className = 'mt-4 border border-[#e7d9a7] rounded-xl p-4 bg-[#fffcf0]';
+
+        const followUpHeading = document.createElement('h4');
+        followUpHeading.className = 'text-xs font-bold uppercase tracking-wider text-[#8a6500] mb-1.5';
+        followUpHeading.textContent = 'Student follow-up context';
+
+        const followUpBody = document.createElement('p');
+        followUpBody.className = 'text-sm text-[#2d3b32] leading-relaxed whitespace-pre-wrap';
+        followUpBody.textContent = followUpText;
+
+        followUpSection.append(followUpHeading, followUpBody);
+        anchor.after(followUpSection);
+        anchor = followUpSection;
+    }
+
+    const feelingsSection = document.createElement('section');
+    feelingsSection.id = 'modalStudentFeelings';
+    feelingsSection.className = 'mt-4 border border-[#d8e3db] rounded-xl p-3.5 bg-white';
+
+    const feelingsHeading = document.createElement('h4');
+    feelingsHeading.className = 'text-xs font-bold uppercase tracking-wider text-[#235D3A] mb-2';
+    feelingsHeading.textContent = 'Student-selected feelings';
+    feelingsSection.append(feelingsHeading);
+
+    const parsedFeelings = parseStudentEmotions(vent.emotions);
+    if (parsedFeelings.length > 0) {
+        const chipList = document.createElement('div');
+        chipList.className = 'flex flex-wrap gap-2';
+        parsedFeelings.forEach(({ label, emoji }) => {
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#fff4cf] text-[#203d2c] border border-[#ebd794]';
+            if (emoji) {
+                const emojiSpan = document.createElement('span');
+                emojiSpan.setAttribute('aria-hidden', 'true');
+                emojiSpan.textContent = emoji;
+                chip.append(emojiSpan);
+            }
+            const textSpan = document.createElement('span');
+            textSpan.textContent = label;
+            chip.append(textSpan);
+            chipList.append(chip);
+        });
+        feelingsSection.append(chipList);
+    } else {
+        const emptyNote = document.createElement('p');
+        emptyNote.className = 'text-xs text-[#61756B]';
+        emptyNote.textContent = 'None selected by student';
+        feelingsSection.append(emptyNote);
+    }
+    anchor.after(feelingsSection);
+    anchor = feelingsSection;
+
     let panel = document.getElementById('screeningExplanation');
     if (!panel) {
         panel = document.createElement('section');
         panel.id = 'screeningExplanation';
-        panel.className = 'mt-5 border border-[#cfe0d5] rounded-xl p-4 bg-[#f4f8f5]';
-        document.getElementById('modalContent').after(panel);
+        panel.className = 'mt-4 border border-[#cfe0d5] rounded-xl p-4 bg-[#f4f8f5]';
     }
+    anchor.after(panel);
     panel.replaceChildren();
 
     const title = document.createElement('h4');

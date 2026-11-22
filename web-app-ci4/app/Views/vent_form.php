@@ -193,6 +193,63 @@
         </div>
     </main>
 
+    <!-- Optional Follow-up Modal -->
+    <div id="ventFollowUpModal" class="fixed inset-0 z-[105] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="followUpTitle">
+        <div class="absolute inset-0 bg-black/35 backdrop-blur-sm transition-opacity duration-200" id="followUpBackdrop"></div>
+        <div class="followup-dialog bg-white p-6 sm:p-7 max-w-lg w-full rounded-2xl shadow-2xl relative z-10 border border-[#d8e3db]" id="followUpContent">
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-[#8a6500] mb-1">Optional check-in</p>
+                    <h2 id="followUpTitle" class="text-xl sm:text-2xl font-heading font-bold text-[#203d2c] leading-snug">Anything else you'd like to add?</h2>
+                </div>
+                <button type="button" id="followUpCloseBtn" aria-label="Close and continue editing"
+                    class="min-w-[40px] min-h-[40px] rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 flex items-center justify-center transition-colors shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                Optional. Sharing what happened, how long you've felt this way, or whether you'd like a counselor to check in helps your counselor understand your message.
+            </p>
+
+            <div class="mb-4">
+                <p class="text-xs font-bold text-[#203d2c] mb-2">Quick context (optional)</p>
+                <div class="followup-chips" id="followUpChips" role="group" aria-label="Optional quick context">
+                    <button type="button" class="followup-chip" data-followup-chip="Just letting off steam / lighthearted" aria-pressed="false">Just letting off steam / lighthearted</button>
+                    <button type="button" class="followup-chip" data-followup-chip="Been feeling this way for days" aria-pressed="false">Been feeling this way for days</button>
+                    <button type="button" class="followup-chip" data-followup-chip="I'd like a counselor to check in" aria-pressed="false">I'd like a counselor to check in</button>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <label for="followUpText" class="text-xs font-bold text-[#203d2c]">Add a short note (optional)</label>
+                    <span id="followUpCharCount" class="text-xs text-gray-500">0 / 600</span>
+                </div>
+                <textarea id="followUpText" rows="3" maxlength="600"
+                    placeholder="For example: what happened, if it was a joke or exam rant, or how your counselor can support you…"
+                    class="w-full rounded-xl border border-[#a5b7ab] bg-[#f8faf8] px-3.5 py-2.5 text-sm text-gray-800 leading-relaxed focus:outline-none focus:border-[#235D3A] focus:bg-white focus:ring-2 focus:ring-[#235D3A]/15 resize-none"></textarea>
+                <p id="followUpHint" class="text-xs font-semibold text-[#8a5700] mt-1.5 hidden" role="status">
+                    Add a short note or select a quick option above, or choose Submit as is.
+                </p>
+            </div>
+
+            <p class="text-xs text-gray-500 mb-5">
+                Any note you add is included in your message so it is reviewed together by your counselor.
+            </p>
+
+            <div class="flex flex-col-reverse sm:flex-row gap-2.5 sm:justify-end">
+                <button type="button" id="followUpAsIsBtn"
+                    class="w-full sm:w-auto min-h-[46px] px-5 py-2.5 rounded-xl border border-[#a5b7ab] bg-white hover:bg-[#f4f7f5] text-[#203d2c] font-bold text-sm transition-colors">
+                    Submit as is
+                </button>
+                <button type="button" id="followUpAddBtn"
+                    class="w-full sm:w-auto min-h-[46px] px-5 py-2.5 rounded-xl submit-btn text-white font-bold text-sm shadow-sm">
+                    Add to my message
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Empathy Modal -->
     <div id="empathyModal" class="fixed inset-0 z-[100] hidden items-center justify-center">
         <div class="absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-500 opacity-0" id="empathyBackdrop"></div>
@@ -292,8 +349,75 @@
         }));
         renderMoodPicker();
 
-        document.getElementById('ventForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        const followUpModal = document.getElementById('ventFollowUpModal');
+        const followUpBackdrop = document.getElementById('followUpBackdrop');
+        const followUpCloseBtn = document.getElementById('followUpCloseBtn');
+        const followUpText = document.getElementById('followUpText');
+        const followUpCharCount = document.getElementById('followUpCharCount');
+        const followUpHint = document.getElementById('followUpHint');
+        const followUpAddBtn = document.getElementById('followUpAddBtn');
+        const followUpAsIsBtn = document.getElementById('followUpAsIsBtn');
+        const followUpChips = [...document.querySelectorAll('.followup-chip')];
+
+        function updateFollowUpCharCount() {
+            const len = followUpText.value.length;
+            followUpCharCount.textContent = len + ' / 600';
+            if (len > 0) followUpHint.classList.add('hidden');
+        }
+        followUpText.addEventListener('input', updateFollowUpCharCount);
+        followUpChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const isActive = chip.classList.toggle('active');
+                chip.setAttribute('aria-pressed', String(isActive));
+                if (isActive) followUpHint.classList.add('hidden');
+            });
+        });
+
+        function resetFollowUpFields() {
+            followUpText.value = '';
+            updateFollowUpCharCount();
+            followUpHint.classList.add('hidden');
+            followUpChips.forEach(chip => {
+                chip.classList.remove('active');
+                chip.setAttribute('aria-pressed', 'false');
+            });
+        }
+
+        function openFollowUpModal() {
+            followUpHint.classList.add('hidden');
+            followUpModal.classList.remove('hidden');
+            followUpModal.classList.add('flex');
+            setTimeout(() => followUpText.focus(), 40);
+        }
+
+        function closeFollowUpModal(restoreFocus = false) {
+            followUpModal.classList.add('hidden');
+            followUpModal.classList.remove('flex');
+            if (restoreFocus) document.getElementById('submitBtn')?.focus();
+        }
+
+        followUpCloseBtn.addEventListener('click', () => closeFollowUpModal(true));
+        followUpBackdrop.addEventListener('click', () => closeFollowUpModal(true));
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !followUpModal.classList.contains('hidden')) {
+                event.preventDefault();
+                closeFollowUpModal(true);
+            }
+        });
+
+        function showVentErrorToast(message) {
+            const errToast = document.createElement('div');
+            errToast.setAttribute('role', 'alert');
+            errToast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3.5 rounded-xl shadow-xl shadow-red-500/20 text-sm font-semibold flex items-center gap-2.5 z-[110]';
+            errToast.innerHTML = '<svg class="w-5 h-5 text-white shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>';
+            const msgSpan = document.createElement('span');
+            msgSpan.textContent = message;
+            errToast.appendChild(msgSpan);
+            document.body.appendChild(errToast);
+            setTimeout(() => { errToast.style.opacity = '0'; errToast.style.transition = 'opacity 0.4s'; setTimeout(() => errToast.remove(), 400); }, 4500);
+        }
+
+        function submitVentEntry(extraContext = '') {
             const btn = document.getElementById('submitBtn');
             if (btn.disabled) return;
             const text = document.getElementById('btnText');
@@ -301,17 +425,13 @@
             const spinner = document.getElementById('btnSpinner');
             const form = document.getElementById('ventForm');
 
-            function showVentErrorToast(message) {
-                const errToast = document.createElement('div');
-                errToast.setAttribute('role', 'alert');
-                errToast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3.5 rounded-xl shadow-xl shadow-red-500/20 text-sm font-semibold flex items-center gap-2.5 z-[110]';
-                errToast.innerHTML = '<svg class="w-5 h-5 text-white shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>';
-                const msgSpan = document.createElement('span');
-                msgSpan.textContent = message;
-                errToast.appendChild(msgSpan);
-                document.body.appendChild(errToast);
-                setTimeout(() => { errToast.style.opacity = '0'; errToast.style.transition = 'opacity 0.4s'; setTimeout(() => errToast.remove(), 400); }, 4500);
-            }
+            closeFollowUpModal(false);
+
+            const baseText = textarea.value.trim();
+            const cleanedExtra = String(extraContext || '').trim();
+            const combinedText = cleanedExtra ? (baseText + '\n\nAdditional context: ' + cleanedExtra) : baseText;
+            const formData = new FormData(form);
+            formData.set('vent_text', combinedText);
 
             btn.disabled = true;
             btn.classList.add('opacity-90', 'cursor-wait');
@@ -326,7 +446,7 @@
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                 },
-                body: new URLSearchParams(new FormData(form)).toString()
+                body: new URLSearchParams(formData).toString()
             })
             .then(r => {
                 // Session expired: server returned a non-JSON redirect or 401
@@ -363,6 +483,7 @@
 
                 textarea.value = '';
                 charCount.textContent = '0 / 2,000 characters';
+                resetFollowUpFields();
                 btn.classList.remove('opacity-90', 'cursor-wait');
                 btn.style.background = 'var(--form-primary)';
                 text.innerText = 'Submitted Securely';
@@ -407,6 +528,46 @@
                         : 'Network error. Please check your connection and try again.');
                 showVentErrorToast(userMsg);
             });
+        }
+
+        followUpAsIsBtn.addEventListener('click', () => {
+            submitVentEntry('');
+        });
+
+        followUpAddBtn.addEventListener('click', () => {
+            const selectedChips = followUpChips
+                .filter(chip => chip.classList.contains('active'))
+                .map(chip => chip.dataset.followupChip || '')
+                .filter(Boolean);
+            const note = followUpText.value.trim();
+
+            if (selectedChips.length === 0 && note === '') {
+                followUpHint.classList.remove('hidden');
+                followUpText.focus();
+                return;
+            }
+
+            let extraContext = '';
+            if (selectedChips.length > 0 && note !== '') {
+                extraContext = selectedChips.join('; ') + '. ' + note;
+            } else if (selectedChips.length > 0) {
+                extraContext = selectedChips.join('; ');
+            } else {
+                extraContext = note;
+            }
+            submitVentEntry(extraContext);
+        });
+
+        document.getElementById('ventForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            if (btn.disabled) return;
+            if (!textarea.value.trim()) {
+                showVentErrorToast('Please write a message before submitting.');
+                textarea.focus();
+                return;
+            }
+            openFollowUpModal();
         });
 
     </script>

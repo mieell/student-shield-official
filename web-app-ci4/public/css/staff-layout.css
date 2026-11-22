@@ -181,9 +181,10 @@ body.staff-layout { --staff-sidebar-width: 240px; background: #f4f7f5; backgroun
     .staff-layout .staff-vents-table td[data-label="NLP Extract"] { grid-row: 3; padding: 10px 0 !important; border-top: 1px solid #edf1ee; }
     .staff-layout .staff-vents-table td[data-label="NLP Extract"]::before { content: 'Entry'; }
     .staff-layout .staff-vents-table td[data-label="NLP Extract"] p { font-size: 14px; line-height: 1.5; }
-    .staff-layout .staff-vents-table td[data-label="Timestamp"] { grid-row: 4; flex-direction: row; align-items: center; gap: 8px; }
+    .staff-layout .staff-vents-table td[data-label="Timestamp"] { grid-row: 4; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
     .staff-layout .staff-vents-table td[data-label="Timestamp"]::before { display: none; }
     .staff-layout .staff-vents-table td[data-label="Timestamp"] > div { font-size: 11px; font-weight: 400; color: #61756b; }
+    .staff-layout .staff-vents-table td[data-label="Timestamp"] > div[data-vent-elapsed] { font-weight: 600; margin-top: 0; }
     .staff-layout .staff-vents-table td[data-label="Action"] { grid-row: 5; display: block; background: transparent; padding-top: 8px !important; }
     .staff-layout .staff-vents-table td[data-label="Action"]::before { display: none; }
     .staff-layout .staff-review-button { background: #0e7c38; color: white; border-color: #0e7c38; font-size: 13px; }
@@ -351,6 +352,24 @@ body.staff-layout #staffMain :is(h1, h2, h3, h4) { font-family: 'Nunito', sans-s
 .staff-layout #dashboardHeader.staff-topbar { border-top: 2px solid #128f42; }
 .staff-layout .dashboard-card { box-shadow: 0 4px 16px #183e2807; }
 .staff-layout .queue-heading { padding-block: 18px; }
+.staff-urgent-summary {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    border: 1px solid #f5d0a9;
+    background: #fffbeb;
+    color: #b45309;
+}
+.staff-urgent-summary[data-severity="critical"] {
+    border-color: #f4c7c4;
+    background: #fef2f2;
+    color: #b3261e;
+}
+.staff-urgent-summary.hidden { display: none !important; }
 .staff-layout .staff-metrics.staff-metrics-compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .staff-registration-notice[hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .staff-sidebar .staff-nav-link { transition: none; } }

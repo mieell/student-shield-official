@@ -539,6 +539,27 @@
                     rl === 'HIGH' ? 'bg-orange-500' :
                         rl === 'MEDIUM' ? 'bg-yellow-500' : 'bg-green-500';
 
+                var isVentDone = v.status === 'Resolved' || v.status === 'Reviewed';
+                var escapeProfileText = function (val) {
+                    return String(val || '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;');
+                };
+                var feelingsHtml = '';
+                if (typeof parseStudentEmotions === 'function') {
+                    var feelingsList = parseStudentEmotions(v.emotions);
+                    if (feelingsList.length > 0) {
+                        feelingsHtml = '<div class="mt-2 flex flex-wrap gap-1.5">' + feelingsList.map(function (f) {
+                            return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#fff4cf] text-[#203d2c] border border-[#ebd794]">' +
+                                (f.emoji ? '<span aria-hidden="true">' + f.emoji + '</span>' : '') +
+                                escapeProfileText(f.label) + '</span>';
+                        }).join('') + '</div>';
+                    }
+                }
+
                 html += '<div class="relative pl-6 pb-6 border-l-2 border-gray-100 last:border-0 last:pb-0">' +
                     '<div class="absolute -left-[5px] top-1 w-2 h-2 rounded-full ' + dotColor + ' ring-4 ring-white"></div>' +
                     '<div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">' +
@@ -546,11 +567,12 @@
                     '<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ' + riskColor + '">Safe Space Entry - ' + rl + ' Risk</span>' +
                     '<span class="text-xs text-gray-400 font-medium">' + dateStr + '</span>' +
                     '</div>' +
-                    '<p class="text-sm text-gray-700 line-clamp-3">"' + v.raw_text + '"</p>' +
+                    '<p class="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">"' + escapeProfileText(v.raw_text) + '"</p>' +
+                    feelingsHtml +
                     '<div class="mt-3 flex items-center justify-between border-t border-gray-50 pt-2">' +
-                    '<span class="text-[10px] text-gray-400" title="Rule-adjusted screening severity indicator (not calibrated clinical probability)">Screening Indicator: ' + (v.risk_percent || '0') + '%</span>' +
-                    '<span class="text-[10px] uppercase font-bold tracking-wider ' + (v.status === 'Resolved' ? 'text-emerald-600' : 'text-amber-500') + '">' +
-                    (v.status === 'Resolved' ? '✓ Resolved' : '• Pending Review') +
+                    '<span class="text-[10px] text-gray-400" title="Rule-adjusted screening severity indicator (not calibrated clinical probability)">Screening Indicator: ' + escapeProfileText(v.risk_percent || '0') + '%</span>' +
+                    '<span class="text-[10px] uppercase font-bold tracking-wider ' + (isVentDone ? 'text-emerald-600' : 'text-amber-500') + '">' +
+                    (isVentDone ? '✓ Reviewed' : '• Pending Review') +
                     '</span>' +
                     '</div>' +
                     '</div>' +

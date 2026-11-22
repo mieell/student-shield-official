@@ -15,11 +15,39 @@ class VentController extends BaseController
         return view('vent_form');
     }
 
+    public static function mergeFollowUp(string $ventText, string $followUpNote = ''): string
+    {
+        $base = trim($ventText);
+        $extra = trim($followUpNote);
+        if ($base === '' || $extra === '') {
+            return $base;
+        }
+        if (mb_stripos($base, 'Additional context:') !== false && mb_stripos($base, $extra) !== false) {
+            return $base;
+        }
+        return $base . "\n\nAdditional context: " . $extra;
+    }
+
+    public static function normalizeEmotions(string $rawEmotions): string
+    {
+        $parts = preg_split('/\s*,\s*/', trim($rawEmotions)) ?: [];
+        $clean = [];
+        foreach ($parts as $part) {
+            $label = trim(preg_replace('/\s+/', ' ', $part));
+            if ($label !== '' && !in_array($label, $clean, true)) {
+                $clean[] = mb_substr($label, 0, 40);
+            }
+        }
+        return mb_substr(implode(',', $clean), 0, 255);
+    }
+
     public function submit()
     {
         if (!$this->hasRole(0)) return $this->forbidden();
         try {
-        $text = $this->request->getPost('vent_text');
+        $rawText = (string) ($this->request->getPost('vent_text') ?? '');
+        $followUpNote = (string) ($this->request->getPost('follow_up_note') ?? '');
+        $text = self::mergeFollowUp($rawText, $followUpNote);
         $userId = session()->get('user_id');
         if (empty($userId)) {
             if ($this->request->isAJAX()) {
@@ -39,7 +67,7 @@ class VentController extends BaseController
         }
         session()->set('last_vent_time', time());
 
-        if (empty($text)) {
+        if ($text === '') {
             if ($this->request->isAJAX()) {
                 return $this->response->setJSON(['status' => 'error', 'message' => 'Please enter text.']);
             }
@@ -139,7 +167,7 @@ class VentController extends BaseController
         }
 
         // --- 3. SAVE TO DATABASE ---
-        $emotions = (string)($this->request->getPost('emotions') ?? '');
+        $emotions = self::normalizeEmotions((string)($this->request->getPost('emotions') ?? ''));
         $insertData = [
             'user_id'      => $userId,
             'raw_text'     => $encryptedText,
