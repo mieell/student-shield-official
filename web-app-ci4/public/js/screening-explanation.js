@@ -170,7 +170,7 @@ function showScreeningExplanation(vent) {
     const badgeStyles = {
         CRITICAL: 'bg-red-100 text-red-800 border-red-200',
         HIGH: 'bg-orange-100 text-orange-800 border-orange-200',
-        MEDIUM: 'bg-amber-100 text-amber-900 border-amber-200',
+        MEDIUM: 'bg-blue-100 text-blue-800 border-blue-200',
         LOW: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     };
 
@@ -189,6 +189,8 @@ function showScreeningExplanation(vent) {
     priorityScore.textContent = `Severity score: ${formattedScore}`;
     priorityRow.append(priorityBadge, priorityScore);
     priorityBlock.append(priorityTerm, priorityRow);
+    const severityLegend = document.getElementById('screeningSeverityLegend');
+    if (severityLegend) priorityBlock.append(severityLegend.content.cloneNode(true));
     panel.append(priorityBlock);
 
     const sources = {

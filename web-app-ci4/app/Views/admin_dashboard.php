@@ -1025,6 +1025,18 @@ $pageDescriptions = [
         </div>
     </div>
 
+    <template id="screeningSeverityLegend">
+        <ul role="list" aria-label="Screening severity ranges" class="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-xs text-[#435e51]">
+            <?php foreach (\App\Libraries\VentRiskAnalyzer::BANDS as $level => [$minimum, $maximum]): ?>
+                <li class="flex items-center gap-1.5 whitespace-nowrap">
+                    <span class="risk-key <?= esc(strtolower($level), 'attr') ?>" aria-hidden="true"></span>
+                    <span class="font-semibold"><?= esc(ucfirst(strtolower($level))) ?></span>
+                    <span class="tabular-nums"><?= $minimum ?>–<?= $maximum ?>%</span>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </template>
+
     <!-- Footer -->
     <footer class="footer-bar mt-auto">
         <div class="container mx-auto px-6">
@@ -1210,6 +1222,7 @@ $pageDescriptions = [
         }
 
         let ventsRequestVersion = 0;
+        let ventsRequest;
         let incidentsRequestVersion = 0;
         let showArchivedVents = false;
         let showArchivedIncidents = false;
@@ -1589,7 +1602,7 @@ $pageDescriptions = [
             if (!document.getElementById('ventsTableBody') && !document.getElementById('riskPieChart')) return;
             const requestVersion = ++ventsRequestVersion;
             const archived = showArchivedVents;
-            $.ajax({
+            ventsRequest = $.ajax({
                 url: API_URL + (archived ? "?archived=1" : ""),
                 dataType: 'json',
                 success: function (data) {
@@ -2028,6 +2041,16 @@ $pageDescriptions = [
         }
 
         // Initialize First Fetch
+        function startVentFeedPolling() {
+            function refresh() {
+                if (document.hidden || ventsRequest?.state() === 'pending') return;
+                fetchLiveVents();
+            }
+
+            setInterval(refresh, 3000);
+            document.addEventListener('visibilitychange', refresh);
+        }
+
         $(document).ready(function () {
             // Checkbox logic
             $(document).on('change', '#selectAllVents', function () {
@@ -2182,7 +2205,11 @@ $pageDescriptions = [
             fetchAlertLogs();
 
             // Refresh the current page automatically; no manual pause state.
-            setInterval(fetchLiveVents, 30000);
+            if (document.getElementById('ventsTableBody')) {
+                startVentFeedPolling();
+            } else {
+                setInterval(fetchLiveVents, 30000);
+            }
             setInterval(fetchLiveIncidents, 30000);
             setInterval(fetchAlertLogs, 30000);
 
