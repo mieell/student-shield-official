@@ -656,17 +656,17 @@ $pageDescriptions = [
                             class="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-[#235D3A] focus:ring-1 focus:ring-[#235D3A]/20 transition-all">
                     </div>
                     <div class="staff-filter-controls flex items-center gap-2 flex-wrap">
-                        <select id="sortVents" aria-label="Sort entries"
+                        <select id="sortVents" data-quick-options aria-label="Sort entries"
                             class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#235D3A] bg-white text-gray-700 font-medium">
                             <option value="urgent" selected>Most Urgent First</option>
                             <option value="newest">Newest First</option>
                         </select>
-                        <select id="filterStatusVents" aria-label="Filter entry status"
+                        <select id="filterStatusVents" data-quick-options aria-label="Filter entry status"
                             class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#235D3A]">
-                            <option value="all">All Statuses</option>
-                            <option value="resolved">Resolved</option>
+                            <option value="all">All current</option>
                             <option value="unresolved">Action Required</option>
-                            <option value="archived">Archived Records</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="archived">Archived</option>
                         </select>
                         <input type="date" id="filterDateVents" aria-label="Filter entry date"
                             class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#235D3A] text-gray-600">
@@ -1203,6 +1203,12 @@ $pageDescriptions = [
         function toggleVentsView(isArchived) {
             showArchivedVents = isArchived;
             previousVentsDataString = "";
+            window.latestVentsData = [];
+            document.getElementById('ventsTableBody').replaceChildren();
+            document.getElementById('selectAllVents').checked = false;
+            document.getElementById('feedUpdatedAt').textContent = 'Loading entries…';
+            updateVentsUrgentSummary([]);
+            toggleDeleteBtn('.vent-checkbox', '.delete-btn-vents');
             fetchLiveVents();
 
             let form = document.getElementById('bulkDeleteVentsForm');
@@ -2069,6 +2075,9 @@ $pageDescriptions = [
                 $('#sortVents').val('urgent');
             }
             if (localStorage.getItem('ventsFilterStatus')) $('#filterStatusVents').val(localStorage.getItem('ventsFilterStatus'));
+            document.querySelectorAll('#section-vents [data-quick-options]').forEach(select => {
+                select.dispatchEvent(new Event('change', {bubbles: true}));
+            });
             if (localStorage.getItem('ventsFilterDate')) $('#filterDateVents').val(localStorage.getItem('ventsFilterDate'));
             if (localStorage.getItem('incidentsFilterStatus')) $('#filterStatusIncidents').val(localStorage.getItem('incidentsFilterStatus'));
             if (localStorage.getItem('incidentsFilterDate')) $('#filterDateIncidents').val(localStorage.getItem('incidentsFilterDate'));
@@ -2118,13 +2127,14 @@ $pageDescriptions = [
 
             // Fetch immediately upon load for 0-lag experience
             // If localStorage has 'archived' filter, switch view before first fetch
-            if (localStorage.getItem('ventsFilterStatus') === 'archived') {
-                showArchivedVents = true;
-            }
             if (localStorage.getItem('incidentsFilterStatus') === 'archived') {
                 showArchivedIncidents = true;
             }
-            fetchLiveVents();
+            if ($('#filterStatusVents').val() === 'archived') {
+                toggleVentsView(true);
+            } else {
+                fetchLiveVents();
+            }
             fetchLiveIncidents();
             fetchAlertLogs();
 

@@ -118,22 +118,39 @@
             caption.textContent = input.type === 'date' ? 'On this date' : (input.getAttribute('aria-label') || 'Filter').replace(/^Filter /i, '');
             input.before(label); label.append(caption, input);
         });
-        const select = controls.querySelector('select');
-        if (select && select.id !== 'filterCategoryLogs') {
-            const quick = document.createElement('div'); quick.className = 'filter-quick'; quick.setAttribute('role', 'group'); quick.setAttribute('aria-label', 'Quick status filters');
+        const promoted = [...controls.querySelectorAll('select[data-quick-options]')];
+        const firstSelect = controls.querySelector('select');
+        const quickSelects = promoted.length ? promoted : (firstSelect && firstSelect.id !== 'filterCategoryLogs' ? [firstSelect] : []);
+        const quickRow = promoted.length ? document.createElement('div') : bar;
+        if (promoted.length) {
+            quickRow.className = 'staff-vent-quick-controls';
+            bar.after(quickRow);
+        }
+        quickSelects.forEach(select => {
+            const quick = document.createElement('div');
+            quick.className = 'filter-quick';
+            quick.setAttribute('role', 'group');
+            quick.setAttribute('aria-label', select.getAttribute('aria-label') || 'Quick status filters');
             [...select.options].forEach(option => {
                 const chip = document.createElement('button'); chip.type = 'button'; chip.textContent = option.textContent; chip.dataset.value = option.value;
                 chip.addEventListener('click', () => { select.value = option.value; select.dispatchEvent(new Event('change', {bubbles: true})); });
                 quick.append(chip);
             });
-            bar.after(quick);
+            if (promoted.length) {
+                quickRow.append(quick);
+                select.closest('label').hidden = true;
+            } else {
+                bar.after(quick);
+            }
             const sync = () => quick.querySelectorAll('button').forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.value === select.value)));
             select.addEventListener('change', sync); sync();
-        }
+        });
         const updateState = () => {
-            const active = [...controls.querySelectorAll('input, select')].some(input => input.value && input.value !== 'all');
+            const count = [...controls.querySelectorAll('input, select')].filter(input =>
+                !input.closest('label[hidden]') && input.value && input.value !== 'all'
+            ).length;
+            const active = count > 0;
             button.classList.toggle('has-active-filters', active);
-            const count = [...controls.querySelectorAll('input, select')].filter(input => input.value && input.value !== 'all').length;
             button.setAttribute('aria-label', active ? 'Refine results, ' + count + ' filters applied' : 'Refine results');
             button.dataset.count = count || '';
         };
