@@ -307,7 +307,7 @@ $selectedSection = (string) set_value('section');
                     <div class="registration-field">
                         <label for="password" class="registration-label">Create Password</label>
                         <div class="relative group/input">
-                            <div class="registration-input-icon pointer-events-none">
+                            <div class="registration-input-icon pointer-events-none" aria-hidden="true">
                                 <i class="fas fa-lock text-white/50 group-focus-within/input:text-gold transition-colors text-[15px]"></i>
                             </div>
                             <input type="password" data-password-toggle maxlength="72" autocomplete="new-password" name="password" id="password" required aria-describedby="password-criteria"
@@ -319,7 +319,7 @@ $selectedSection = (string) set_value('section');
                     <div class="registration-field">
                         <label for="password_confirm" class="registration-label">Confirm Password</label>
                         <div class="relative group/input">
-                            <div class="registration-input-icon pointer-events-none">
+                            <div class="registration-input-icon pointer-events-none" aria-hidden="true">
                                 <i class="fas fa-lock text-white/50 group-focus-within/input:text-gold transition-colors text-[15px]"></i>
                             </div>
                             <input type="password" data-password-toggle maxlength="72" autocomplete="new-password" name="password_confirm" id="password_confirm" required

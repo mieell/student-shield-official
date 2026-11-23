@@ -209,6 +209,11 @@ body.student-registration .registration-input-icon {
     justify-content: center;
 }
 
+/* Keep the lock above the password visibility wrapper. */
+body.student-registration .registration-password-fields .registration-input-icon {
+    z-index: 1;
+}
+
 body.student-registration .registration-input-icon i {
     color: rgba(237, 247, 240, 0.82);
 }
