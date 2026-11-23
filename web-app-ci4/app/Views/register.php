@@ -283,6 +283,7 @@ $selectedSection = (string) set_value('section');
                                    class="w-full pl-11 pr-4 input-dark registration-control rounded-xl text-[15px] font-semibold outline-none tabular-nums"
                                    placeholder="09123456789">
                         </div>
+                        <p id="guardian-contact-error" role="status" class="mt-1 text-[13px] font-semibold text-red-300 empty:mt-0"></p>
                         <p id="guardian-contact-help" class="registration-help">School staff verify this number before sending a consent request. If you cannot safely provide a number, contact the Guidance Office for help.</p>
                     </div>
 
@@ -683,6 +684,32 @@ $selectedSection = (string) set_value('section');
     registrationForm.addEventListener('input', () => { registrationConfirmed = false; });
     registrationForm.addEventListener('change', () => { registrationConfirmed = false; });
 
+    const guardianPhone = document.getElementById('parent_contact');
+    const guardianPhoneError = document.getElementById('guardian-contact-error');
+
+    function validateGuardianPhone() {
+        const phone = guardianPhone.value.replace(/[\s\p{Z}\p{Cf}\p{Pd}\u2212\u2043()-]+/gu, '');
+        const hasRepeatedDigits = /([0-9])\1{5}/.test(phone);
+        const message = hasRepeatedDigits ? 'Use a mobile number without 6 or more identical digits in a row.' : '';
+        guardianPhone.setCustomValidity(message);
+        if (guardianPhoneError.textContent !== message) {
+            guardianPhoneError.textContent = message;
+            guardianPhone.setAttribute('aria-describedby', hasRepeatedDigits
+                ? 'guardian-contact-help guardian-contact-error'
+                : 'guardian-contact-help');
+            if (hasRepeatedDigits) {
+                guardianPhone.setAttribute('aria-invalid', 'true');
+            } else {
+                guardianPhone.removeAttribute('aria-invalid');
+            }
+        }
+        return !hasRepeatedDigits;
+    }
+
+    guardianPhone.addEventListener('input', validateGuardianPhone);
+    guardianPhone.addEventListener('change', validateGuardianPhone);
+    validateGuardianPhone();
+
     function passwordRequirements(value) {
         return {
             'req-length': value.length >= 8,
@@ -694,6 +721,12 @@ $selectedSection = (string) set_value('section');
     }
 
     registrationForm.addEventListener('submit', function(e) {
+        if (!validateGuardianPhone()) {
+            e.preventDefault();
+            guardianPhone.reportValidity();
+            return;
+        }
+
         const pass = document.getElementById('password').value;
         const confirmPass = document.getElementById('password_confirm').value;
         const feedback = document.getElementById('registrationFeedback');
