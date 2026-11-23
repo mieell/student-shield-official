@@ -40,6 +40,18 @@ final class ScreeningExplanationTest extends CIUnitTestCase
         self::assertNull(ScreeningExplanation::decode('old unencrypted data'));
     }
 
+    public function testCriticalModelFlagReasonSurvivesBlankReasoning(): void
+    {
+        $result = VentRiskAnalyzer::resolve('Sample entry', [
+            'risk_level' => 'CRITICAL',
+            'risk_score' => 95,
+            'reasoning' => '  ',
+            'flag_reason' => 'The screening service flagged this entry for immediate review.',
+        ], 200, static fn () => []);
+        self::assertSame('CRITICAL', $result['risk_level']);
+        self::assertSame('The screening service flagged this entry for immediate review.', $result['reasoning']);
+    }
+
     public function testDoesNotInventReasoningForModelWithoutDetails(): void
     {
         $result = VentRiskAnalyzer::resolve('A school concern', ['risk_level' => 'MEDIUM', 'risk_score' => 45], 200, static fn () => []);
@@ -81,7 +93,8 @@ final class ScreeningExplanationTest extends CIUnitTestCase
         self::assertSame('groq', $enforced['source']);
         self::assertSame('CRITICAL', $enforced['risk_level']);
         self::assertGreaterThanOrEqual(86.0, $enforced['risk_percent']);
-        self::assertStringContainsString('PHP safety rules raised the final review priority', $enforced['reasoning']);
+        self::assertStringContainsString('raised the review priority to Critical', $enforced['reasoning']);
+        self::assertStringNotContainsString('Casual phrasing', $enforced['reasoning']);
     }
 
     public function testCounselorModalIncludesPsychologistDisclaimerWithoutVendorLeak(): void

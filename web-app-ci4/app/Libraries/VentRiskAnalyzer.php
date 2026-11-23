@@ -53,9 +53,13 @@ final class VentRiskAnalyzer
                 $probability = max($probability, $localProbability);
             }
         }
-        $hasModelReason = in_array($source, ['model', 'groq', 'gemini'], true) && is_string($result['reasoning'] ?? $result['flag_reason'] ?? null);
+        $modelReasoning = $result['reasoning'] ?? null;
+        if (!is_string($modelReasoning) || trim($modelReasoning) === '') {
+            $modelReasoning = $result['flag_reason'] ?? null;
+        }
+        $hasModelReason = $source !== 'local' && is_string($modelReasoning) && trim($modelReasoning) !== '';
         $reasoning = $hasModelReason
-            ? ($result['reasoning'] ?? $result['flag_reason'])
+            ? trim($modelReasoning)
             : ($source === 'groq'
                 ? 'Clinical backup screening analyzed this entry while the primary engine was unavailable.'
                 : ($source === 'gemini'
@@ -64,7 +68,7 @@ final class VentRiskAnalyzer
                         ? 'The ML service did not return a detailed explanation for this entry.'
                         : 'Local keyword rules determined this review priority. Review the full entry and ask the student about its context.')));
         if ($classification['risk_level'] !== $result['risk_level']) {
-            $reasoning .= ' The PHP safety rules raised the final review priority after the initial analysis.';
+            $reasoning = 'A safety rule detected wording that raised the review priority to Critical. Review the full entry and confirm the context with the student.';
         }
         return $classification + ['reasoning' => $reasoning, 'source' => $source, 'trajectory' => $trajectory, 'escalation_probability' => $probability];
     }

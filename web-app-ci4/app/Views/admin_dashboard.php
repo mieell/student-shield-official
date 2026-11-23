@@ -670,6 +670,19 @@ $pageDescriptions = [
                         </select>
                         <input type="date" id="filterDateVents" aria-label="Filter entry date"
                             class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-[#235D3A] text-gray-600">
+                        <select id="filterRiskVents" aria-label="Risk level">
+                            <option value="all">All risk levels</option>
+                            <option value="CRITICAL">Critical</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                        </select>
+                        <select id="filterWaitingVents" aria-label="Waiting days (open entries)">
+                            <option value="all">Any waiting time</option>
+                            <option value="1">1 day or more</option>
+                            <option value="3">3 days or more</option>
+                            <option value="7">7 days or more</option>
+                        </select>
                     </div>
                     <button type="button" onclick="submitBulkDeleteVents()"
                         class="text-xs font-bold text-[#235D3A] bg-[#235D3A]/5 hover:bg-[#235D3A]/10 px-4 py-2 rounded-lg border border-[#235D3A]/20 transition-colors shadow-sm delete-btn-vents hidden">
@@ -707,6 +720,7 @@ $pageDescriptions = [
                         </tr>
                     </tbody>
                 </table>
+                <p id="ventsNoFilterMatches" role="status" class="px-6 py-8 text-center text-sm text-gray-600" hidden>No entries match your filters.</p>
             </div>
         </div>
 
@@ -975,7 +989,7 @@ $pageDescriptions = [
                 </div>
             </div>
 
-            <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 pb-4">
+            <div class="shrink-0 pb-4">
                 <p class="text-[11px] font-bold text-[#235D3A] uppercase tracking-widest mb-2">Full Context Payload</p>
                 <div id="modalContent"
                     class="text-[15px] sm:text-[16px] leading-[1.75] sm:leading-[1.85] tracking-wide text-gray-800 bg-[#f8faf6] border border-[#e5ebe5] shadow-inner p-4 sm:p-7 rounded-xl sm:rounded-2xl whitespace-pre-wrap font-medium">
@@ -1205,6 +1219,7 @@ $pageDescriptions = [
             previousVentsDataString = "";
             window.latestVentsData = [];
             document.getElementById('ventsTableBody').replaceChildren();
+            document.getElementById('ventsNoFilterMatches').hidden = true;
             document.getElementById('selectAllVents').checked = false;
             document.getElementById('feedUpdatedAt').textContent = 'Loading entries…';
             updateVentsUrgentSummary([]);
@@ -1461,7 +1476,7 @@ $pageDescriptions = [
 
                     const rawDate = formatPHIsoDate(dateObj);
                     const ventStatus = isResolved ? "resolved" : "unresolved";
-                    html += `<tr data-entry-id="${vent.id}" data-status="${ventStatus}" data-date="${rawDate}" data-risk="${escapeHtml(vent.risk_level)}" class="transition-all duration-300 transform hover:-translate-y-[1px] ${bgColor} ${animClass}" ${animDelay}>
+                    html += `<tr data-entry-id="${vent.id}" data-status="${ventStatus}" data-date="${rawDate}" data-risk="${escapeHtml(vent.risk_level)}" data-submitted-ms="${dateObj.getTime()}" class="transition-all duration-300 transform hover:-translate-y-[1px] ${bgColor} ${animClass}" ${animDelay}>
                             <td data-label="Select" class="px-4 py-4 whitespace-nowrap text-center relative z-10">
                                 <label class="staff-entry-select"><input type="checkbox" name="vent_ids[]" value="${vent.id}" aria-label="Select entry by ${escapeHtml(vent.name)}" class="vent-checkbox rounded border-gray-300 text-primary h-4 w-4"></label>
                             </td>
@@ -1584,6 +1599,9 @@ $pageDescriptions = [
                     let currentDataString = JSON.stringify(data);
                     if (currentDataString === previousVentsDataString) {
                         refreshVentElapsedLabels();
+                        if ($('#filterWaitingVents').is(':enabled') && Number($('#filterWaitingVents').val()) > 0) {
+                            applyVentsFilter();
+                        }
                         return;
                     }
                     previousVentsDataString = currentDataString;
@@ -2034,20 +2052,39 @@ $pageDescriptions = [
                 }
             });
 
-            // Search Filters
+            const waitingFilter = $('#filterWaitingVents');
+            const ventsRefinements = [
+                ['filterDateVents', 'ventsFilterDate'],
+                ['filterRiskVents', 'ventsFilterRisk'],
+                ['filterWaitingVents', 'ventsFilterWaiting']
+            ];
+
+            function syncWaitingFilter(status) {
+                waitingFilter.prop('disabled', status === 'resolved' || status === 'archived');
+            }
+
             window.applyVentsFilter = function () {
-                let searchValue = ($('#searchVents').val() || '').toLowerCase();
-                let statusValue = $('#filterStatusVents').val();
-                let dateValue = $('#filterDateVents').val();
+                const searchValue = ($('#searchVents').val() || '').toLowerCase();
+                const statusValue = $('#filterStatusVents').val();
+                const dateValue = $('#filterDateVents').val();
+                const riskValue = $('#filterRiskVents').val();
+                const waitingDays = waitingFilter.prop('disabled') ? 0 : (Number(waitingFilter.val()) || 0);
+                const waitingCutoff = Date.now() - waitingDays * 86400000;
+                const rows = document.querySelectorAll('#ventsTableBody tr[data-status]');
+                let matchCount = 0;
 
-                $('#ventsTableBody tr[data-status]').each(function () {
-                    let matchesSearch = $(this).text().toLowerCase().indexOf(searchValue) > -1;
-                    let matchesStatus = statusValue === 'all' || statusValue === 'archived' || $(this).attr('data-status') === statusValue;
-                    let matchesDate = !dateValue || $(this).attr('data-date') === dateValue;
-
-                    this.hidden = !(matchesSearch && matchesStatus && matchesDate);
-                    this.style.removeProperty('display');
+                rows.forEach(row => {
+                    const matchesSearch = row.textContent.toLowerCase().includes(searchValue);
+                    const matchesStatus = statusValue === 'all' || statusValue === 'archived' || row.dataset.status === statusValue;
+                    const matchesDate = !dateValue || row.dataset.date === dateValue;
+                    const matchesRisk = !riskValue || riskValue === 'all' || row.dataset.risk.toUpperCase() === riskValue;
+                    const matchesWaiting = !waitingDays || (row.dataset.status === 'unresolved' && Number(row.dataset.submittedMs) <= waitingCutoff);
+                    row.hidden = !(matchesSearch && matchesStatus && matchesDate && matchesRisk && matchesWaiting);
+                    row.style.removeProperty('display');
+                    if (!row.hidden) matchCount++;
                 });
+                const emptyMessage = document.getElementById('ventsNoFilterMatches');
+                if (emptyMessage) emptyMessage.hidden = rows.length === 0 || matchCount > 0;
                 collapseRows('ventsTableBody', 5, 7, 'section-vents');
             };
 
@@ -2075,10 +2112,19 @@ $pageDescriptions = [
                 $('#sortVents').val('urgent');
             }
             if (localStorage.getItem('ventsFilterStatus')) $('#filterStatusVents').val(localStorage.getItem('ventsFilterStatus'));
+            ventsRefinements.forEach(([id, key]) => {
+                const field = $('#' + id);
+                const saved = localStorage.getItem(key);
+                if (saved) field.val(saved);
+                field.on('change', function () {
+                    localStorage.setItem(key, this.value);
+                    applyVentsFilter();
+                });
+            });
+            syncWaitingFilter($('#filterStatusVents').val());
             document.querySelectorAll('#section-vents [data-quick-options]').forEach(select => {
                 select.dispatchEvent(new Event('change', {bubbles: true}));
             });
-            if (localStorage.getItem('ventsFilterDate')) $('#filterDateVents').val(localStorage.getItem('ventsFilterDate'));
             if (localStorage.getItem('incidentsFilterStatus')) $('#filterStatusIncidents').val(localStorage.getItem('incidentsFilterStatus'));
             if (localStorage.getItem('incidentsFilterDate')) $('#filterDateIncidents').val(localStorage.getItem('incidentsFilterDate'));
 
@@ -2093,6 +2139,7 @@ $pageDescriptions = [
             $('#filterStatusVents').on('change', function () {
                 let val = $(this).val();
                 localStorage.setItem('ventsFilterStatus', val);
+                syncWaitingFilter(val);
 
                 if (val === 'archived') {
                     if (!showArchivedVents) toggleVentsView(true);
@@ -2101,10 +2148,6 @@ $pageDescriptions = [
                     if (showArchivedVents) toggleVentsView(false);
                     else applyVentsFilter();
                 }
-            });
-            $('#filterDateVents').on('change', function () {
-                localStorage.setItem('ventsFilterDate', $(this).val());
-                applyVentsFilter();
             });
 
             $('#searchIncidents').on('input', applyIncidentsFilter);

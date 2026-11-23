@@ -147,7 +147,7 @@
         });
         const updateState = () => {
             const count = [...controls.querySelectorAll('input, select')].filter(input =>
-                !input.closest('label[hidden]') && input.value && input.value !== 'all'
+                !input.disabled && !input.closest('label[hidden]') && input.value && input.value !== 'all'
             ).length;
             const active = count > 0;
             button.classList.toggle('has-active-filters', active);

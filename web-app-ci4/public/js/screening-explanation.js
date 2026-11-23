@@ -47,6 +47,9 @@ function splitVentFollowUp(rawText) {
 function cleanScreeningText(raw, finalRisk = '') {
     if (typeof raw !== 'string') return '';
     const riskUpper = String(finalRisk || '').toUpperCase();
+    if (riskUpper === 'CRITICAL' && raw.includes('The PHP safety rules raised the final review priority after the initial analysis.')) {
+        return 'A safety rule detected wording that raised the review priority to Critical. Review the full entry and confirm the context with the student.';
+    }
     const hadCriticalHistory = /CRITICAL\s+ESCALATION:|Repeated\s+HIGH\s+distress\s+with\s+escalating\s+trajectory\.?/i.test(raw);
     const hadHighHistory = /HIGH\s+ESCALATION:|Persistent\s+MEDIUM\s+distress\s+with\s+repeated\s+high-risk\s+history\.?|Repeated\s+worsening\s+emotional\s+distress\s+over\s+14\s+days\.?/i.test(raw);
 
@@ -204,7 +207,9 @@ function showScreeningExplanation(vent) {
     explanationTerm.textContent = 'Why this priority was suggested';
     const explanationBox = document.createElement('p');
     explanationBox.className = 'text-sm text-[#1b3629] leading-relaxed whitespace-pre-line bg-white border border-[#dce8e0] rounded-lg px-3.5 py-2.5';
-    explanationBox.textContent = cleanedReasoning || 'No detailed explanation was recorded for this entry. Review the student message directly.';
+    explanationBox.textContent = cleanedReasoning || (riskLevel === 'CRITICAL'
+        ? 'Critical priority was recorded. A detailed reason is unavailable for this entry. Review the full message promptly.'
+        : 'No detailed explanation was recorded for this entry. Review the student message directly.');
     explanationBlock.append(explanationTerm, explanationBox);
     panel.append(explanationBlock);
 
