@@ -577,6 +577,9 @@ class AuthController extends BaseController
         if ($parentPhone === null) {
             return $this->registrationFailure('Enter a valid Philippine mobile number for your parent or guardian. If you cannot safely provide one, contact the Guidance Office.');
         }
+        if (preg_match('/([0-9])\1{5}/', $parentPhone)) {
+            return $this->registrationFailure('Enter a guardian mobile number without six or more identical digits in a row. If this is your guardian’s actual number, contact the Guidance Office.');
+        }
 
         $rawParentEmail = trim((string) ($this->request->getPost('parent_email') ?? ''));
         $parentEmail = null;

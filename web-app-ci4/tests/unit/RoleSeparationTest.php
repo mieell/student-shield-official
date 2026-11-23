@@ -376,7 +376,7 @@ final class RoleSeparationTest extends CIUnitTestCase
 
     public function testRegistrationRequiresUniqueTwelveDigitLrnAndKeepsLeadingZero(): void
     {
-        $post = ['name' => 'Registration fixture', 'lrn' => '012345678901', 'grade_level' => '8', 'section' => 'B', 'parent_contact' => '09123456789', 'password' => 'Example!234A', 'password_confirm' => 'Example!234A', 'terms' => '1'];
+        $post = ['name' => 'Registration fixture', 'lrn' => '012345678901', 'grade_level' => '8', 'section' => 'B', 'parent_contact' => '0917 111-1189', 'password' => 'Example!234A', 'password_confirm' => 'Example!234A', 'terms' => '1'];
         $before = $this->rbacDb->table('users')->countAllResults();
         foreach ([['grade_level' => '11'], ['section' => 'Unknown section'], ['grade_level' => '7', 'section' => 'B'], ['section' => ['B']], ['password' => ['invalid']]] as $invalidPlacement) {
             $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, $invalidPlacement))->processStudentRegistration();
@@ -389,6 +389,11 @@ final class RoleSeparationTest extends CIUnitTestCase
             $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['parent_contact' => $contact]))->processStudentRegistration();
             $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
         }
+        foreach (['09171111112', '+63 917 111-1112', '639999999999'] as $contact) {
+            $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['parent_contact' => $contact]))->processStudentRegistration();
+            $this->assertStringContainsString('six or more identical digits', session()->getFlashdata('error'));
+            $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
+        }
         foreach (['', '123', '12345678901x', '1234567890123'] as $invalid) {
             $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['lrn' => $invalid]))->processStudentRegistration();
             $this->assertSame($before, $this->rbacDb->table('users')->countAllResults());
@@ -397,7 +402,7 @@ final class RoleSeparationTest extends CIUnitTestCase
         $this->assertStringEndsWith('/login', $response->getHeaderLine('Location'));
         $student = $this->rbacDb->table('students')->where('lrn', $post['lrn'])->get()->getRowArray();
         $this->assertSame($post['lrn'], $student['lrn']);
-        $this->assertSame('+639123456789', $student['parent_phone']);
+        $this->assertSame('+639171111189', $student['parent_phone']);
         $this->assertStringStartsWith('SS-', $student['student_id']);
         $this->controller(\App\Controllers\AuthController::class, 'register/process', array_replace($post, ['name' => 'Duplicate LRN']))->processStudentRegistration();
         $this->assertSame($before + 1, $this->rbacDb->table('users')->countAllResults());
