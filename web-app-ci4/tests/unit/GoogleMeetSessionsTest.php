@@ -76,6 +76,19 @@ final class GoogleMeetSessionsTest extends CIUnitTestCase
         $service->join(1, 10, 0);
     }
 
+    public function testDetachingAnUnavailableHostKeepsMeetingHistoryClosed(): void
+    {
+        [$service, $db] = $this->service();
+        $row = $service->publish(10, 20, 'https://meet.google.com/abc-defg-hij', true);
+        $row['legacy_counselor_id'] = $row['counselor_id'];
+        $row['counselor_id'] = null;
+        $db->rows['virtual_meetings'][0] = $row;
+        $this->assertFalse($service->isOpen($row));
+        $this->assertNull($service->status(10)['active']);
+        $this->expectException(DomainException::class);
+        $service->join($row['id'], 10, 0);
+    }
+
     public function testInvalidUrlsCannotBecomeRedirects(): void
     {
         foreach (['https://evil.test/abc-defg-hij', 'https://meet.google.com.evil.test/abc-defg-hij',
@@ -111,7 +124,7 @@ final class GoogleMeetSessionsTest extends CIUnitTestCase
 /** In-memory query-builder double: no live database or network is used. */
 final class MeetMemoryDatabase
 {
-    public array $rows = ['users' => [['id' => 10, 'role' => 0, 'is_active' => 1], ['id' => 11, 'role' => 0, 'is_active' => 1]], 'virtual_meetings' => []];
+    public array $rows = ['users' => [['id' => 10, 'role_id' => 0, 'is_active' => 1], ['id' => 11, 'role_id' => 0, 'is_active' => 1]], 'virtual_meetings' => []];
     public bool $lockAvailable = true;
     public bool $commitSucceeds = true;
     private array $snapshot = [];

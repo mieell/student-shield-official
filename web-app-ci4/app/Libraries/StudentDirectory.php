@@ -33,10 +33,10 @@ final class StudentDirectory
 
     private static function query(BaseConnection $db, string $grade, string $section)
     {
-        return $db->table('users u')->join('students s', 's.user_id = u.id')
-            ->where('u.role', 0)->where('u.is_active', 1)->where('u.access_disabled', 0)
+        return $db->table('users u')
+            ->where('u.role_id', 0)->where('u.is_active', 1)->where('u.access_disabled', 0)
             ->where('u.registration_status', 'approved')
-            ->whereIn('s.grade_level', [$grade, 'Grade ' . $grade])
-            ->where('s.section', $section);
+            ->whereIn('u.grade_level', [$grade, 'Grade ' . $grade])
+            ->where('u.section', $section);
     }
 }

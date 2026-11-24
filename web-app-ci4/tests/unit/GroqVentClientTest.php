@@ -54,8 +54,7 @@ final class GroqVentClientTest extends CIUnitTestCase
         $property->setValue(null, ['tests' => $this->memDb]);
 
         foreach ([
-            'users' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, password_hash TEXT, role INTEGER DEFAULT 0',
-            'students' => 'user_id INTEGER PRIMARY KEY, student_id TEXT, lrn TEXT, grade_level TEXT, section TEXT, parent_phone TEXT, parent_email TEXT, adviser_name TEXT',
+            'users' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, password_hash TEXT, role_id INTEGER DEFAULT 0, student_id TEXT, lrn TEXT, grade_level TEXT, section TEXT, parent_phone TEXT, parent_email TEXT, adviser_name TEXT',
             'vent_logs' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, raw_text TEXT, emotions TEXT, risk_percent REAL, risk_level TEXT, analysis_details TEXT, trajectory TEXT, escalation_probability REAL, status TEXT, created_at TEXT, deleted_at TEXT',
             'audit_logs' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, action TEXT, entity_type TEXT, entity_id INTEGER, ip_address TEXT, user_agent TEXT, created_at TEXT',
             'guardian_alert_routes' => 'user_id INTEGER PRIMARY KEY, unsafe_guardian INTEGER DEFAULT 0',
@@ -65,10 +64,9 @@ final class GroqVentClientTest extends CIUnitTestCase
             $this->memDb->query("CREATE TABLE $table ($cols)");
         }
 
-        $this->memDb->table('users')->insert(['id' => 1, 'name' => 'Counselor', 'role' => 1]);
-        $this->memDb->table('users')->insert(['id' => 10, 'name' => 'Juan Dela Cruz', 'role' => 0]);
-        $this->memDb->table('students')->insert([
-            'user_id' => 10,
+        $this->memDb->table('users')->insert(['id' => 1, 'name' => 'Counselor', 'role_id' => 1]);
+            $this->memDb->table('users')->insert(['id' => 10, 'name' => 'Juan Dela Cruz', 'role_id' => 0]);
+        $this->memDb->table('users')->where('id', 10)->update([
             'student_id' => 'SS-2026-10',
             'lrn' => '123456789012',
             'grade_level' => '9',

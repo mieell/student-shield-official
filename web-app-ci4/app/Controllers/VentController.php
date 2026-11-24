@@ -204,8 +204,7 @@ class VentController extends BaseController
         if ($riskLevel === 'CRITICAL' || $riskLevel === 'HIGH') {
             try {
                 $user = $db->table('users')
-                    ->select('users.*, students.parent_phone, students.parent_email, students.section, students.grade_level')
-                    ->join('students', 'students.user_id = users.id', 'left')
+                    ->select('users.*')
                     ->where('users.id', $userId)
                     ->get()->getRow();
 

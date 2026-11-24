@@ -95,7 +95,7 @@ class GuardianConsentController extends BaseController
                     return $back->with('error', 'Verify the guardian contact first.');
                 }
                 if ($byEmail) {
-                    $studentRow = $db->table('students')->select('parent_email')->where('user_id', $id)->get()->getRowArray();
+                    $studentRow = $db->table('users')->select('parent_email')->where('id', $id)->get()->getRowArray();
                     $recipientEmail = GuardianConsent::email($studentRow['parent_email'] ?? null);
                     if ($recipientEmail === null) {
                         $db->transRollback();
@@ -103,9 +103,9 @@ class GuardianConsentController extends BaseController
                     }
                 }
             } elseif ($verifiedEmail !== null) {
-                $db->table('students')->where('user_id', $id)->update(
+                $db->table('users')->where('id', $id)->update(
                     ['parent_email' => $verifiedEmail]
-                    + \App\Libraries\ManilaTime::stampFields($db, 'students', ['updated_at'])
+                    + \App\Libraries\ManilaTime::stampFields($db, 'users', ['updated_at'])
                 );
             }
             $nowTs = time();
@@ -458,7 +458,7 @@ class GuardianConsentController extends BaseController
         $nowStr = \App\Libraries\ManilaTime::now();
         $db = Database::connect();
         $row = $db->table('guardian_consents g')->select('g.user_id, g.notice')
-            ->join('users u', 'u.id = g.user_id')->where('u.role', 0)->where('u.registration_status', 'pending')
+            ->join('users u', 'u.id = g.user_id')->where('u.role_id', 0)->where('u.registration_status', 'pending')
             ->where('g.token_hash', $hash)->where('g.response', null)
             ->where('g.expires_at >', $nowStr)->get()->getRowArray();
         if ($row) {
@@ -467,7 +467,7 @@ class GuardianConsentController extends BaseController
 
         // Preserve unexpired emailed/manual links for the same pending student if a follow-up SMS updated token_hash.
         $candidates = $db->table('guardian_consents g')->select('g.user_id, g.phone, g.notice')
-            ->join('users u', 'u.id = g.user_id')->where('u.role', 0)->where('u.registration_status', 'pending')
+            ->join('users u', 'u.id = g.user_id')->where('u.role_id', 0)->where('u.registration_status', 'pending')
             ->where('g.response', null)->where('g.expires_at >', $nowStr)->get()->getResultArray();
         $now = time();
         foreach ($candidates as $candidate) {
@@ -484,7 +484,7 @@ class GuardianConsentController extends BaseController
         $nowStr = \App\Libraries\ManilaTime::now();
         $db = Database::connect();
         $row = $db->table('guardian_consents g')->select('g.user_id, g.notice')
-            ->join('users u', 'u.id = g.user_id')->where('u.role', 0)->where('u.registration_status', 'pending')
+            ->join('users u', 'u.id = g.user_id')->where('u.role_id', 0)->where('u.registration_status', 'pending')
             ->where('g.phone', $phone)
             ->where('g.token_hash', $hash)->where('g.response', null)
             ->where('g.expires_at >', $nowStr)->get()->getRowArray();
@@ -494,7 +494,7 @@ class GuardianConsentController extends BaseController
 
         // Preserve unexpired prior SMS codes sent to the same verified phone if a resend or backup link updated token_hash.
         $candidates = $db->table('guardian_consents g')->select('g.user_id, g.notice')
-            ->join('users u', 'u.id = g.user_id')->where('u.role', 0)->where('u.registration_status', 'pending')
+            ->join('users u', 'u.id = g.user_id')->where('u.role_id', 0)->where('u.registration_status', 'pending')
             ->where('g.phone', $phone)->where('g.response', null)
             ->where('g.expires_at >', $nowStr)->get()->getResultArray();
         $now = time();

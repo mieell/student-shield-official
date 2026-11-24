@@ -47,8 +47,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         $this->connections = $property->getValue();
         $property->setValue(null, ['tests' => $this->smsDb]);
         foreach ([
-            'users' => 'id INTEGER PRIMARY KEY, name TEXT, role INTEGER DEFAULT 0, registration_status TEXT DEFAULT \'approved\', is_locked INTEGER DEFAULT 0',
-            'students' => 'user_id INTEGER PRIMARY KEY, parent_phone TEXT, parent_email TEXT, section TEXT, grade_level TEXT',
+            'users' => 'id INTEGER PRIMARY KEY, name TEXT, role_id INTEGER DEFAULT 0, registration_status TEXT DEFAULT \'approved\', is_locked INTEGER DEFAULT 0, parent_phone TEXT, parent_email TEXT, section TEXT, grade_level TEXT',
             'counselors' => 'user_id INTEGER PRIMARY KEY, counselor_email TEXT',
             'admins' => 'user_id INTEGER PRIMARY KEY, email TEXT',
             'vent_logs' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, raw_text TEXT, emotions TEXT, risk_percent REAL, risk_level TEXT, status TEXT, created_at TEXT, deleted_at TEXT',
@@ -58,7 +57,8 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
         ] as $table => $fields) $this->smsDb->query("CREATE TABLE $table ($fields)");
         foreach ([10 => '09181234567', 11 => '09191234567'] as $id => $phone) {
             $this->smsDb->table('users')->insert(['id' => $id, 'name' => 'PRIVATE STUDENT ' . $id]);
-            $this->smsDb->table('students')->insert(['user_id' => $id, 'parent_phone' => $phone, 'parent_email' => '', 'section' => 'A', 'grade_level' => '7']);
+            $this->smsDb->table('users')->where('id', $id)->update([
+            'parent_phone' => $phone, 'parent_email' => '', 'section' => 'A', 'grade_level' => '7']);
         }
         $encrypter = $this->createMock(\CodeIgniter\Encryption\EncrypterInterface::class);
         $encrypter->method('encrypt')->willReturn('encrypted-test-data');
@@ -185,7 +185,7 @@ final class SmsNotificationFlowTest extends CIUnitTestCase
             'incident_details' => 'Sinuntok ako sa hallway.',
         ])->submit();
 
-        $this->smsDb->table('users')->insert(['id' => 99, 'name' => 'Pending Student', 'role' => 0, 'registration_status' => 'pending']);
+        $this->smsDb->table('users')->insert(['id' => 99, 'name' => 'Pending Student', 'role_id' => 0, 'registration_status' => 'pending']);
         session()->set(['isLoggedIn' => true, 'role' => 2, 'user_id' => 2]);
         $gateway = $this->gateway;
         $consentController = new class($gateway) extends GuardianConsentController {

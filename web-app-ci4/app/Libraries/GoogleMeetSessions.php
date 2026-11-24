@@ -36,7 +36,7 @@ class GoogleMeetSessions
         }
         $created = ManilaTime::unix($row['created_at'] ?? '');
         $now = ($this->clock)();
-        return ($row['status'] ?? '') === 'active' && $created !== null
+        return ($row['status'] ?? '') === 'active' && isset($row['student_id'], $row['counselor_id']) && $created !== null
             && $created <= $now && $created > $now - self::LIFETIME_SECONDS;
     }
 
@@ -75,7 +75,7 @@ class GoogleMeetSessions
         $link = self::normalizeLink($input);
         if (!$confirmed) throw new DomainException('Confirm the Google Meet host and admission settings before publishing.');
         return $this->locked(function () use ($studentId, $hostId, $link) {
-            $student = $this->db->table('users')->where('id', $studentId)->where('role', 0)
+            $student = $this->db->table('users')->where('id', $studentId)->where('role_id', 0)
                 ->where('is_active', 1)->get()->getRowArray();
             if (!$student) throw new DomainException('An active student account is required.');
             $this->retireStale($studentId);

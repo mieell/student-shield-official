@@ -42,13 +42,12 @@ class AuthController extends BaseController
             return redirect()->back()->with('error', 'Please fill in all fields.');
         }
 
-        $matches = $db->table('users')->select('users.*')
-            ->join('students', 'students.user_id = users.id')
-            ->where('users.role', 0)->groupStart()->where('students.student_id', $name)
-            ->orWhere('students.lrn', $name)->groupEnd()->limit(2)->get()->getResultArray();
+        $matches = $db->table('users')->select('users.*, users.role_id AS role')
+            ->where('users.role_id', 0)->groupStart()->where('users.student_id', $name)
+            ->orWhere('users.lrn', $name)->groupEnd()->limit(2)->get()->getResultArray();
         // Preserve existing name-based student sign-in. Explicit ID/LRN matches take priority.
         if (!$matches) {
-            $matches = $db->table('users')->where('role', 0)->where('name', $name)
+            $matches = $db->table('users')->select('users.*, users.role_id AS role')->where('role_id', 0)->where('name', $name)
                 ->limit(2)->get()->getResultArray();
         }
         if (!$matches) return $this->authenticateAdmin();
@@ -115,11 +114,10 @@ class AuthController extends BaseController
 
         // Only staff roles may authenticate through this portal.
         $user = $db->table('users')
-            ->select('users.*, CASE WHEN users.role = 1 THEN counselors.counselor_email ELSE admins.email END AS parent_email, CASE WHEN users.role = 1 THEN counselors.counselor_phone ELSE admins.phone END AS parent_phone', false)
-            ->join('counselors', 'counselors.user_id = users.id', 'left')
-            ->join('admins', 'admins.user_id = users.id', 'left')
-            ->whereIn('users.role', [1, 2, 3])
-            ->groupStart()->where('users.name', $name)->orWhere('counselors.counselor_email', $name)->orWhere('admins.email', $name)->groupEnd()
+            ->select('users.*, users.role_id AS role')
+
+            ->whereIn('users.role_id', [1, 2, 3])
+            ->groupStart()->where('users.name', $name)->orWhere('users.email', $name)->groupEnd()
             ->limit(2)->get()->getResultArray();
         $user = count($user) === 1 ? $user[0] : null;
 
@@ -176,9 +174,9 @@ class AuthController extends BaseController
             }
 
             // Determine recipient email:
-            // 1. Specific account email (counselors.counselor_email or admins.email)
+            // 1. Specific staff account email
             // 2. Fallback to COUNSELOR_EMAIL / SMTPUser ONLY for Counselors (role = 1)
-            $recipientEmail = !empty($user['parent_email']) ? trim($user['parent_email']) : '';
+            $recipientEmail = !empty($user['email']) ? trim($user['email']) : '';
             if (empty($recipientEmail) && (int) $user['role'] === 1) {
                 $recipientEmail = trim((string) env('COUNSELOR_EMAIL', env('email.SMTPUser', '')));
             }
@@ -351,9 +349,8 @@ class AuthController extends BaseController
         $userId = session()->get('temp_user_id');
         $db = \Config\Database::connect();
         $user = $db->table('users')
-            ->select('users.*, CASE WHEN users.role = 1 THEN counselors.counselor_email ELSE admins.email END AS parent_email', false)
-            ->join('counselors', 'counselors.user_id = users.id', 'left')
-            ->join('admins', 'admins.user_id = users.id', 'left')
+            ->select('users.*, users.role_id AS role')
+
             ->where('users.id', $userId)
             ->get()->getRowArray();
 
@@ -362,7 +359,7 @@ class AuthController extends BaseController
             return redirect()->to('/admin/login')->with('error', 'Session invalid. Please log in again.');
         }
 
-        $recipientEmail = !empty($user['parent_email']) ? trim($user['parent_email']) : '';
+        $recipientEmail = !empty($user['email']) ? trim($user['email']) : '';
         if (empty($recipientEmail) && (int) ($user['role'] ?? 0) === 1) {
             $recipientEmail = trim((string) env('COUNSELOR_EMAIL', env('email.SMTPUser', '')));
         }
@@ -438,7 +435,7 @@ class AuthController extends BaseController
      */
     protected function otpAccount(int $id): ?array
     {
-        return \Config\Database::connect()->table('users')->where('id', $id)->get()->getRowArray();
+        return \Config\Database::connect()->table('users')->select('users.*, users.role_id AS role')->where('id', $id)->get()->getRowArray();
     }
 
     private function clearOtpSession(): void
@@ -634,38 +631,29 @@ class AuthController extends BaseController
         }
 
         $existingUser = $db->table('users')->where('name', $name)->get()->getRow();
-        $existingLrn = $db->table('students')->where('lrn', $lrn)->countAllResults() > 0;
+        $existingLrn = $db->table('users')->where('lrn', $lrn)->countAllResults() > 0;
         if ($existingUser || $existingLrn) {
             return $this->registrationFailure('Registration could not be completed with those details. If you already have an account, please sign in or contact the guidance office.');
         }
 
-        $db->transStart();
-        // Insert into users table
-        $db->table('users')->insert([
-            'name' => $name,
-            'role' => 0, // Student
-            'password_hash' => password_hash($password, PASSWORD_BCRYPT),
-            'is_active' => 0, // Pending approval
-            'registration_status' => 'pending'
-        ] + \App\Libraries\ManilaTime::stampFields($db, 'users', ['created_at']));
-
-        $userId = $db->insertID();
-
-        // Insert into students table
-        $db->table('students')->insert([
-            'user_id' => $userId,
-            'student_id' => $studentId,
-            'lrn' => $lrn,
-            'grade_level' => $gradeLevel,
-            'section' => $section,
-            'parent_phone' => $parentPhone,
-            'parent_email' => $parentEmail,
-        ] + \App\Libraries\ManilaTime::stampFields($db, 'students', ['created_at']));
-
-        $db->transComplete();
-
-        if ($db->transStatus() === false) {
-            return $this->registrationFailure('Registration failed. Please try again.');
+        try {
+            $inserted = $db->table('users')->insert([
+                'name' => $name,
+                'role_id' => 0,
+                'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+                'is_active' => 0,
+                'registration_status' => 'pending',
+                'student_id' => $studentId,
+                'lrn' => $lrn,
+                'grade_level' => $gradeLevel,
+                'section' => $section,
+                'parent_phone' => $parentPhone,
+                'parent_email' => $parentEmail,
+            ] + \App\Libraries\ManilaTime::stampFields($db, 'users', ['created_at']));
+            if (!$inserted) throw new \RuntimeException('Student account insert failed');
+            $userId = (int) $db->insertID();
+        } catch (\Throwable $e) {
+            return $this->registrationFailure('Registration could not be completed with those details. If you already have an account, please sign in or contact the guidance office.');
         }
 
         \App\Libraries\AuditTrail::record('USER_REGISTERED', 'user', (int) $userId, (int) $userId);

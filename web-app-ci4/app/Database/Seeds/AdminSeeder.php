@@ -10,7 +10,9 @@ class AdminSeeder extends Seeder
     {
         $userData = [
             'name'            => 'admin',
-            'role'            => 2, // Super Admin
+            'role_id'         => 2, // Super Admin
+            'email'           => 'admin@studentshield.org',
+            'phone'           => '09000000000',
             'password_hash'   => password_hash('admin123', PASSWORD_BCRYPT),
         ];
 
@@ -18,13 +20,6 @@ class AdminSeeder extends Seeder
         $existing = $this->db->table('users')->where('name', 'admin')->get()->getRow();
         if (!$existing) {
             $this->db->table('users')->insert($userData);
-            $newUserId = $this->db->insertID();
-            
-            $this->db->table('admins')->insert([
-                'user_id' => $newUserId,
-                'email'   => 'admin@studentshield.org',
-                'phone'   => '09000000000'
-            ]);
             echo "Admin account created successfully. Username: admin, Password: admin123\n";
         } else {
             echo "Admin account already exists.\n";

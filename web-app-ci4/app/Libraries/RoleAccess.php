@@ -12,8 +12,9 @@ final class RoleAccess
 
     public static function enabled(array $user): bool
     {
-        return isset(self::NAMES[(int) $user['role']]) && empty($user['access_disabled'])
-            && ((int) $user['role'] !== 0 || (!empty($user['is_active']) && ($user['registration_status'] ?? 'approved') === 'approved'));
+        $role = $user['role_id'] ?? $user['role'] ?? null;
+        return $role !== null && isset(self::NAMES[(int) $role]) && empty($user['access_disabled'])
+            && ((int) $role !== 0 || (!empty($user['is_active']) && ($user['registration_status'] ?? 'approved') === 'approved'));
     }
 
     public static function allows(int $role, string $path): bool

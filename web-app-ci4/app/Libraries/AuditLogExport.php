@@ -85,9 +85,9 @@ final class AuditLogExport
         }
 
         $isCounselor = $role === 1;
-        $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, users.role AS actor_role, CASE WHEN users.role = 0 THEN 'Student account' ELSE users.name END AS actor_name";
+        $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, users.role_id AS actor_role, CASE WHEN users.role_id = 0 THEN 'Student account' ELSE users.name END AS actor_name";
         if (!$isCounselor) {
-            $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, audit_logs.ip_address, users.role AS actor_role, CASE WHEN users.role = 0 THEN 'Student account' ELSE users.name END AS actor_name";
+            $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, audit_logs.ip_address, users.role_id AS actor_role, CASE WHEN users.role_id = 0 THEN 'Student account' ELSE users.name END AS actor_name";
         }
 
         $builder = $db->table('audit_logs')

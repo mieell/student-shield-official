@@ -58,8 +58,7 @@ final class SecurityHardeningTest extends CIUnitTestCase
         $property->setValue(null, ['tests' => $this->secDb]);
 
         foreach ([
-            'users' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, password_hash TEXT, role INTEGER DEFAULT 0, is_active INTEGER DEFAULT 1, access_disabled INTEGER DEFAULT 0, registration_status TEXT DEFAULT "approved", auth_version INTEGER DEFAULT 1, remember_token TEXT, is_locked INTEGER DEFAULT 0, created_at TEXT',
-            'students' => 'user_id INTEGER PRIMARY KEY, student_id TEXT, lrn TEXT UNIQUE, grade_level TEXT, section TEXT, parent_phone TEXT, parent_email TEXT, adviser_name TEXT, created_at TEXT',
+            'users' => 'id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, password_hash TEXT, role_id INTEGER DEFAULT 0, email TEXT, phone TEXT, is_active INTEGER DEFAULT 1, access_disabled INTEGER DEFAULT 0, registration_status TEXT DEFAULT "approved", auth_version INTEGER DEFAULT 1, remember_token TEXT, is_locked INTEGER DEFAULT 0, created_at TEXT, student_id TEXT, lrn TEXT UNIQUE, grade_level TEXT, section TEXT, parent_phone TEXT, parent_email TEXT, adviser_name TEXT',
             'counselors' => 'user_id INTEGER PRIMARY KEY, counselor_email TEXT, counselor_phone TEXT',
             'admins' => 'user_id INTEGER PRIMARY KEY, email TEXT, phone TEXT',
             'guardian_consents' => 'user_id INTEGER PRIMARY KEY, verified_by INTEGER, phone TEXT, verified_name TEXT, token_hash TEXT, notice TEXT, requested_at TEXT, expires_at TEXT, sms_state TEXT, response TEXT, guardian_name TEXT, responded_at TEXT',
@@ -71,12 +70,11 @@ final class SecurityHardeningTest extends CIUnitTestCase
             $this->secDb->query("CREATE TABLE $table ($cols)");
         }
 
-        $this->secDb->table('users')->insert(['id' => 1, 'name' => 'Counselor', 'role' => 1, 'password_hash' => password_hash('StaffPass!9', PASSWORD_BCRYPT)]);
-        $this->secDb->table('users')->insert(['id' => 2, 'name' => 'SuperAdmin', 'role' => 2, 'password_hash' => password_hash('StaffPass!9', PASSWORD_BCRYPT)]);
-        $this->secDb->table('users')->insert(['id' => 3, 'name' => 'Principal', 'role' => 3, 'password_hash' => password_hash('StaffPass!9', PASSWORD_BCRYPT)]);
-        $this->secDb->table('users')->insert(['id' => 10, 'name' => 'Safe Student', 'role' => 0]);
-        $this->secDb->table('students')->insert([
-            'user_id' => 10,
+        $this->secDb->table('users')->insert(['id' => 1, 'name' => 'Counselor', 'role_id' => 1, 'password_hash' => password_hash('StaffPass!9', PASSWORD_BCRYPT)]);
+            $this->secDb->table('users')->insert(['id' => 2, 'name' => 'SuperAdmin', 'role_id' => 2, 'password_hash' => password_hash('StaffPass!9', PASSWORD_BCRYPT)]);
+        $this->secDb->table('users')->insert(['id' => 3, 'name' => 'Principal', 'role_id' => 3, 'password_hash' => password_hash('StaffPass!9', PASSWORD_BCRYPT)]);
+            $this->secDb->table('users')->insert(['id' => 10, 'name' => 'Safe Student', 'role_id' => 0]);
+        $this->secDb->table('users')->where('id', 10)->update([
             'student_id' => 'SS-10',
             'lrn' => '100000000010',
             'grade_level' => '8',
@@ -84,9 +82,8 @@ final class SecurityHardeningTest extends CIUnitTestCase
             'parent_phone' => '+639181234567',
             'parent_email' => 'safe-parent@example.test',
         ]);
-        $this->secDb->table('users')->insert(['id' => 11, 'name' => 'At-Risk Student', 'role' => 0]);
-        $this->secDb->table('students')->insert([
-            'user_id' => 11,
+        $this->secDb->table('users')->insert(['id' => 11, 'name' => 'At-Risk Student', 'role_id' => 0]);
+        $this->secDb->table('users')->where('id', 11)->update([
             'student_id' => 'SS-11',
             'lrn' => '100000000011',
             'grade_level' => '8',
@@ -103,9 +100,8 @@ final class SecurityHardeningTest extends CIUnitTestCase
             'verified_by' => 1,
             'verified_at' => '2026-11-14 10:00:00',
         ]);
-        $this->secDb->table('users')->insert(['id' => 12, 'name' => 'Blocked Unsafe Student', 'role' => 0]);
-        $this->secDb->table('students')->insert([
-            'user_id' => 12,
+        $this->secDb->table('users')->insert(['id' => 12, 'name' => 'Blocked Unsafe Student', 'role_id' => 0]);
+        $this->secDb->table('users')->where('id', 12)->update([
             'student_id' => 'SS-12',
             'lrn' => '100000000012',
             'grade_level' => '8',

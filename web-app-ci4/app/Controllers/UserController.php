@@ -8,13 +8,17 @@ class UserController extends BaseController
         if (!$this->hasRole(2)) return $this->forbidden();
         // Account and guardian contacts are available only to Super Admins.
         $users = \Config\Database::connect()->table('users')
-            ->select('users.id, users.name, users.role, users.access_disabled, users.is_locked, users.registration_status, users.created_at, students.student_id, students.grade_level, students.section, students.adviser_name, students.parent_phone, students.parent_email')
-            ->select('SUBSTR(students.lrn, -4) AS lrn_suffix', false)
-            ->select('CASE WHEN users.role = 1 THEN counselors.counselor_phone ELSE admins.phone END AS phone, CASE WHEN users.role = 1 THEN counselors.counselor_email ELSE admins.email END AS email', false)
-            ->join('students', 'students.user_id = users.id AND users.role = 0', 'left')
-            ->join('counselors', 'counselors.user_id = users.id AND users.role = 1', 'left')
-            ->join('admins', 'admins.user_id = users.id AND users.role IN (2, 3)', 'left')
-            ->orderBy('users.role', 'DESC')->orderBy('users.name')->get()->getResultArray();
+            ->select('id, name, role_id AS role, access_disabled, is_locked, registration_status, created_at')
+            ->select("CASE WHEN role_id = 0 THEN student_id END AS student_id,
+                CASE WHEN role_id = 0 THEN grade_level END AS grade_level,
+                CASE WHEN role_id = 0 THEN section END AS section,
+                CASE WHEN role_id = 0 THEN adviser_name END AS adviser_name,
+                CASE WHEN role_id = 0 THEN parent_phone END AS parent_phone,
+                CASE WHEN role_id = 0 THEN parent_email END AS parent_email,
+                CASE WHEN role_id = 0 THEN SUBSTR(lrn, -4) END AS lrn_suffix,
+                CASE WHEN role_id <> 0 THEN phone END AS phone,
+                CASE WHEN role_id <> 0 THEN email END AS email", false)
+            ->orderBy('role_id', 'DESC')->orderBy('name')->get()->getResultArray();
         return view('manage_accounts', ['users' => $users]);
     }
 
@@ -36,7 +40,7 @@ class UserController extends BaseController
         $old = $id ? $db->table('users')->where('id', $id)->get()->getRowArray() : null;
         if ($id && !$old) return $this->response->setStatusCode(404);
         $name = trim((string) $this->request->getPost('name'));
-        if ($old && (int) $old['role'] === 0) $name = $old['name'];
+        if ($old && (int) $old['role_id'] === 0) $name = $old['name'];
         $rawRole = (string) $this->request->getPost('role');
         $password = (string) $this->request->getPost('passcode');
         if (!in_array($rawRole, ['0', '1', '2', '3'], true) || $name === '' || mb_strlen($name) > 255) {
@@ -79,25 +83,27 @@ class UserController extends BaseController
         $duplicate = $db->table('users')->where('name', $name);
         if ($id) $duplicate->where('id !=', $id);
         if ($duplicate->countAllResults()) return redirect()->to('/admin/users')->with('error', 'Account name already exists.');
-        $data = ['name' => $name, 'role' => $role, 'remember_token' => null,
+        $data = ['name' => $name, 'role_id' => $role, 'remember_token' => null,
             'auth_version' => (int) ($old['auth_version'] ?? 0) + 1];
         if ($password !== '') $data['password_hash'] = password_hash($password, PASSWORD_BCRYPT);
-        if (!$old || ((int) $old['role'] !== $role && $role === 0)) {
+        if (!$old || ((int) $old['role_id'] !== $role && $role === 0)) {
             $data['registration_status'] = $role === 0 ? 'pending' : 'approved';
             $data['is_active'] = $role === 0 ? 0 : 1;
         }
         try {
             \App\Libraries\ManilaTime::syncDatabaseSession($db);
             $db->transStart();
-            // Serialize contact edits so simultaneous removals cannot erase both guardian contacts.
+            // Read the same account under lock so simultaneous edits use current contacts.
+            $saved = $old;
             if ($id && $db->DBDriver === 'MySQLi') {
-                $lockedUser = $db->query('SELECT auth_version FROM users WHERE id = ? FOR UPDATE', [$id])->getRowArray();
-                $data['auth_version'] = (int) $lockedUser['auth_version'] + 1;
+                $saved = $db->query('SELECT * FROM users WHERE id = ? FOR UPDATE', [$id])->getRowArray();
+                if (!$saved || (int) $saved['auth_version'] !== (int) $old['auth_version']) {
+                    $db->transRollback();
+                    return redirect()->to('/admin/users')->with('error', 'This account changed. Review its details and try again.');
+                }
             }
-            $table = $role === 0 ? 'students' : ($role === 1 ? 'counselors' : 'admins');
-            $emailField = $role === 0 ? 'parent_email' : ($role === 1 ? 'counselor_email' : 'email');
-            $phoneField = $role === 0 ? 'parent_phone' : ($role === 1 ? 'counselor_phone' : 'phone');
-            $saved = $id ? $db->table($table)->where('user_id', $id)->get()->getRowArray() : null;
+            $emailField = $role === 0 ? 'parent_email' : 'email';
+            $phoneField = $role === 0 ? 'parent_phone' : 'phone';
             $finalEmail = $removeEmail ? '' : ($email !== '' ? $email : trim((string) ($saved[$emailField] ?? '')));
             $finalPhone = $removePhone ? '' : ($phone !== '' ? $phone : trim((string) ($saved[$phoneField] ?? '')));
             $validEmail = $finalEmail !== '' && filter_var($finalEmail, FILTER_VALIDATE_EMAIL) !== false;
@@ -115,6 +121,11 @@ class UserController extends BaseController
                 $db->transRollback();
                 return redirect()->to('/admin/users')->with('error', 'This student has a verified guardian contact. Refer any changes to the Guidance Office.');
             }
+            if ($removeEmail || $email !== '') $data[$emailField] = $removeEmail ? null : $email;
+            if ($removePhone || $phone !== '') $data[$phoneField] = $removePhone ? null : $phone;
+            if ($id && $role === 0 && (int) $saved['role_id'] !== 0 && empty($saved['student_id'])) {
+                $data['student_id'] = 'SS-' . $id;
+            }
             if ($id) {
                 $db->table('users')->where('id', $id)->update($data + \App\Libraries\ManilaTime::stampFields($db, 'users', ['updated_at']));
             } else {
@@ -123,20 +134,12 @@ class UserController extends BaseController
                 $id = (int) $db->insertID();
                 if ($id < 1) throw new \RuntimeException('Account ID not generated');
             }
-            $contacts = [];
-            if ($removeEmail || $email !== '') $contacts[$emailField] = $removeEmail ? null : $email;
-            if ($removePhone || $phone !== '') $contacts[$phoneField] = $removePhone ? null : $phone;
-            if ($saved) {
-                if ($contacts) $db->table($table)->where('user_id', $id)->update($contacts);
-            } else {
-                $profile = ['user_id' => $id] + $contacts;
-                if ($role === 0) $profile['student_id'] = 'SS-' . $id;
-                $db->table($table)->insert($profile);
+            if (!$old && $role === 0) {
+                $db->table('users')->where('id', $id)->update(['student_id' => 'SS-' . $id]);
             }
-            // Keep existing contacts when omitted, and retain student history on role changes.
             $db->transComplete();
             if (!$db->transStatus()) throw new \RuntimeException('Account transaction failed');
-            $this->logAudit(!$old ? 'CREATE_USER' : ((int) $old['role'] !== $role ? 'ROLE_CHANGED' : ($password !== '' ? 'PASSWORD_RESET' : 'UPDATE_USER')), 'user', $id);
+            $this->logAudit(!$old ? 'CREATE_USER' : ((int) $old['role_id'] !== $role ? 'ROLE_CHANGED' : ($password !== '' ? 'PASSWORD_RESET' : 'UPDATE_USER')), 'user', $id);
             if ($old && $contactsChanged) {
                 $this->logAudit($removeEmail || $removePhone ? 'CONTACTS_REMOVED' : 'CONTACTS_UPDATED', 'user', $id);
             }

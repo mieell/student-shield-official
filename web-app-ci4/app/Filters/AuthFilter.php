@@ -13,7 +13,7 @@ class AuthFilter implements FilterInterface
     {
         $db = \Config\Database::connect();
         \App\Libraries\ManilaTime::syncDatabaseSession($db);
-        return $db->table('users')->where('id', $id)->get()->getRowArray();
+        return $db->table('users')->select('users.*, users.role_id AS role')->where('id', $id)->get()->getRowArray();
     }
 
     public function before(RequestInterface $request, $arguments = null)

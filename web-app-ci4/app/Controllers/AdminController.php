@@ -74,9 +74,8 @@ class AdminController extends BaseController
         }
 
         $requests = $db->table('virtual_meetings vm')
-            ->select('vm.id, vm.student_id, vm.created_at as requested_at, u.name as student_name, s.student_id as student_number, s.section')
-            ->join('users u', 'u.id = vm.student_id', 'left')
-            ->join('students s', 's.user_id = vm.student_id', 'left')
+            ->select('vm.id, vm.student_id, vm.created_at as requested_at, u.name as student_name, u.student_id as student_number, u.section')
+            ->join('users u', 'u.id = vm.student_id AND u.role_id = 0')
             ->where('vm.status', 'requested')
             ->orderBy('vm.created_at', 'DESC')
             ->get()->getResultArray();
@@ -114,9 +113,9 @@ class AdminController extends BaseController
         $logs = [];
         if ($db->tableExists('audit_logs')) {
             $auditModel = new \App\Models\AuditLogModel();
-            $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, users.role AS actor_role, CASE WHEN users.role = 0 THEN 'Student account' ELSE users.name END AS actor_name";
+            $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, users.role_id AS actor_role, CASE WHEN users.role_id = 0 THEN 'Student account' ELSE users.name END AS actor_name";
             if (!$isCounselorView) {
-                $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, audit_logs.ip_address, users.role AS actor_role, CASE WHEN users.role = 0 THEN 'Student account' ELSE users.name END AS actor_name";
+                $select = "audit_logs.id, audit_logs.action, audit_logs.entity_type, audit_logs.entity_id, audit_logs.created_at, audit_logs.ip_address, users.role_id AS actor_role, CASE WHEN users.role_id = 0 THEN 'Student account' ELSE users.name END AS actor_name";
             }
 
             $auditModel
@@ -227,9 +226,8 @@ class AdminController extends BaseController
         $isArchived = $this->request->getGet('archived') == '1';
 
         $query = $db->table('vent_logs')
-            ->select('vent_logs.*, users.name, students.student_id, students.parent_phone, students.parent_email, students.section, students.adviser_name')
-            ->join('users', 'users.id = vent_logs.user_id', 'left')
-            ->join('students', 'students.user_id = users.id', 'left');
+            ->select('vent_logs.*, users.name, users.student_id, users.parent_phone, users.parent_email, users.section, users.adviser_name')
+            ->join('users', 'users.id = vent_logs.user_id', 'left');
 
         if ($isArchived) {
             $query->where('vent_logs.deleted_at IS NOT NULL');
@@ -307,9 +305,8 @@ class AdminController extends BaseController
         $isArchived = $this->request->getGet('archived') == '1';
 
         $query = $db->table('bully_reports')
-            ->select('bully_reports.*, bully_reports.incident_details as description, bully_reports.reporter_student_id as reporter_id, users.name, students.parent_phone, students.parent_email')
-            ->join('users', 'users.id = bully_reports.reporter_student_id', 'left')
-            ->join('students', 'students.user_id = users.id', 'left');
+            ->select('bully_reports.*, bully_reports.incident_details as description, bully_reports.reporter_student_id as reporter_id, users.name, users.parent_phone, users.parent_email')
+            ->join('users', 'users.id = bully_reports.reporter_student_id', 'left');
 
         if ($isArchived) {
             $query->where('bully_reports.deleted_at IS NOT NULL');
@@ -434,8 +431,7 @@ class AdminController extends BaseController
             if ($totalStrikes === 2) {
                 // ── Strike 2: Notify parent/guardian ──
                 $student = $db->table('users')
-                    ->select('users.name, students.parent_phone, students.parent_email')
-                    ->join('students', 'students.user_id = users.id', 'left')
+                    ->select('users.name, users.parent_phone, users.parent_email')
                     ->where('users.id', $reporterId)
                     ->get()->getRow();
 
@@ -461,8 +457,7 @@ class AdminController extends BaseController
 
                 // Notify parent about suspension
                 $student = $db->table('users')
-                    ->select('users.name, students.parent_phone, students.parent_email')
-                    ->join('students', 'students.user_id = users.id', 'left')
+                    ->select('users.name, users.parent_phone, users.parent_email')
                     ->where('users.id', $reporterId)
                     ->get()->getRow();
 
@@ -648,13 +643,12 @@ class AdminController extends BaseController
 
         // 1. Fetch User Data
         $user = $db->table('users')
-            ->select('users.id, users.name, users.role, users.is_locked, users.created_at,
-                      students.student_id, students.section, students.adviser_name, students.grade_level,
-                      students.parent_phone,
-                      students.parent_email')
-            ->join('students', 'students.user_id = users.id', 'left')
+            ->select('users.id, users.name, users.role_id AS role, users.is_locked, users.created_at,
+                      users.student_id, users.section, users.adviser_name, users.grade_level,
+                      users.parent_phone,
+                      users.parent_email')
             ->where('users.id', $id)
-            ->where('users.role', 0)
+            ->where('users.role_id', 0)
             ->get()->getRowArray();
         if (!$user) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'User not found']);
@@ -747,7 +741,7 @@ class AdminController extends BaseController
 
         try {
             $count = \Config\Database::connect()->table('users')
-                ->where('role', 0)->where('registration_status', 'pending')->countAllResults();
+                ->where('role_id', 0)->where('registration_status', 'pending')->countAllResults();
             return $this->response->setHeader('Cache-Control', 'no-store')->setJSON(['count' => $count]);
         } catch (\Throwable $e) {
             log_message('error', 'Pending registration count failed: {message}', ['message' => $e->getMessage()]);
@@ -766,11 +760,10 @@ class AdminController extends BaseController
         $pendingUsers = [];
         try {
             $pendingUsers = $db->table('users')
-                ->select('users.id as user_id, users.name, users.created_at, students.student_id, students.lrn, students.grade_level, students.section, students.parent_phone, students.parent_email,
+                ->select('users.id as user_id, users.name, users.created_at, users.student_id, users.lrn, users.grade_level, users.section, users.parent_phone, users.parent_email,
                     gc.phone as verified_phone, gc.verified_name, gc.guardian_name, gc.response, gc.responded_at, gc.sms_state, gc.requested_at, gc.expires_at')
-                ->join('students', 'students.user_id = users.id', 'left')
                 ->join('guardian_consents gc', 'gc.user_id = users.id', 'left')
-                ->where('users.role', 0)
+                ->where('users.role_id', 0)
                 ->where('users.registration_status', $registrationStatus)
                 ->orderBy('users.created_at', 'ASC')
                 ->get()->getResultArray();
@@ -796,7 +789,7 @@ class AdminController extends BaseController
         $db = \Config\Database::connect();
         $userUpdate = ['registration_status' => 'archived', 'is_active' => 0, 'remember_token' => null]
             + \App\Libraries\ManilaTime::stampFields($db, 'users', ['updated_at']);
-        $db->table('users')->where('id', $id)->where('role', 0)->where('registration_status', 'pending')
+        $db->table('users')->where('id', $id)->where('role_id', 0)->where('registration_status', 'pending')
             ->update($userUpdate);
         if ($db->affectedRows() !== 1) {
             return $back->with('error', 'Only pending student registrations can be archived.');
@@ -830,11 +823,6 @@ class AdminController extends BaseController
                     $db->transRollback();
                     return $this->response->setStatusCode(409)->setJSON(['status' => 'error', 'message' => 'A pending registration needs accepted guardian consent before approval.']);
                 }
-                if (!$db->table('students')->where('user_id', $id)->countAllResults()) {
-                    $db->transRollback();
-                    return $this->response->setStatusCode(409)->setJSON(['status' => 'error', 'message' => 'The student profile is missing.']);
-                }
-                $db->table('students')->where('user_id', $id)->update(['parent_phone' => $consent['phone']]);
             } catch (\Throwable $e) {
                 $db->transRollback();
                 return $this->response->setStatusCode(503)->setJSON(['status' => 'error', 'message' => 'Guardian consent could not be checked.']);
@@ -845,7 +833,8 @@ class AdminController extends BaseController
             'is_active' => $status === 'approved' ? 1 : 0,
             'remember_token' => null,
         ] + \App\Libraries\ManilaTime::stampFields($db, 'users', ['updated_at']);
-        $db->table('users')->where('id', $id)->where('role', 0)->where('registration_status', 'pending')
+        if ($status === 'approved') $userUpdate['parent_phone'] = $consent['phone'];
+        $db->table('users')->where('id', $id)->where('role_id', 0)->where('registration_status', 'pending')
             ->update($userUpdate);
         if ($db->affectedRows() !== 1 || ($status === 'approved' && (!$db->transStatus() || !$db->transCommit()))) {
             if ($status === 'approved') $db->transRollback();
@@ -960,8 +949,7 @@ class AdminController extends BaseController
         int &$smsUnconfirmed
     ): void {
         $student = $db->table('users')
-            ->select('users.*, students.parent_phone, students.parent_email')
-            ->join('students', 'students.user_id = users.id', 'left')
+            ->select('users.*')
             ->where('users.id', $studentUserId)
             ->get()->getRow();
         if (!$student) {

@@ -122,7 +122,7 @@ final class GuardianConsent
     public static function lockStudent(BaseConnection $db, int $id): ?array
     {
         $lock = $db->DBDriver === 'MySQLi' ? ' FOR UPDATE' : '';
-        return $db->query("SELECT id, name FROM users WHERE id = ? AND role = 0 AND registration_status = 'pending'" . $lock, [$id])
+        return $db->query("SELECT id, name FROM users WHERE id = ? AND role_id = 0 AND registration_status = 'pending'" . $lock, [$id])
             ->getRowArray();
     }
 

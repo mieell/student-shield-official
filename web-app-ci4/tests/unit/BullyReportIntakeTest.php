@@ -23,13 +23,9 @@ final class BullyReportIntakeTest extends CIUnitTestCase
         $priorConnections = $connections->getValue();
         $connections->setValue(null, ['tests' => $db]);
         try {
-            $db->query('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, is_locked INTEGER)');
-            $db->query('CREATE TABLE students (user_id INTEGER, parent_email TEXT)');
-            $db->query('CREATE TABLE counselors (user_id INTEGER, counselor_email TEXT)');
-            $db->query('CREATE TABLE admins (user_id INTEGER, email TEXT)');
+            $db->query('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, is_locked INTEGER, parent_email TEXT)');
             $db->query('CREATE TABLE bully_reports (id INTEGER PRIMARY KEY AUTOINCREMENT, reporter_student_id INTEGER, reporter_type TEXT, victim_student_id INTEGER, bully_student_id INTEGER, incident_details TEXT, status TEXT, created_at TEXT, updated_at TEXT)');
-            $db->table('users')->insert(['id' => 10, 'name' => 'Fictional Student', 'is_locked' => 0]);
-            $db->table('students')->insert(['user_id' => 10, 'parent_email' => 'unsafe-parent@example.test']);
+            $db->table('users')->insert(['id' => 10, 'name' => 'Fictional Student', 'is_locked' => 0, 'parent_email' => 'unsafe-parent@example.test']);
 
             $email = $this->getMockBuilder(\CodeIgniter\Email\Email::class)->disableOriginalConstructor()
                 ->onlyMethods(['initialize', 'setFrom', 'setTo', 'setSubject', 'setMessage', 'send'])->getMock();

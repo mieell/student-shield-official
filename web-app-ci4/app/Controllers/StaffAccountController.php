@@ -17,7 +17,7 @@ class StaffAccountController extends BaseController
         if (!$this->allowed()) return $this->forbidden();
         $id = (int) session()->get('user_id');
         $db = Database::connect();
-        $user = $db->table('users')->where('id', $id)->get()->getRowArray();
+        $user = $db->table('users')->select('users.*, users.role_id AS role')->where('id', $id)->get()->getRowArray();
         if (!$user || !in_array((int) $user['role'], [1, 2, 3], true) || !RoleAccess::enabled($user)) return $this->forbidden();
         $name = trim((string) $this->request->getPost('name'));
         $phone = trim((string) $this->request->getPost('phone'));
@@ -31,19 +31,12 @@ class StaffAccountController extends BaseController
         if ($db->table('users')->where('name', $name)->where('id !=', $id)->countAllResults()) {
             return redirect()->to('/staff/profile')->with('error', 'That account name is already in use. Choose another name.');
         }
-        $table = (int) $user['role'] === 1 ? 'counselors' : 'admins';
-        $phoneField = (int) $user['role'] === 1 ? 'counselor_phone' : 'phone';
         try {
-            $db->transBegin();
-            // Identity comes only from the session; never accept a target user or role from this form.
-            if (!$db->table('users')->where('id', $id)->update(['name' => $name])) throw new \RuntimeException('Name update failed');
-            $contacts = $db->table($table)->where('user_id', $id);
-            $ok = $contacts->countAllResults() ? $db->table($table)->where('user_id', $id)->update([$phoneField => $phone])
-                : $db->table($table)->insert(['user_id' => $id, $phoneField => $phone]);
-            if (!$ok || !$db->transStatus()) throw new \RuntimeException('Profile update failed');
-            $db->transCommit();
+            // Identity and permitted role come from the authenticated account.
+            $updated = $db->table('users')->where('id', $id)->where('role_id', (int) $user['role'])
+                ->update(['name' => $name, 'phone' => $phone]);
+            if (!$updated) throw new \RuntimeException('Profile update failed');
         } catch (\Throwable $e) {
-            $db->transRollback();
             log_message('error', 'Staff profile update failed for user {id}', ['id' => $id]);
             return redirect()->to('/staff/profile')->with('error', 'Your profile could not be saved. Please try again.');
         }
@@ -57,7 +50,7 @@ class StaffAccountController extends BaseController
         if (!$this->allowed()) return $this->forbidden();
         $id = (int) session()->get('user_id');
         $db = Database::connect();
-        $user = $db->table('users')->where('id', $id)->get()->getRowArray();
+        $user = $db->table('users')->select('users.*, users.role_id AS role')->where('id', $id)->get()->getRowArray();
         if (!$user || !in_array((int) $user['role'], [1, 2, 3], true) || !RoleAccess::enabled($user)) {
             return $this->forbidden();
         }
@@ -101,11 +94,8 @@ class StaffAccountController extends BaseController
     private function page(string $page)
     {
         if (!$this->allowed()) return $this->forbidden();
-        $user = Database::connect()->table('users')->select('id, name, role')->where('id', (int) session()->get('user_id'))->get()->getRowArray();
+        $user = Database::connect()->table('users')->select('id, name, role_id AS role, phone, email')->where('id', (int) session()->get('user_id'))->get()->getRowArray();
         if (!$user) return $this->forbidden();
-        $contact = Database::connect()->table((int) $user['role'] === 1 ? 'counselors' : 'admins')->where('user_id', $user['id'])->get()->getRowArray() ?? [];
-        $user['phone'] = $contact[(int) $user['role'] === 1 ? 'counselor_phone' : 'phone'] ?? '';
-        $user['email'] = $contact[(int) $user['role'] === 1 ? 'counselor_email' : 'email'] ?? '';
         return view('staff_account', ['page' => $page, 'account' => $user, 'roleName' => RoleAccess::NAMES[(int) $user['role']]]);
     }
 }

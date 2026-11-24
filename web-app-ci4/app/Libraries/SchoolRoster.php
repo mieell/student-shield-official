@@ -19,7 +19,7 @@ final class SchoolRoster
         foreach (config(\Config\SchoolRoster::class)->sectionsByGrade as $grade => $sections) {
             foreach ($sections as $section) $rows[] = ['grade_level' => (string) $grade, 'section' => $section];
         }
-        $rows = array_merge($rows, $db->table('students')->select('grade_level, section')->distinct()->get()->getResultArray());
+        $rows = array_merge($rows, $db->table('users')->select('grade_level, section')->where('role_id', 0)->distinct()->get()->getResultArray());
         return self::fromRows($rows);
     }
 

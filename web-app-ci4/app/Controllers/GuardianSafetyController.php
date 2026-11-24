@@ -23,7 +23,7 @@ final class GuardianSafetyController extends BaseController
         $db->transBegin();
         try {
             $lock = $db->DBDriver === 'MySQLi' ? ' FOR UPDATE' : '';
-            $student = $db->query('SELECT u.id, s.parent_phone, s.parent_email FROM users u LEFT JOIN students s ON s.user_id = u.id WHERE u.id = ? AND u.role = 0' . $lock, [$userId])->getRowArray();
+            $student = $db->query('SELECT u.id, u.parent_phone, u.parent_email FROM users u WHERE u.id = ? AND u.role_id = 0' . $lock, [$userId])->getRowArray();
             if (!$student) {
                 $db->transRollback();
                 return $this->response->setStatusCode(404)->setJSON(['error' => 'Student not found.', 'csrf' => csrf_hash()]);

@@ -444,12 +444,11 @@ class CaseSummaryController extends BaseController
     private function getStudentInfo($db, $studentId): ?array
     {
         $user = $db->table('users')
-            ->select('users.id, users.name, users.role,
-                      students.student_id, students.section, students.adviser_name,
-                      students.grade_level, students.parent_phone, students.parent_email')
-            ->join('students', 'students.user_id = users.id', 'left')
+            ->select('users.id, users.name, users.role_id AS role,
+                      users.student_id, users.section, users.adviser_name,
+                      users.grade_level, users.parent_phone, users.parent_email')
             ->where('users.id', $studentId)
-            ->where('users.role', 0)
+            ->where('users.role_id', 0)
             ->get()->getRowArray();
 
 
