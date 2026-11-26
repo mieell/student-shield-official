@@ -250,6 +250,7 @@
         </form>
     <?php elseif ($notice !== null): ?>
         <p>Complete this form only if you are the parent or guardian the school contacted. Contact the guidance office if you received this notice by mistake or have questions.</p>
+        <p>The school uses the student’s registration details and your verified contact information to match this request to the correct account. Your name and consent decision are recorded for Guidance Office review.</p>
         <p class="notice"><?= esc($notice) ?></p>
         <?php $action = $token !== null ? site_url('guardian-consent/' . $token) : site_url('guardian-consent/respond'); ?>
         <form method="post" action="<?= esc($action, 'attr') ?>">

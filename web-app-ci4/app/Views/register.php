@@ -284,7 +284,7 @@ $selectedSection = (string) set_value('section');
                                    placeholder="09123456789">
                         </div>
                         <p id="guardian-contact-error" role="status" class="mt-1 text-[13px] font-semibold text-red-300 empty:mt-0"></p>
-                        <p id="guardian-contact-help" class="registration-help">School staff verify this number before sending a consent request. If you cannot safely provide a number, contact the Guidance Office for help.</p>
+                        <p id="guardian-contact-help" class="registration-help">Enter your parent or guardian’s current mobile number. School staff check it against school records before requesting consent. If you cannot safely provide a number, contact the Guidance Office.</p>
                     </div>
 
                     <div class="registration-guardian-email registration-field">
@@ -398,7 +398,7 @@ $selectedSection = (string) set_value('section');
                 <h3 id="terms-section-privacy" class="text-gold font-semibold text-base sm:text-lg mt-4">2. Data Collection and Privacy</h3>
                 <p>The school handles your information under its privacy policy and the <strong>Data Privacy Act of 2012 (R.A. 10173)</strong>.</p>
                 <ul class="list-disc pl-5 space-y-1">
-                    <li>Registration details are used to verify your account, request guardian consent, and provide guidance support.</li>
+                    <li>The school uses your school details and guardian contact information to verify your registration, request guardian consent, and decide whether to activate your account.</li>
                     <li>Safe Space messages are screened to help prioritize counselor review. Message text may be processed by configured external services. Stored vent text is encrypted, and access follows assigned staff roles.</li>
                     <li>School staff may contact a verified guardian or a school-approved emergency contact when a safety concern requires protective action.</li>
                 </ul>
